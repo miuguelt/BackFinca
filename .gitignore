@@ -1,3 +1,13 @@
+/certs
+/docs
+/instance/scripts
+/sdk
+/tools
+/.dev_jwt_secret
+.env
+finca (6).sql
+routes.json
+run.py
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
