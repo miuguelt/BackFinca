@@ -1,0 +1,4853 @@
+{
+    "swagger": "2.0",
+    "basePath": "/api/v1",
+    "paths": {
+        "/analytics/alerts": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Lista de alertas del sistema"
+                    },
+                    "401": {
+                        "description": "Token JWT requerido o inv\u00e1lido"
+                    },
+                    "500": {
+                        "description": "Error interno del servidor"
+                    }
+                },
+                "summary": "Obtener alertas y notificaciones del sistema",
+                "description": "**Sistema de alertas y notificaciones autom\u00e1ticas**\n        \n        Genera alertas inteligentes basadas en el estado del hato:\n        - Animales que requieren atenci\u00f3n m\u00e9dica\n        - Controles de salud vencidos\n        - Vacunaciones pendientes\n        - Anomal\u00edas en el crecimiento\n        - Alertas de productividad\n        \n        **Par\u00e1metros opcionales:**\n        - `priority`: Filtrar por prioridad (high, medium, low)\n        - `type`: Tipo de alerta (health, vaccination, growth, productivity)\n        - `limit`: N\u00famero m\u00e1ximo de alertas (default: 50)\n        \n        **\u00datil para:**\n        - Dashboard de alertas\n        - Notificaciones push\n        - Planificaci\u00f3n de actividades",
+                "operationId": "get_system_alerts",
+                "parameters": [
+                    {
+                        "description": "Filtrar por prioridad",
+                        "type": "string",
+                        "enum": [
+                            "high",
+                            "medium",
+                            "low"
+                        ],
+                        "name": "priority",
+                        "in": "query"
+                    },
+                    {
+                        "description": "Tipo de alerta",
+                        "type": "string",
+                        "enum": [
+                            "health",
+                            "vaccination",
+                            "growth",
+                            "productivity"
+                        ],
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "description": "N\u00famero m\u00e1ximo de alertas",
+                        "type": "integer",
+                        "default": 50,
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "Cookie": []
+                    }
+                ],
+                "tags": [
+                    "analytics"
+                ]
+            }
+        },
+        "/analytics/animals/statistics": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Estad\u00edsticas de animales",
+                        "schema": {
+                            "$ref": "#/definitions/AnimalStats"
+                        }
+                    },
+                    "401": {
+                        "description": "Token JWT requerido o inv\u00e1lido"
+                    },
+                    "500": {
+                        "description": "Error interno del servidor"
+                    }
+                },
+                "summary": "Obtener estad\u00edsticas detalladas de animales",
+                "description": "**Estad\u00edsticas detalladas de animales**\n        \n        Proporciona an\u00e1lisis completo del inventario ganadero:\n        - Distribuci\u00f3n por estado (vivo, vendido, muerto)\n        - Distribuci\u00f3n por sexo y raza\n        - Grupos de edad y distribuci\u00f3n de pesos\n        - Tendencias de crecimiento\n        \n        **Ideal para:**\n        - Gr\u00e1ficos de torta y barras\n        - An\u00e1lisis de composici\u00f3n del hato\n        - Planificaci\u00f3n de reproducci\u00f3n",
+                "operationId": "get_animal_statistics",
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "Cookie": []
+                    }
+                ],
+                "tags": [
+                    "analytics"
+                ]
+            }
+        },
+        "/analytics/animals/{animal_id}/medical-history": {
+            "parameters": [
+                {
+                    "name": "animal_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Historial m\u00e9dico del animal"
+                    },
+                    "401": {
+                        "description": "Token JWT requerido o inv\u00e1lido"
+                    },
+                    "404": {
+                        "description": "Animal no encontrado"
+                    },
+                    "500": {
+                        "description": "Error interno del servidor"
+                    }
+                },
+                "summary": "Obtener historial m\u00e9dico completo de un animal",
+                "description": "**Historial m\u00e9dico completo de un animal**\n        \n        Proporciona el historial m\u00e9dico detallado de un animal espec\u00edfico:\n        - Todos los tratamientos aplicados\n        - Vacunaciones recibidas\n        - Controles de peso y salud\n        - L\u00ednea de tiempo m\u00e9dica\n        - Alertas y recomendaciones\n        \n        **Par\u00e1metros:**\n        - `animal_id`: ID del animal\n        - `limit`: N\u00famero m\u00e1ximo de registros (default: 50)\n        - `start_date`: Fecha de inicio (YYYY-MM-DD)\n        - `end_date`: Fecha de fin (YYYY-MM-DD)\n        \n        **\u00datil para:**\n        - Ficha m\u00e9dica individual\n        - Seguimiento de tratamientos\n        - An\u00e1lisis de efectividad",
+                "operationId": "get_animal_medical_history",
+                "parameters": [
+                    {
+                        "description": "N\u00famero m\u00e1ximo de registros",
+                        "type": "integer",
+                        "default": 50,
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "description": "Fecha de inicio (YYYY-MM-DD)",
+                        "type": "string",
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "description": "Fecha de fin (YYYY-MM-DD)",
+                        "type": "string",
+                        "name": "end_date",
+                        "in": "query"
+                    }
+                ],
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "Cookie": []
+                    }
+                ],
+                "tags": [
+                    "analytics"
+                ]
+            }
+        },
+        "/analytics/dashboard": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Estad\u00edsticas del dashboard",
+                        "schema": {
+                            "$ref": "#/definitions/Dashboard"
+                        }
+                    },
+                    "401": {
+                        "description": "Token JWT requerido o inv\u00e1lido"
+                    },
+                    "500": {
+                        "description": "Error interno del servidor"
+                    }
+                },
+                "summary": "Obtener estad\u00edsticas principales del dashboard",
+                "description": "**Estad\u00edsticas principales del dashboard**\n        \n        Retorna un resumen completo de las m\u00e9tricas clave del sistema:\n        - Total de animales y distribuci\u00f3n por estado\n        - Actividad m\u00e9dica (tratamientos y vacunaciones)\n        - Usuarios del sistema\n        - Actividades recientes\n        \n        **Casos de uso:**\n        - Dashboard principal de la aplicaci\u00f3n\n        - Vista general del estado de la finca\n        - M\u00e9tricas para toma de decisiones",
+                "operationId": "get_dashboard_stats",
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "Cookie": []
+                    }
+                ],
+                "tags": [
+                    "analytics"
+                ]
+            }
+        },
+        "/analytics/health/statistics": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Estad\u00edsticas de salud",
+                        "schema": {
+                            "$ref": "#/definitions/HealthStats"
+                        }
+                    },
+                    "401": {
+                        "description": "Token JWT requerido o inv\u00e1lido"
+                    },
+                    "500": {
+                        "description": "Error interno del servidor"
+                    }
+                },
+                "summary": "Obtener estad\u00edsticas de salud animal",
+                "description": "**Estad\u00edsticas de salud animal**\n        \n        An\u00e1lisis completo del estado sanitario del hato:\n        - Tratamientos y vacunaciones por per\u00edodo\n        - Distribuci\u00f3n de estados de salud\n        - Enfermedades m\u00e1s comunes\n        - Uso de medicamentos y vacunas\n        \n        **Par\u00e1metros opcionales:**\n        - `months`: N\u00famero de meses hacia atr\u00e1s (default: 12)\n        - `animal_id`: Filtrar por animal espec\u00edfico\n        \n        **\u00datil para:**\n        - Gr\u00e1ficos de l\u00edneas temporales\n        - An\u00e1lisis de tendencias de salud\n        - Planificaci\u00f3n de programas sanitarios",
+                "operationId": "get_health_statistics",
+                "parameters": [
+                    {
+                        "description": "Meses hacia atr\u00e1s para el an\u00e1lisis",
+                        "type": "integer",
+                        "default": 12,
+                        "name": "months",
+                        "in": "query"
+                    },
+                    {
+                        "description": "ID de animal espec\u00edfico",
+                        "type": "integer",
+                        "name": "animal_id",
+                        "in": "query"
+                    }
+                ],
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "Cookie": []
+                    }
+                ],
+                "tags": [
+                    "analytics"
+                ]
+            }
+        },
+        "/analytics/production/statistics": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Estad\u00edsticas de producci\u00f3n",
+                        "schema": {
+                            "$ref": "#/definitions/ProductionStats"
+                        }
+                    },
+                    "401": {
+                        "description": "Token JWT requerido o inv\u00e1lido"
+                    },
+                    "500": {
+                        "description": "Error interno del servidor"
+                    }
+                },
+                "summary": "Obtener estad\u00edsticas de producci\u00f3n y rendimiento",
+                "description": "**Estad\u00edsticas de producci\u00f3n y rendimiento**\n        \n        An\u00e1lisis de productividad del hato ganadero:\n        - Tendencias de peso y crecimiento\n        - Tasas de conversi\u00f3n alimenticia\n        - M\u00e9tricas de rendimiento por grupo\n        - Comparativas de productividad\n        \n        **Par\u00e1metros opcionales:**\n        - `period`: Per\u00edodo de an\u00e1lisis (6m, 1y, 2y)\n        - `group_by`: Agrupar por (breed, sex, age_group)\n        \n        **\u00datil para:**\n        - Gr\u00e1ficos de tendencias\n        - An\u00e1lisis de rentabilidad\n        - Optimizaci\u00f3n de alimentaci\u00f3n",
+                "operationId": "get_production_statistics",
+                "parameters": [
+                    {
+                        "description": "Per\u00edodo de an\u00e1lisis",
+                        "type": "string",
+                        "enum": [
+                            "6m",
+                            "1y",
+                            "2y"
+                        ],
+                        "default": "1y",
+                        "name": "period",
+                        "in": "query"
+                    },
+                    {
+                        "description": "Agrupar por",
+                        "type": "string",
+                        "enum": [
+                            "breed",
+                            "sex",
+                            "age_group"
+                        ],
+                        "name": "group_by",
+                        "in": "query"
+                    }
+                ],
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "Cookie": []
+                    }
+                ],
+                "tags": [
+                    "analytics"
+                ]
+            }
+        },
+        "/analytics/reports/custom": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Informe personalizado generado"
+                    },
+                    "400": {
+                        "description": "Par\u00e1metros inv\u00e1lidos"
+                    },
+                    "401": {
+                        "description": "Token JWT requerido o inv\u00e1lido"
+                    },
+                    "500": {
+                        "description": "Error interno del servidor"
+                    }
+                },
+                "summary": "Generar informe personalizado",
+                "description": "**Generador de informes personalizables**\n        \n        Crea informes personalizados basados en criterios espec\u00edficos:\n        - Informes de salud animal\n        - Reportes de productividad\n        - An\u00e1lisis de costos\n        - Informes de inventario\n        - Reportes de actividades\n        \n        **Par\u00e1metros requeridos:**\n        - `report_type`: Tipo de informe (health, productivity, inventory, activities)\n        - `start_date`: Fecha de inicio (YYYY-MM-DD)\n        - `end_date`: Fecha de fin (YYYY-MM-DD)\n        \n        **Par\u00e1metros opcionales:**\n        - `animal_ids`: Lista de IDs de animales espec\u00edficos\n        - `breed_ids`: Lista de IDs de razas\n        - `format`: Formato de salida (json, summary)\n        - `group_by`: Agrupar por (breed, sex, age_group, month)\n        \n        **\u00datil para:**\n        - Informes ejecutivos\n        - An\u00e1lisis de tendencias\n        - Reportes regulatorios",
+                "operationId": "generate_custom_report",
+                "parameters": [
+                    {
+                        "description": "Tipo de informe",
+                        "type": "string",
+                        "enum": [
+                            "health",
+                            "productivity",
+                            "inventory",
+                            "activities"
+                        ],
+                        "required": true,
+                        "name": "report_type",
+                        "in": "query"
+                    },
+                    {
+                        "description": "Fecha de inicio (YYYY-MM-DD)",
+                        "type": "string",
+                        "required": true,
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "description": "Fecha de fin (YYYY-MM-DD)",
+                        "type": "string",
+                        "required": true,
+                        "name": "end_date",
+                        "in": "query"
+                    },
+                    {
+                        "description": "IDs de animales (separados por coma)",
+                        "type": "string",
+                        "name": "animal_ids",
+                        "in": "query"
+                    },
+                    {
+                        "description": "IDs de razas (separados por coma)",
+                        "type": "string",
+                        "name": "breed_ids",
+                        "in": "query"
+                    },
+                    {
+                        "description": "Formato de salida",
+                        "type": "string",
+                        "enum": [
+                            "json",
+                            "summary"
+                        ],
+                        "default": "json",
+                        "name": "format",
+                        "in": "query"
+                    },
+                    {
+                        "description": "Agrupar por",
+                        "type": "string",
+                        "enum": [
+                            "breed",
+                            "sex",
+                            "age_group",
+                            "month"
+                        ],
+                        "name": "group_by",
+                        "in": "query"
+                    }
+                ],
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "Cookie": []
+                    }
+                ],
+                "tags": [
+                    "analytics"
+                ]
+            }
+        },
+        "/animal-diseases/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Listar registros con filtros y paginaci\u00f3n (cach\u00e9 ligera / export / selecci\u00f3n de campos)",
+                "operationId": "list_animal-diseases",
+                "tags": [
+                    "animal-diseases"
+                ]
+            },
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear nuevo registro",
+                "operationId": "create_animal-diseases",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/AnimalDiseasesInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "animal-diseases"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD listado: devuelve solo headers (ETag, status) sin cuerpo",
+                "operationId": "head_list_animal-diseases",
+                "tags": [
+                    "animal-diseases"
+                ]
+            }
+        },
+        "/animal-diseases/bulk": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear m\u00faltiples registros en un solo request",
+                "operationId": "bulk_create_animal-diseases",
+                "tags": [
+                    "animal-diseases"
+                ]
+            }
+        },
+        "/animal-diseases/stats": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener estad\u00edsticas b\u00e1sicas del modelo",
+                "operationId": "stats_animal-diseases",
+                "tags": [
+                    "animal-diseases"
+                ]
+            }
+        },
+        "/animal-diseases/{record_id}": {
+            "parameters": [
+                {
+                    "name": "record_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "delete": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Eliminar registro",
+                "operationId": "delete_animal-diseases",
+                "tags": [
+                    "animal-diseases"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD detalle: solo headers y estado",
+                "operationId": "head_animal-diseases",
+                "tags": [
+                    "animal-diseases"
+                ]
+            },
+            "put": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar registro (reemplazo completo)",
+                "operationId": "update_animal-diseases",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/AnimalDiseasesInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "animal-diseases"
+                ]
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar parcialmente registro",
+                "operationId": "patch_animal-diseases",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/AnimalDiseasesInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "animal-diseases"
+                ]
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener detalle por ID (soporta include_relations)",
+                "operationId": "get_animal-diseases",
+                "tags": [
+                    "animal-diseases"
+                ]
+            }
+        },
+        "/animal-fields/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Listar registros con filtros y paginaci\u00f3n (cach\u00e9 ligera / export / selecci\u00f3n de campos)",
+                "operationId": "list_animal-fields",
+                "tags": [
+                    "animal-fields"
+                ]
+            },
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear nuevo registro",
+                "operationId": "create_animal-fields",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/AnimalFieldsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "animal-fields"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD listado: devuelve solo headers (ETag, status) sin cuerpo",
+                "operationId": "head_list_animal-fields",
+                "tags": [
+                    "animal-fields"
+                ]
+            }
+        },
+        "/animal-fields/bulk": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear m\u00faltiples registros en un solo request",
+                "operationId": "bulk_create_animal-fields",
+                "tags": [
+                    "animal-fields"
+                ]
+            }
+        },
+        "/animal-fields/stats": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener estad\u00edsticas b\u00e1sicas del modelo",
+                "operationId": "stats_animal-fields",
+                "tags": [
+                    "animal-fields"
+                ]
+            }
+        },
+        "/animal-fields/{record_id}": {
+            "parameters": [
+                {
+                    "name": "record_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "delete": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Eliminar registro",
+                "operationId": "delete_animal-fields",
+                "tags": [
+                    "animal-fields"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD detalle: solo headers y estado",
+                "operationId": "head_animal-fields",
+                "tags": [
+                    "animal-fields"
+                ]
+            },
+            "put": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar registro (reemplazo completo)",
+                "operationId": "update_animal-fields",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/AnimalFieldsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "animal-fields"
+                ]
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar parcialmente registro",
+                "operationId": "patch_animal-fields",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/AnimalFieldsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "animal-fields"
+                ]
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener detalle por ID (soporta include_relations)",
+                "operationId": "get_animal-fields",
+                "tags": [
+                    "animal-fields"
+                ]
+            }
+        },
+        "/animals/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Listar registros con filtros y paginaci\u00f3n (cach\u00e9 ligera / export / selecci\u00f3n de campos)",
+                "operationId": "list_animals",
+                "tags": [
+                    "animals"
+                ]
+            },
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear nuevo registro",
+                "operationId": "create_animals",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/AnimalsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "animals"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD listado: devuelve solo headers (ETag, status) sin cuerpo",
+                "operationId": "head_list_animals",
+                "tags": [
+                    "animals"
+                ]
+            }
+        },
+        "/animals/bulk": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear m\u00faltiples registros en un solo request",
+                "operationId": "bulk_create_animals",
+                "tags": [
+                    "animals"
+                ]
+            }
+        },
+        "/animals/stats": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener estad\u00edsticas b\u00e1sicas del modelo",
+                "operationId": "stats_animals",
+                "tags": [
+                    "animals"
+                ]
+            }
+        },
+        "/animals/status": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "summary": "Obtener estad\u00edsticas de animales por estado",
+                "description": "**Obtener estad\u00edsticas de animales por estado**\n        \n        Retorna un dashboard con estad\u00edsticas del ganado agrupadas por estado.\n        - Total de animales vivos, vendidos y muertos\n        - Porcentajes de distribuci\u00f3n por estado\n        - Total general del inventario\n        - Promedio de peso por estado\n        \n        **Permisos:** Requiere autenticaci\u00f3n JWT",
+                "operationId": "get_animal_status",
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "Cookie": []
+                    }
+                ],
+                "tags": [
+                    "animals"
+                ]
+            }
+        },
+        "/animals/{record_id}": {
+            "parameters": [
+                {
+                    "name": "record_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "delete": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Eliminar registro",
+                "operationId": "delete_animals",
+                "tags": [
+                    "animals"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD detalle: solo headers y estado",
+                "operationId": "head_animals",
+                "tags": [
+                    "animals"
+                ]
+            },
+            "put": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar registro (reemplazo completo)",
+                "operationId": "update_animals",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/AnimalsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "animals"
+                ]
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar parcialmente registro",
+                "operationId": "patch_animals",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/AnimalsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "animals"
+                ]
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener detalle por ID (soporta include_relations)",
+                "operationId": "get_animals",
+                "tags": [
+                    "animals"
+                ]
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "summary": "Autenticar usuario y generar tokens JWT",
+                "description": "Autenticar usuario y generar tokens JWT. Acepta campos: identifier | identification | email\nDevuelve cookies HttpOnly y access_token en body.",
+                "operationId": "login_user",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/Login"
+                        }
+                    }
+                ],
+                "tags": [
+                    "auth"
+                ]
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "summary": "Cerrar sesi\u00f3n y limpiar cookies de autenticaci\u00f3n",
+                "description": "Cerrar sesi\u00f3n y limpiar tokens.",
+                "operationId": "logout_user",
+                "tags": [
+                    "auth"
+                ]
+            }
+        },
+        "/auth/me": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "summary": "Obtener informaci\u00f3n del usuario actual",
+                "description": "Obtener informaci\u00f3n del usuario autenticado.",
+                "operationId": "get_current_user",
+                "tags": [
+                    "auth"
+                ]
+            }
+        },
+        "/auth/refresh": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "summary": "Renovar token de acceso",
+                "description": "Renovar token de acceso usando el refresh token.",
+                "operationId": "refresh_token",
+                "tags": [
+                    "auth"
+                ]
+            }
+        },
+        "/breeds/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Listar registros con filtros y paginaci\u00f3n (cach\u00e9 ligera / export / selecci\u00f3n de campos)",
+                "operationId": "list_breeds",
+                "tags": [
+                    "breeds"
+                ]
+            },
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear nuevo registro",
+                "operationId": "create_breeds",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/BreedsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "breeds"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD listado: devuelve solo headers (ETag, status) sin cuerpo",
+                "operationId": "head_list_breeds",
+                "tags": [
+                    "breeds"
+                ]
+            }
+        },
+        "/breeds/bulk": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear m\u00faltiples registros en un solo request",
+                "operationId": "bulk_create_breeds",
+                "tags": [
+                    "breeds"
+                ]
+            }
+        },
+        "/breeds/by-species/{species_id}": {
+            "parameters": [
+                {
+                    "name": "species_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Razas de la especie"
+                    },
+                    "404": {
+                        "description": "Especie no encontrada"
+                    },
+                    "500": {
+                        "description": "Error interno del servidor"
+                    }
+                },
+                "summary": "Obtener razas de una especie espec\u00edfica",
+                "description": "**Obtener razas por especie**\n\n        Retorna todas las razas de una especie espec\u00edfica.\n        \u00datil para formularios en cascada y filtros dependientes.\n\n        **Permisos:** Requiere autenticaci\u00f3n JWT",
+                "operationId": "get_breeds_by_species",
+                "security": [
+                    {
+                        "Bearer": []
+                    },
+                    {
+                        "Cookie": []
+                    }
+                ],
+                "tags": [
+                    "breeds"
+                ]
+            }
+        },
+        "/breeds/stats": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener estad\u00edsticas b\u00e1sicas del modelo",
+                "operationId": "stats_breeds",
+                "tags": [
+                    "breeds"
+                ]
+            }
+        },
+        "/breeds/{record_id}": {
+            "parameters": [
+                {
+                    "name": "record_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "delete": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Eliminar registro",
+                "operationId": "delete_breeds",
+                "tags": [
+                    "breeds"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD detalle: solo headers y estado",
+                "operationId": "head_breeds",
+                "tags": [
+                    "breeds"
+                ]
+            },
+            "put": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar registro (reemplazo completo)",
+                "operationId": "update_breeds",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/BreedsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "breeds"
+                ]
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar parcialmente registro",
+                "operationId": "patch_breeds",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/BreedsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "breeds"
+                ]
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener detalle por ID (soporta include_relations)",
+                "operationId": "get_breeds",
+                "tags": [
+                    "breeds"
+                ]
+            }
+        },
+        "/controls/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Listar registros con filtros y paginaci\u00f3n (cach\u00e9 ligera / export / selecci\u00f3n de campos)",
+                "operationId": "list_controls",
+                "tags": [
+                    "controls"
+                ]
+            },
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear nuevo registro",
+                "operationId": "create_controls",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/ControlInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "controls"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD listado: devuelve solo headers (ETag, status) sin cuerpo",
+                "operationId": "head_list_controls",
+                "tags": [
+                    "controls"
+                ]
+            }
+        },
+        "/controls/bulk": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear m\u00faltiples registros en un solo request",
+                "operationId": "bulk_create_controls",
+                "tags": [
+                    "controls"
+                ]
+            }
+        },
+        "/controls/stats": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener estad\u00edsticas b\u00e1sicas del modelo",
+                "operationId": "stats_controls",
+                "tags": [
+                    "controls"
+                ]
+            }
+        },
+        "/controls/{record_id}": {
+            "parameters": [
+                {
+                    "name": "record_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "delete": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Eliminar registro",
+                "operationId": "delete_controls",
+                "tags": [
+                    "controls"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD detalle: solo headers y estado",
+                "operationId": "head_controls",
+                "tags": [
+                    "controls"
+                ]
+            },
+            "put": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar registro (reemplazo completo)",
+                "operationId": "update_controls",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/ControlInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "controls"
+                ]
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar parcialmente registro",
+                "operationId": "patch_controls",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/ControlInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "controls"
+                ]
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener detalle por ID (soporta include_relations)",
+                "operationId": "get_controls",
+                "tags": [
+                    "controls"
+                ]
+            }
+        },
+        "/diseases/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Listar registros con filtros y paginaci\u00f3n (cach\u00e9 ligera / export / selecci\u00f3n de campos)",
+                "operationId": "list_diseases",
+                "tags": [
+                    "diseases"
+                ]
+            },
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear nuevo registro",
+                "operationId": "create_diseases",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/DiseasesInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "diseases"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD listado: devuelve solo headers (ETag, status) sin cuerpo",
+                "operationId": "head_list_diseases",
+                "tags": [
+                    "diseases"
+                ]
+            }
+        },
+        "/diseases/bulk": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear m\u00faltiples registros en un solo request",
+                "operationId": "bulk_create_diseases",
+                "tags": [
+                    "diseases"
+                ]
+            }
+        },
+        "/diseases/stats": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener estad\u00edsticas b\u00e1sicas del modelo",
+                "operationId": "stats_diseases",
+                "tags": [
+                    "diseases"
+                ]
+            }
+        },
+        "/diseases/{record_id}": {
+            "parameters": [
+                {
+                    "name": "record_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "delete": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Eliminar registro",
+                "operationId": "delete_diseases",
+                "tags": [
+                    "diseases"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD detalle: solo headers y estado",
+                "operationId": "head_diseases",
+                "tags": [
+                    "diseases"
+                ]
+            },
+            "put": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar registro (reemplazo completo)",
+                "operationId": "update_diseases",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/DiseasesInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "diseases"
+                ]
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar parcialmente registro",
+                "operationId": "patch_diseases",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/DiseasesInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "diseases"
+                ]
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener detalle por ID (soporta include_relations)",
+                "operationId": "get_diseases",
+                "tags": [
+                    "diseases"
+                ]
+            }
+        },
+        "/fields/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Listar registros con filtros y paginaci\u00f3n (cach\u00e9 ligera / export / selecci\u00f3n de campos)",
+                "operationId": "list_fields",
+                "tags": [
+                    "fields"
+                ]
+            },
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear nuevo registro",
+                "operationId": "create_fields",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/FieldsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "fields"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD listado: devuelve solo headers (ETag, status) sin cuerpo",
+                "operationId": "head_list_fields",
+                "tags": [
+                    "fields"
+                ]
+            }
+        },
+        "/fields/bulk": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear m\u00faltiples registros en un solo request",
+                "operationId": "bulk_create_fields",
+                "tags": [
+                    "fields"
+                ]
+            }
+        },
+        "/fields/stats": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener estad\u00edsticas b\u00e1sicas del modelo",
+                "operationId": "stats_fields",
+                "tags": [
+                    "fields"
+                ]
+            }
+        },
+        "/fields/{record_id}": {
+            "parameters": [
+                {
+                    "name": "record_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "delete": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Eliminar registro",
+                "operationId": "delete_fields",
+                "tags": [
+                    "fields"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD detalle: solo headers y estado",
+                "operationId": "head_fields",
+                "tags": [
+                    "fields"
+                ]
+            },
+            "put": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar registro (reemplazo completo)",
+                "operationId": "update_fields",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/FieldsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "fields"
+                ]
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar parcialmente registro",
+                "operationId": "patch_fields",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/FieldsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "fields"
+                ]
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener detalle por ID (soporta include_relations)",
+                "operationId": "get_fields",
+                "tags": [
+                    "fields"
+                ]
+            }
+        },
+        "/food-types/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Listar registros con filtros y paginaci\u00f3n (cach\u00e9 ligera / export / selecci\u00f3n de campos)",
+                "operationId": "list_food-types",
+                "tags": [
+                    "food-types"
+                ]
+            },
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear nuevo registro",
+                "operationId": "create_food-types",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/FoodTypesInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "food-types"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD listado: devuelve solo headers (ETag, status) sin cuerpo",
+                "operationId": "head_list_food-types",
+                "tags": [
+                    "food-types"
+                ]
+            }
+        },
+        "/food-types/bulk": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear m\u00faltiples registros en un solo request",
+                "operationId": "bulk_create_food-types",
+                "tags": [
+                    "food-types"
+                ]
+            }
+        },
+        "/food-types/stats": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener estad\u00edsticas b\u00e1sicas del modelo",
+                "operationId": "stats_food-types",
+                "tags": [
+                    "food-types"
+                ]
+            }
+        },
+        "/food-types/{record_id}": {
+            "parameters": [
+                {
+                    "name": "record_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "delete": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Eliminar registro",
+                "operationId": "delete_food-types",
+                "tags": [
+                    "food-types"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD detalle: solo headers y estado",
+                "operationId": "head_food-types",
+                "tags": [
+                    "food-types"
+                ]
+            },
+            "put": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar registro (reemplazo completo)",
+                "operationId": "update_food-types",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/FoodTypesInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "food-types"
+                ]
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar parcialmente registro",
+                "operationId": "patch_food-types",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/FoodTypesInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "food-types"
+                ]
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener detalle por ID (soporta include_relations)",
+                "operationId": "get_food-types",
+                "tags": [
+                    "food-types"
+                ]
+            }
+        },
+        "/genetic-improvements/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Listar registros con filtros y paginaci\u00f3n (cach\u00e9 ligera / export / selecci\u00f3n de campos)",
+                "operationId": "list_genetic-improvements",
+                "tags": [
+                    "genetic-improvements"
+                ]
+            },
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear nuevo registro",
+                "operationId": "create_genetic-improvements",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/GeneticImprovementsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "genetic-improvements"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD listado: devuelve solo headers (ETag, status) sin cuerpo",
+                "operationId": "head_list_genetic-improvements",
+                "tags": [
+                    "genetic-improvements"
+                ]
+            }
+        },
+        "/genetic-improvements/bulk": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear m\u00faltiples registros en un solo request",
+                "operationId": "bulk_create_genetic-improvements",
+                "tags": [
+                    "genetic-improvements"
+                ]
+            }
+        },
+        "/genetic-improvements/stats": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener estad\u00edsticas b\u00e1sicas del modelo",
+                "operationId": "stats_genetic-improvements",
+                "tags": [
+                    "genetic-improvements"
+                ]
+            }
+        },
+        "/genetic-improvements/{record_id}": {
+            "parameters": [
+                {
+                    "name": "record_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "delete": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Eliminar registro",
+                "operationId": "delete_genetic-improvements",
+                "tags": [
+                    "genetic-improvements"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD detalle: solo headers y estado",
+                "operationId": "head_genetic-improvements",
+                "tags": [
+                    "genetic-improvements"
+                ]
+            },
+            "put": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar registro (reemplazo completo)",
+                "operationId": "update_genetic-improvements",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/GeneticImprovementsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "genetic-improvements"
+                ]
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar parcialmente registro",
+                "operationId": "patch_genetic-improvements",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/GeneticImprovementsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "genetic-improvements"
+                ]
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener detalle por ID (soporta include_relations)",
+                "operationId": "get_genetic-improvements",
+                "tags": [
+                    "genetic-improvements"
+                ]
+            }
+        },
+        "/medications/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Listar registros con filtros y paginaci\u00f3n (cach\u00e9 ligera / export / selecci\u00f3n de campos)",
+                "operationId": "list_medications",
+                "tags": [
+                    "medications"
+                ]
+            },
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear nuevo registro",
+                "operationId": "create_medications",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/MedicationsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "medications"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD listado: devuelve solo headers (ETag, status) sin cuerpo",
+                "operationId": "head_list_medications",
+                "tags": [
+                    "medications"
+                ]
+            }
+        },
+        "/medications/bulk": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear m\u00faltiples registros en un solo request",
+                "operationId": "bulk_create_medications",
+                "tags": [
+                    "medications"
+                ]
+            }
+        },
+        "/medications/by-route/{route_id}": {
+            "parameters": [
+                {
+                    "name": "route_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/Medication"
+                            }
+                        }
+                    }
+                },
+                "summary": "Obtener medicamentos por ruta de administraci\u00f3n",
+                "operationId": "get_medications_by_route",
+                "parameters": [
+                    {
+                        "name": "X-Fields",
+                        "in": "header",
+                        "type": "string",
+                        "format": "mask",
+                        "description": "An optional fields mask"
+                    }
+                ],
+                "tags": [
+                    "medications"
+                ]
+            }
+        },
+        "/medications/stats": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener estad\u00edsticas b\u00e1sicas del modelo",
+                "operationId": "stats_medications",
+                "tags": [
+                    "medications"
+                ]
+            }
+        },
+        "/medications/with-route-administration": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/Medication"
+                            }
+                        }
+                    }
+                },
+                "summary": "Obtener todos los medicamentos con informaci\u00f3n de ruta de administraci\u00f3n",
+                "operationId": "get_medications_with_route_administration",
+                "parameters": [
+                    {
+                        "name": "X-Fields",
+                        "in": "header",
+                        "type": "string",
+                        "format": "mask",
+                        "description": "An optional fields mask"
+                    }
+                ],
+                "tags": [
+                    "medications"
+                ]
+            }
+        },
+        "/medications/{record_id}": {
+            "parameters": [
+                {
+                    "name": "record_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "delete": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Eliminar registro",
+                "operationId": "delete_medications",
+                "tags": [
+                    "medications"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD detalle: solo headers y estado",
+                "operationId": "head_medications",
+                "tags": [
+                    "medications"
+                ]
+            },
+            "put": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar registro (reemplazo completo)",
+                "operationId": "update_medications",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/MedicationsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "medications"
+                ]
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar parcialmente registro",
+                "operationId": "patch_medications",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/MedicationsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "medications"
+                ]
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener detalle por ID (soporta include_relations)",
+                "operationId": "get_medications",
+                "tags": [
+                    "medications"
+                ]
+            }
+        },
+        "/route-administrations/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Listar registros con filtros y paginaci\u00f3n (cach\u00e9 ligera / export / selecci\u00f3n de campos)",
+                "operationId": "list_route-administrations",
+                "tags": [
+                    "route-administrations"
+                ]
+            },
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear nuevo registro",
+                "operationId": "create_route-administrations",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/RouteAdministrationInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "route-administrations"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD listado: devuelve solo headers (ETag, status) sin cuerpo",
+                "operationId": "head_list_route-administrations",
+                "tags": [
+                    "route-administrations"
+                ]
+            }
+        },
+        "/route-administrations/active": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/RouteAdministration"
+                            }
+                        }
+                    }
+                },
+                "summary": "Obtener todas las rutas de administraci\u00f3n activas",
+                "operationId": "get_active_route_administrations",
+                "parameters": [
+                    {
+                        "name": "X-Fields",
+                        "in": "header",
+                        "type": "string",
+                        "format": "mask",
+                        "description": "An optional fields mask"
+                    }
+                ],
+                "tags": [
+                    "route-administrations"
+                ]
+            }
+        },
+        "/route-administrations/bulk": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear m\u00faltiples registros en un solo request",
+                "operationId": "bulk_create_route-administrations",
+                "tags": [
+                    "route-administrations"
+                ]
+            }
+        },
+        "/route-administrations/search": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/RouteAdministration"
+                            }
+                        }
+                    }
+                },
+                "summary": "Buscar rutas de administraci\u00f3n por nombre o descripci\u00f3n",
+                "operationId": "search_route_administrations",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "type": "string",
+                        "description": "T\u00e9rmino de b\u00fasqueda"
+                    },
+                    {
+                        "name": "X-Fields",
+                        "in": "header",
+                        "type": "string",
+                        "format": "mask",
+                        "description": "An optional fields mask"
+                    }
+                ],
+                "tags": [
+                    "route-administrations"
+                ]
+            }
+        },
+        "/route-administrations/stats": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener estad\u00edsticas b\u00e1sicas del modelo",
+                "operationId": "stats_route-administrations",
+                "tags": [
+                    "route-administrations"
+                ]
+            }
+        },
+        "/route-administrations/{record_id}": {
+            "parameters": [
+                {
+                    "name": "record_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "delete": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Eliminar registro",
+                "operationId": "delete_route-administrations",
+                "tags": [
+                    "route-administrations"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD detalle: solo headers y estado",
+                "operationId": "head_route-administrations",
+                "tags": [
+                    "route-administrations"
+                ]
+            },
+            "put": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar registro (reemplazo completo)",
+                "operationId": "update_route-administrations",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/RouteAdministrationInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "route-administrations"
+                ]
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar parcialmente registro",
+                "operationId": "patch_route-administrations",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/RouteAdministrationInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "route-administrations"
+                ]
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener detalle por ID (soporta include_relations)",
+                "operationId": "get_route-administrations",
+                "tags": [
+                    "route-administrations"
+                ]
+            }
+        },
+        "/security/alerts": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "summary": "Obtener alertas de seguridad del \u00faltimo per\u00edodo",
+                "description": "Obtener alertas de seguridad recientes",
+                "operationId": "get_security_alerts",
+                "tags": [
+                    "security"
+                ]
+            }
+        },
+        "/security/metrics": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "M\u00e9tricas de seguridad (solo administradores)",
+                "operationId": "get_security_metrics",
+                "tags": [
+                    "security"
+                ]
+            }
+        },
+        "/security/scan": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "summary": "Ejecutar escaneo de seguridad del sistema",
+                "description": "Ejecutar escaneo de seguridad manual",
+                "operationId": "run_security_scan",
+                "tags": [
+                    "security"
+                ]
+            }
+        },
+        "/species/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Listar registros con filtros y paginaci\u00f3n (cach\u00e9 ligera / export / selecci\u00f3n de campos)",
+                "operationId": "list_species",
+                "tags": [
+                    "species"
+                ]
+            },
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear nuevo registro",
+                "operationId": "create_species",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/SpeciesInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "species"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD listado: devuelve solo headers (ETag, status) sin cuerpo",
+                "operationId": "head_list_species",
+                "tags": [
+                    "species"
+                ]
+            }
+        },
+        "/species/bulk": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear m\u00faltiples registros en un solo request",
+                "operationId": "bulk_create_species",
+                "tags": [
+                    "species"
+                ]
+            }
+        },
+        "/species/stats": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener estad\u00edsticas b\u00e1sicas del modelo",
+                "operationId": "stats_species",
+                "tags": [
+                    "species"
+                ]
+            }
+        },
+        "/species/{record_id}": {
+            "parameters": [
+                {
+                    "name": "record_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "delete": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Eliminar registro",
+                "operationId": "delete_species",
+                "tags": [
+                    "species"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD detalle: solo headers y estado",
+                "operationId": "head_species",
+                "tags": [
+                    "species"
+                ]
+            },
+            "put": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar registro (reemplazo completo)",
+                "operationId": "update_species",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/SpeciesInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "species"
+                ]
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar parcialmente registro",
+                "operationId": "patch_species",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/SpeciesInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "species"
+                ]
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener detalle por ID (soporta include_relations)",
+                "operationId": "get_species",
+                "tags": [
+                    "species"
+                ]
+            }
+        },
+        "/treatment-medications/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Listar registros con filtros y paginaci\u00f3n (cach\u00e9 ligera / export / selecci\u00f3n de campos)",
+                "operationId": "list_treatment-medications",
+                "tags": [
+                    "treatment-medications"
+                ]
+            },
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear nuevo registro",
+                "operationId": "create_treatment-medications",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/TreatmentMedicationsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "treatment-medications"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD listado: devuelve solo headers (ETag, status) sin cuerpo",
+                "operationId": "head_list_treatment-medications",
+                "tags": [
+                    "treatment-medications"
+                ]
+            }
+        },
+        "/treatment-medications/bulk": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear m\u00faltiples registros en un solo request",
+                "operationId": "bulk_create_treatment-medications",
+                "tags": [
+                    "treatment-medications"
+                ]
+            }
+        },
+        "/treatment-medications/stats": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener estad\u00edsticas b\u00e1sicas del modelo",
+                "operationId": "stats_treatment-medications",
+                "tags": [
+                    "treatment-medications"
+                ]
+            }
+        },
+        "/treatment-medications/{record_id}": {
+            "parameters": [
+                {
+                    "name": "record_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "delete": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Eliminar registro",
+                "operationId": "delete_treatment-medications",
+                "tags": [
+                    "treatment-medications"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD detalle: solo headers y estado",
+                "operationId": "head_treatment-medications",
+                "tags": [
+                    "treatment-medications"
+                ]
+            },
+            "put": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar registro (reemplazo completo)",
+                "operationId": "update_treatment-medications",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/TreatmentMedicationsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "treatment-medications"
+                ]
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar parcialmente registro",
+                "operationId": "patch_treatment-medications",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/TreatmentMedicationsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "treatment-medications"
+                ]
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener detalle por ID (soporta include_relations)",
+                "operationId": "get_treatment-medications",
+                "tags": [
+                    "treatment-medications"
+                ]
+            }
+        },
+        "/treatment-vaccines/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Listar registros con filtros y paginaci\u00f3n (cach\u00e9 ligera / export / selecci\u00f3n de campos)",
+                "operationId": "list_treatment-vaccines",
+                "tags": [
+                    "treatment-vaccines"
+                ]
+            },
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear nuevo registro",
+                "operationId": "create_treatment-vaccines",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/TreatmentVaccinesInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "treatment-vaccines"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD listado: devuelve solo headers (ETag, status) sin cuerpo",
+                "operationId": "head_list_treatment-vaccines",
+                "tags": [
+                    "treatment-vaccines"
+                ]
+            }
+        },
+        "/treatment-vaccines/bulk": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear m\u00faltiples registros en un solo request",
+                "operationId": "bulk_create_treatment-vaccines",
+                "tags": [
+                    "treatment-vaccines"
+                ]
+            }
+        },
+        "/treatment-vaccines/stats": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener estad\u00edsticas b\u00e1sicas del modelo",
+                "operationId": "stats_treatment-vaccines",
+                "tags": [
+                    "treatment-vaccines"
+                ]
+            }
+        },
+        "/treatment-vaccines/{record_id}": {
+            "parameters": [
+                {
+                    "name": "record_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "delete": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Eliminar registro",
+                "operationId": "delete_treatment-vaccines",
+                "tags": [
+                    "treatment-vaccines"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD detalle: solo headers y estado",
+                "operationId": "head_treatment-vaccines",
+                "tags": [
+                    "treatment-vaccines"
+                ]
+            },
+            "put": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar registro (reemplazo completo)",
+                "operationId": "update_treatment-vaccines",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/TreatmentVaccinesInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "treatment-vaccines"
+                ]
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar parcialmente registro",
+                "operationId": "patch_treatment-vaccines",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/TreatmentVaccinesInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "treatment-vaccines"
+                ]
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener detalle por ID (soporta include_relations)",
+                "operationId": "get_treatment-vaccines",
+                "tags": [
+                    "treatment-vaccines"
+                ]
+            }
+        },
+        "/treatments/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Listar registros con filtros y paginaci\u00f3n (cach\u00e9 ligera / export / selecci\u00f3n de campos)",
+                "operationId": "list_treatments",
+                "tags": [
+                    "treatments"
+                ]
+            },
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear nuevo registro",
+                "operationId": "create_treatments",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/TreatmentsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "treatments"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD listado: devuelve solo headers (ETag, status) sin cuerpo",
+                "operationId": "head_list_treatments",
+                "tags": [
+                    "treatments"
+                ]
+            }
+        },
+        "/treatments/bulk": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear m\u00faltiples registros en un solo request",
+                "operationId": "bulk_create_treatments",
+                "tags": [
+                    "treatments"
+                ]
+            }
+        },
+        "/treatments/stats": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener estad\u00edsticas b\u00e1sicas del modelo",
+                "operationId": "stats_treatments",
+                "tags": [
+                    "treatments"
+                ]
+            }
+        },
+        "/treatments/{record_id}": {
+            "parameters": [
+                {
+                    "name": "record_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "delete": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Eliminar registro",
+                "operationId": "delete_treatments",
+                "tags": [
+                    "treatments"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD detalle: solo headers y estado",
+                "operationId": "head_treatments",
+                "tags": [
+                    "treatments"
+                ]
+            },
+            "put": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar registro (reemplazo completo)",
+                "operationId": "update_treatments",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/TreatmentsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "treatments"
+                ]
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar parcialmente registro",
+                "operationId": "patch_treatments",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/TreatmentsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "treatments"
+                ]
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener detalle por ID (soporta include_relations)",
+                "operationId": "get_treatments",
+                "tags": [
+                    "treatments"
+                ]
+            }
+        },
+        "/users/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Listar registros con filtros y paginaci\u00f3n (cach\u00e9 ligera / export / selecci\u00f3n de campos)",
+                "operationId": "list_users",
+                "tags": [
+                    "users"
+                ]
+            },
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear nuevo registro",
+                "operationId": "create_users",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/UserInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "users"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD listado: devuelve solo headers (ETag, status) sin cuerpo",
+                "operationId": "head_list_users",
+                "tags": [
+                    "users"
+                ]
+            }
+        },
+        "/users/bulk": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear m\u00faltiples registros en un solo request",
+                "operationId": "bulk_create_users",
+                "tags": [
+                    "users"
+                ]
+            }
+        },
+        "/users/public": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear un usuario sin autenticaci\u00f3n (solo permitido si no existen usuarios previos).",
+                "operationId": "public_create_user",
+                "tags": [
+                    "users"
+                ]
+            }
+        },
+        "/users/roles": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Distribuci\u00f3n de usuarios por roles",
+                "operationId": "get_user_roles_stats",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "tags": [
+                    "users"
+                ]
+            }
+        },
+        "/users/statistics": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Estad\u00edsticas completas de usuarios",
+                "operationId": "get_user_statistics",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "tags": [
+                    "users"
+                ]
+            }
+        },
+        "/users/stats": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener estad\u00edsticas b\u00e1sicas del modelo",
+                "operationId": "stats_users",
+                "tags": [
+                    "users"
+                ]
+            }
+        },
+        "/users/status": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Resumen de usuarios por estado",
+                "operationId": "get_user_status_stats",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "tags": [
+                    "users"
+                ]
+            }
+        },
+        "/users/{record_id}": {
+            "parameters": [
+                {
+                    "name": "record_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "delete": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Eliminar registro",
+                "operationId": "delete_users",
+                "tags": [
+                    "users"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD detalle: solo headers y estado",
+                "operationId": "head_users",
+                "tags": [
+                    "users"
+                ]
+            },
+            "put": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar registro (reemplazo completo)",
+                "operationId": "update_users",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/UserInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "users"
+                ]
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar parcialmente registro",
+                "operationId": "patch_users",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/UserInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "users"
+                ]
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener detalle por ID (soporta include_relations)",
+                "operationId": "get_users",
+                "tags": [
+                    "users"
+                ]
+            }
+        },
+        "/vaccinations/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Listar registros con filtros y paginaci\u00f3n (cach\u00e9 ligera / export / selecci\u00f3n de campos)",
+                "operationId": "list_vaccinations",
+                "tags": [
+                    "vaccinations"
+                ]
+            },
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear nuevo registro",
+                "operationId": "create_vaccinations",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "vaccinations"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD listado: devuelve solo headers (ETag, status) sin cuerpo",
+                "operationId": "head_list_vaccinations",
+                "tags": [
+                    "vaccinations"
+                ]
+            }
+        },
+        "/vaccinations/bulk": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear m\u00faltiples registros en un solo request",
+                "operationId": "bulk_create_vaccinations",
+                "tags": [
+                    "vaccinations"
+                ]
+            }
+        },
+        "/vaccinations/stats": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener estad\u00edsticas b\u00e1sicas del modelo",
+                "operationId": "stats_vaccinations",
+                "tags": [
+                    "vaccinations"
+                ]
+            }
+        },
+        "/vaccinations/{record_id}": {
+            "parameters": [
+                {
+                    "name": "record_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "delete": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Eliminar registro",
+                "operationId": "delete_vaccinations",
+                "tags": [
+                    "vaccinations"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD detalle: solo headers y estado",
+                "operationId": "head_vaccinations",
+                "tags": [
+                    "vaccinations"
+                ]
+            },
+            "put": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar registro (reemplazo completo)",
+                "operationId": "update_vaccinations",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "vaccinations"
+                ]
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar parcialmente registro",
+                "operationId": "patch_vaccinations",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationsInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "vaccinations"
+                ]
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener detalle por ID (soporta include_relations)",
+                "operationId": "get_vaccinations",
+                "tags": [
+                    "vaccinations"
+                ]
+            }
+        },
+        "/vaccines/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Listar registros con filtros y paginaci\u00f3n (cach\u00e9 ligera / export / selecci\u00f3n de campos)",
+                "operationId": "list_vaccines",
+                "tags": [
+                    "vaccines"
+                ]
+            },
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear nuevo registro",
+                "operationId": "create_vaccines",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinesInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "vaccines"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD listado: devuelve solo headers (ETag, status) sin cuerpo",
+                "operationId": "head_list_vaccines",
+                "tags": [
+                    "vaccines"
+                ]
+            }
+        },
+        "/vaccines/bulk": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Crear m\u00faltiples registros en un solo request",
+                "operationId": "bulk_create_vaccines",
+                "tags": [
+                    "vaccines"
+                ]
+            }
+        },
+        "/vaccines/by-route/{route_id}": {
+            "parameters": [
+                {
+                    "name": "route_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/Vaccine"
+                            }
+                        }
+                    }
+                },
+                "summary": "Obtener vacunas por ruta de administraci\u00f3n",
+                "operationId": "get_vaccines_by_route",
+                "parameters": [
+                    {
+                        "name": "X-Fields",
+                        "in": "header",
+                        "type": "string",
+                        "format": "mask",
+                        "description": "An optional fields mask"
+                    }
+                ],
+                "tags": [
+                    "vaccines"
+                ]
+            }
+        },
+        "/vaccines/stats": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener estad\u00edsticas b\u00e1sicas del modelo",
+                "operationId": "stats_vaccines",
+                "tags": [
+                    "vaccines"
+                ]
+            }
+        },
+        "/vaccines/with-route-administration": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/Vaccine"
+                            }
+                        }
+                    }
+                },
+                "summary": "Obtener todas las vacunas con informaci\u00f3n de ruta de administraci\u00f3n",
+                "operationId": "get_vaccines_with_route_administration",
+                "parameters": [
+                    {
+                        "name": "X-Fields",
+                        "in": "header",
+                        "type": "string",
+                        "format": "mask",
+                        "description": "An optional fields mask"
+                    }
+                ],
+                "tags": [
+                    "vaccines"
+                ]
+            }
+        },
+        "/vaccines/{record_id}": {
+            "parameters": [
+                {
+                    "name": "record_id",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "delete": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Eliminar registro",
+                "operationId": "delete_vaccines",
+                "tags": [
+                    "vaccines"
+                ]
+            },
+            "head": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "HEAD detalle: solo headers y estado",
+                "operationId": "head_vaccines",
+                "tags": [
+                    "vaccines"
+                ]
+            },
+            "put": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar registro (reemplazo completo)",
+                "operationId": "update_vaccines",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinesInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "vaccines"
+                ]
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Actualizar parcialmente registro",
+                "operationId": "patch_vaccines",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinesInput"
+                        }
+                    }
+                ],
+                "tags": [
+                    "vaccines"
+                ]
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "description": "Obtener detalle por ID (soporta include_relations)",
+                "operationId": "get_vaccines",
+                "tags": [
+                    "vaccines"
+                ]
+            }
+        }
+    },
+    "info": {
+        "title": "Finca Villa Luz API",
+        "version": "1.0",
+        "description": "**API Optimizada para Finca Villa Luz**\n\nUna API RESTful para la gesti\u00f3n integral de ganado. Todos los endpoints devuelven respuestas en formato JSON estandarizado.\n\n**Notas de Inicio R\u00e1pido:**\n1.  **Autenticaci\u00f3n**:\n    -   Usa el endpoint `/auth/login` para obtener tus tokens.\n    -   Usuario administrador por defecto: `identification=99999999`, `password=password123`.\n    -   La API utiliza JWT, que se puede enviar como `Bearer` token en el encabezado `Authorization` o a trav\u00e9s de cookies seguras (HttpOnly).\n\n2.  **Endpoints**:\n    -   La mayor\u00eda de los recursos (animales, usuarios, etc.) siguen un patr\u00f3n CRUD est\u00e1ndar.\n    -   Endpoints de anal\u00edtica (`/analytics`) y seguridad (`/security`) ofrecen datos agregados.\n\n3.  **Respuestas JSON**:\n    -   Las respuestas exitosas (`200 OK`, `201CREATED`) siguen la estructura: `{ \"success\": true, \"message\": \"...\", \"data\": { ... } }`.\n    -   Las respuestas de error (`4xx`, `5xx`) siguen la estructura: `{ \"success\": false, \"error\": \"...\", \"message\": \"...\", \"details\": { ... } }`.\n",
+        "contact": {
+            "name": "Finca Villa Luz",
+            "email": "info@fincavillaluz.com",
+            "url": null
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
+        }
+    },
+    "produces": [
+        "application/json"
+    ],
+    "consumes": [
+        "application/json"
+    ],
+    "securityDefinitions": {
+        "Bearer": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "Authorization",
+            "description": "JWT token. Formato: Bearer <token>"
+        },
+        "Cookie": {
+            "type": "apiKey",
+            "in": "cookie",
+            "name": "access_token_cookie",
+            "description": "JWT token en cookie (autenticaci\u00f3n autom\u00e1tica)"
+        }
+    },
+    "security": [
+        {
+            "Bearer": []
+        },
+        {
+            "Cookie": []
+        }
+    ],
+    "tags": [
+        {
+            "name": "auth",
+            "description": "\ud83d\udd10 Autenticaci\u00f3n y Autorizaci\u00f3n Optimizada"
+        },
+        {
+            "name": "users",
+            "description": "\ud83d\udc65 Gesti\u00f3n Optimizada de Usuarios del Sistema"
+        },
+        {
+            "name": "animals",
+            "description": "\ud83d\udc04 Gesti\u00f3n Optimizada del Ganado"
+        },
+        {
+            "name": "analytics",
+            "description": "\ud83d\udcca Analytics y Dashboard - Sistema de Gesti\u00f3n Integral"
+        },
+        {
+            "name": "security",
+            "description": "\ud83d\udd10 Monitoreo y Dashboard de Seguridad"
+        },
+        {
+            "name": "species",
+            "description": "\ud83e\uddec Gesti\u00f3n Optimizada de Especies - Cat\u00e1logo Gen\u00e9tico"
+        },
+        {
+            "name": "breeds",
+            "description": "\ud83e\uddec Gesti\u00f3n Optimizada de Razas - Cat\u00e1logo Gen\u00e9tico"
+        },
+        {
+            "name": "controls",
+            "description": "\ud83e\ude7a Gesti\u00f3n de Controles de Salud"
+        },
+        {
+            "name": "fields",
+            "description": "\ud83c\udfde\ufe0f Gesti\u00f3n de Campos y Potreros"
+        },
+        {
+            "name": "diseases",
+            "description": "\ud83e\udda0 Gesti\u00f3n de Enfermedades"
+        },
+        {
+            "name": "genetic-improvements",
+            "description": "\ud83e\uddec Gesti\u00f3n de Mejoras Gen\u00e9ticas"
+        },
+        {
+            "name": "food-types",
+            "description": "\ud83c\udf3e Gesti\u00f3n de Tipos de Alimentaci\u00f3n"
+        },
+        {
+            "name": "treatments",
+            "description": "\ud83d\udc8a Gesti\u00f3n Optimizada de Tratamientos M\u00e9dicos"
+        },
+        {
+            "name": "vaccinations",
+            "description": "\ud83d\udc89 Gesti\u00f3n de Vacunaciones"
+        },
+        {
+            "name": "vaccines",
+            "description": "\ud83d\udc89 Gesti\u00f3n de Vacunas"
+        },
+        {
+            "name": "medications",
+            "description": "\ud83d\udc8a Gesti\u00f3n de Medicamentos"
+        },
+        {
+            "name": "route-administrations",
+            "description": "Rutas de Administraci\u00f3n"
+        },
+        {
+            "name": "animal-diseases",
+            "description": "\ud83d\udd17 Gesti\u00f3n de Enfermedades por Animal"
+        },
+        {
+            "name": "animal-fields",
+            "description": "\ud83d\udd17 Gesti\u00f3n de Campos por Animal"
+        },
+        {
+            "name": "treatment-medications",
+            "description": "\ud83d\udd17 Gesti\u00f3n de Medicamentos por Tratamiento"
+        },
+        {
+            "name": "treatment-vaccines",
+            "description": "\ud83d\udd17 Gesti\u00f3n de Vacunas por Tratamiento"
+        }
+    ],
+    "definitions": {
+        "Login": {
+            "required": [
+                "password"
+            ],
+            "properties": {
+                "identifier": {
+                    "type": "object",
+                    "description": "Email o n\u00famero de identificaci\u00f3n (campo principal) (string | number)",
+                    "example": "12345678"
+                },
+                "identification": {
+                    "type": "object",
+                    "description": "Alias: n\u00famero de identificaci\u00f3n si no se env\u00eda identifier (string | number)",
+                    "example": "12345678"
+                },
+                "email": {
+                    "type": "string",
+                    "description": "Alias: email si no se env\u00eda identifier",
+                    "example": "user@example.com"
+                },
+                "password": {
+                    "type": "string",
+                    "description": "Contrase\u00f1a",
+                    "example": "password123"
+                }
+            },
+            "type": "object"
+        },
+        "UserInput": {
+            "required": [
+                "email",
+                "fullname",
+                "identification",
+                "phone",
+                "role"
+            ],
+            "properties": {
+                "identification": {
+                    "type": "integer",
+                    "description": "Identification"
+                },
+                "fullname": {
+                    "type": "string",
+                    "description": "Fullname"
+                },
+                "password": {
+                    "type": "string",
+                    "description": "Password (raw, will be hashed)"
+                },
+                "email": {
+                    "type": "string",
+                    "description": "Email"
+                },
+                "phone": {
+                    "type": "string",
+                    "description": "Phone"
+                },
+                "address": {
+                    "type": "string",
+                    "description": "Address"
+                },
+                "role": {
+                    "type": "string",
+                    "description": "Role. Valores v\u00e1lidos: Aprendiz, Instructor, Administrador"
+                },
+                "status": {
+                    "type": "boolean",
+                    "description": "Status"
+                }
+            },
+            "type": "object"
+        },
+        "AnimalsInput": {
+            "required": [
+                "birth_date",
+                "breeds_id",
+                "record",
+                "sex",
+                "weight"
+            ],
+            "properties": {
+                "sex": {
+                    "type": "string",
+                    "description": "Sex. Valores v\u00e1lidos: Hembra, Macho"
+                },
+                "birth_date": {
+                    "type": "object",
+                    "description": "Birth Date"
+                },
+                "weight": {
+                    "type": "integer",
+                    "description": "Weight"
+                },
+                "record": {
+                    "type": "string",
+                    "description": "Record"
+                },
+                "status": {
+                    "type": "string",
+                    "description": "Status. Valores v\u00e1lidos: Vivo, Vendido, Muerto"
+                },
+                "breeds_id": {
+                    "type": "integer",
+                    "description": "Breeds Id"
+                },
+                "idFather": {
+                    "type": "integer",
+                    "description": "Idfather"
+                },
+                "idMother": {
+                    "type": "integer",
+                    "description": "Idmother"
+                }
+            },
+            "type": "object"
+        },
+        "Dashboard": {
+            "properties": {
+                "total_animals": {
+                    "type": "integer",
+                    "description": "Total de animales"
+                },
+                "active_animals": {
+                    "type": "integer",
+                    "description": "Animales activos"
+                },
+                "health_alerts": {
+                    "type": "integer",
+                    "description": "Alertas de salud"
+                },
+                "productivity_score": {
+                    "type": "number",
+                    "description": "Puntuaci\u00f3n de productividad"
+                },
+                "recent_activities": {
+                    "type": "array",
+                    "description": "Actividades recientes",
+                    "items": {
+                        "type": "object"
+                    }
+                },
+                "generated_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Fecha de generaci\u00f3n"
+                }
+            },
+            "type": "object"
+        },
+        "ProductionStats": {
+            "properties": {
+                "weight_trends": {
+                    "type": "array",
+                    "description": "Tendencias de peso",
+                    "items": {
+                        "type": "object"
+                    }
+                },
+                "growth_rates": {
+                    "type": "array",
+                    "description": "Tasas de crecimiento",
+                    "items": {
+                        "type": "object"
+                    }
+                },
+                "productivity_metrics": {
+                    "type": "object",
+                    "description": "M\u00e9tricas de productividad"
+                },
+                "best_performers": {
+                    "type": "array",
+                    "description": "Mejores performers",
+                    "items": {
+                        "type": "object"
+                    }
+                },
+                "group_statistics": {
+                    "type": "object",
+                    "description": "Estad\u00edsticas por grupo"
+                },
+                "summary": {
+                    "type": "object",
+                    "description": "Resumen"
+                }
+            },
+            "type": "object"
+        },
+        "AnimalStats": {
+            "properties": {
+                "by_status": {
+                    "type": "object",
+                    "description": "Por estado"
+                },
+                "by_sex": {
+                    "type": "object",
+                    "description": "Por sexo"
+                },
+                "by_breed": {
+                    "type": "array",
+                    "description": "Por raza",
+                    "items": {
+                        "type": "object"
+                    }
+                },
+                "by_age_group": {
+                    "type": "object",
+                    "description": "Por grupo de edad"
+                },
+                "weight_distribution": {
+                    "type": "object",
+                    "description": "Distribuci\u00f3n de pesos"
+                },
+                "total_animals": {
+                    "type": "integer",
+                    "description": "Total de animales"
+                },
+                "average_weight": {
+                    "type": "number",
+                    "description": "Peso promedio"
+                }
+            },
+            "type": "object"
+        },
+        "HealthStats": {
+            "properties": {
+                "treatments_by_month": {
+                    "type": "array",
+                    "description": "Tratamientos por mes",
+                    "items": {
+                        "type": "object"
+                    }
+                },
+                "vaccinations_by_month": {
+                    "type": "array",
+                    "description": "Vacunaciones por mes",
+                    "items": {
+                        "type": "object"
+                    }
+                },
+                "health_status_distribution": {
+                    "type": "object",
+                    "description": "Distribuci\u00f3n de estados de salud"
+                },
+                "common_diseases": {
+                    "type": "array",
+                    "description": "Enfermedades comunes",
+                    "items": {
+                        "type": "object"
+                    }
+                },
+                "medication_usage": {
+                    "type": "array",
+                    "description": "Uso de medicamentos",
+                    "items": {
+                        "type": "object"
+                    }
+                },
+                "summary": {
+                    "type": "object",
+                    "description": "Resumen"
+                }
+            },
+            "type": "object"
+        },
+        "SpeciesInput": {
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Name"
+                }
+            },
+            "type": "object"
+        },
+        "BreedsInput": {
+            "required": [
+                "name",
+                "species_id"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Name"
+                },
+                "species_id": {
+                    "type": "integer",
+                    "description": "Species Id"
+                }
+            },
+            "type": "object"
+        },
+        "ControlInput": {
+            "required": [
+                "animal_id",
+                "checkup_date",
+                "health_status"
+            ],
+            "properties": {
+                "checkup_date": {
+                    "type": "object",
+                    "description": "Checkup Date"
+                },
+                "health_status": {
+                    "type": "string",
+                    "description": "Health Status. Valores v\u00e1lidos: Excelente, Bueno, Regular, Malo, Sano"
+                },
+                "weight": {
+                    "type": "integer",
+                    "description": "Weight"
+                },
+                "height": {
+                    "type": "integer",
+                    "description": "Height"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Description"
+                },
+                "animal_id": {
+                    "type": "integer",
+                    "description": "Animal Id"
+                }
+            },
+            "type": "object"
+        },
+        "FieldsInput": {
+            "required": [
+                "area",
+                "capacity",
+                "gauges",
+                "handlings",
+                "name",
+                "state",
+                "ubication"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Name"
+                },
+                "ubication": {
+                    "type": "string",
+                    "description": "Ubication"
+                },
+                "capacity": {
+                    "type": "string",
+                    "description": "Capacity"
+                },
+                "state": {
+                    "type": "string",
+                    "description": "State. Valores v\u00e1lidos: Disponible, Ocupado, Mantenimiento, Restringido, Da\u00f1ado, Activo"
+                },
+                "handlings": {
+                    "type": "string",
+                    "description": "Handlings"
+                },
+                "gauges": {
+                    "type": "string",
+                    "description": "Gauges"
+                },
+                "area": {
+                    "type": "string",
+                    "description": "Area"
+                },
+                "food_type_id": {
+                    "type": "integer",
+                    "description": "Food Type Id"
+                }
+            },
+            "type": "object"
+        },
+        "DiseasesInput": {
+            "required": [
+                "details",
+                "name",
+                "symptoms"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Name"
+                },
+                "symptoms": {
+                    "type": "string",
+                    "description": "Symptoms"
+                },
+                "details": {
+                    "type": "string",
+                    "description": "Details"
+                }
+            },
+            "type": "object"
+        },
+        "GeneticImprovementsInput": {
+            "required": [
+                "animal_id",
+                "date",
+                "details",
+                "genetic_event_technique",
+                "results"
+            ],
+            "properties": {
+                "date": {
+                    "type": "object",
+                    "description": "Date"
+                },
+                "details": {
+                    "type": "string",
+                    "description": "Details"
+                },
+                "results": {
+                    "type": "string",
+                    "description": "Results"
+                },
+                "genetic_event_technique": {
+                    "type": "string",
+                    "description": "Genetic Event Technique"
+                },
+                "animal_id": {
+                    "type": "integer",
+                    "description": "Animal Id"
+                }
+            },
+            "type": "object"
+        },
+        "FoodTypesInput": {
+            "required": [
+                "area",
+                "food_type",
+                "gauges",
+                "handlings",
+                "sowing_date"
+            ],
+            "properties": {
+                "food_type": {
+                    "type": "string",
+                    "description": "Food Type"
+                },
+                "sowing_date": {
+                    "type": "object",
+                    "description": "Sowing Date"
+                },
+                "harvest_date": {
+                    "type": "object",
+                    "description": "Harvest Date"
+                },
+                "area": {
+                    "type": "integer",
+                    "description": "Area"
+                },
+                "handlings": {
+                    "type": "string",
+                    "description": "Handlings"
+                },
+                "gauges": {
+                    "type": "string",
+                    "description": "Gauges"
+                }
+            },
+            "type": "object"
+        },
+        "TreatmentsInput": {
+            "required": [
+                "animal_id",
+                "description",
+                "dosis",
+                "frequency",
+                "treatment_date"
+            ],
+            "properties": {
+                "treatment_date": {
+                    "type": "object",
+                    "description": "Treatment Date"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Description"
+                },
+                "frequency": {
+                    "type": "string",
+                    "description": "Frequency"
+                },
+                "observations": {
+                    "type": "string",
+                    "description": "Observations"
+                },
+                "dosis": {
+                    "type": "string",
+                    "description": "Dosis"
+                },
+                "animal_id": {
+                    "type": "integer",
+                    "description": "Animal Id"
+                }
+            },
+            "type": "object"
+        },
+        "VaccinationsInput": {
+            "required": [
+                "animal_id",
+                "vaccination_date",
+                "vaccine_id"
+            ],
+            "properties": {
+                "animal_id": {
+                    "type": "integer",
+                    "description": "Animal Id"
+                },
+                "vaccine_id": {
+                    "type": "integer",
+                    "description": "Vaccine Id"
+                },
+                "vaccination_date": {
+                    "type": "object",
+                    "description": "Vaccination Date"
+                },
+                "apprentice_id": {
+                    "type": "integer",
+                    "description": "Apprentice Id"
+                },
+                "instructor_id": {
+                    "type": "integer",
+                    "description": "Instructor Id"
+                }
+            },
+            "type": "object"
+        },
+        "VaccinesInput": {
+            "required": [
+                "dosis",
+                "name",
+                "national_plan",
+                "route_administration_id",
+                "target_disease_id",
+                "type",
+                "vaccination_interval"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Name"
+                },
+                "dosis": {
+                    "type": "string",
+                    "description": "Dosis"
+                },
+                "route_administration_id": {
+                    "type": "integer",
+                    "description": "Route Administration Id"
+                },
+                "vaccination_interval": {
+                    "type": "string",
+                    "description": "Vaccination Interval"
+                },
+                "type": {
+                    "type": "string",
+                    "description": "Type. Valores v\u00e1lidos: Atenuada, Inactivada, Toxoide, Subunidad, Conjugada, Recombinante, Adn, Arn"
+                },
+                "national_plan": {
+                    "type": "string",
+                    "description": "National Plan"
+                },
+                "target_disease_id": {
+                    "type": "integer",
+                    "description": "Target Disease Id"
+                }
+            },
+            "type": "object"
+        },
+        "Vaccine": {
+            "required": [
+                "dosis",
+                "name",
+                "national_plan",
+                "route_administration_id",
+                "target_disease_id",
+                "type",
+                "vaccination_interval"
+            ],
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "description": "ID \u00fanico de la vacuna"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Nombre de la vacuna"
+                },
+                "dosis": {
+                    "type": "string",
+                    "description": "Dosis"
+                },
+                "route_administration_id": {
+                    "type": "integer",
+                    "description": "ID de la ruta de administraci\u00f3n"
+                },
+                "vaccination_interval": {
+                    "type": "string",
+                    "description": "Intervalo de vacunaci\u00f3n"
+                },
+                "type": {
+                    "type": "string",
+                    "description": "Tipo de vacuna"
+                },
+                "national_plan": {
+                    "type": "string",
+                    "description": "Plan nacional"
+                },
+                "target_disease_id": {
+                    "type": "integer",
+                    "description": "ID de la enfermedad objetivo"
+                },
+                "route_administration_rel": {
+                    "description": "Informaci\u00f3n de la ruta de administraci\u00f3n",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/RouteAdminRef"
+                        }
+                    ]
+                }
+            },
+            "type": "object"
+        },
+        "RouteAdminRef": {
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "description": "ID de la ruta de administraci\u00f3n"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Nombre de la ruta de administraci\u00f3n"
+                }
+            },
+            "type": "object"
+        },
+        "MedicationsInput": {
+            "required": [
+                "description",
+                "name",
+                "route_administration_id"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Name"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Description"
+                },
+                "indications": {
+                    "type": "string",
+                    "description": "Indications"
+                },
+                "dosis": {
+                    "type": "string",
+                    "description": "Dosis"
+                },
+                "contraindications": {
+                    "type": "string",
+                    "description": "Contraindications"
+                },
+                "route_administration_id": {
+                    "type": "integer",
+                    "description": "Route Administration Id"
+                },
+                "availability": {
+                    "type": "boolean",
+                    "description": "Availability"
+                }
+            },
+            "type": "object"
+        },
+        "Medication": {
+            "required": [
+                "description",
+                "indications",
+                "name",
+                "route_administration_id"
+            ],
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "description": "ID \u00fanico del medicamento"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Nombre del medicamento",
+                    "example": "Antibi\u00f3tico XYZ"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Descripci\u00f3n del medicamento"
+                },
+                "indications": {
+                    "type": "string",
+                    "description": "Indicaciones del medicamento"
+                },
+                "contraindications": {
+                    "type": "string",
+                    "description": "Contraindicaciones del medicamento"
+                },
+                "route_administration_id": {
+                    "type": "integer",
+                    "description": "ID de la ruta de administraci\u00f3n"
+                },
+                "availability": {
+                    "type": "boolean",
+                    "description": "Disponibilidad del medicamento",
+                    "default": true
+                },
+                "created_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Fecha de creaci\u00f3n"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Fecha de \u00faltima actualizaci\u00f3n"
+                },
+                "route_administration_rel": {
+                    "description": "Informaci\u00f3n de la ruta de administraci\u00f3n",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/RouteAdminRef"
+                        }
+                    ]
+                }
+            },
+            "type": "object"
+        },
+        "RouteAdministrationInput": {
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Nombre de la ruta de administraci\u00f3n",
+                    "example": "Oral"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Descripci\u00f3n de la ruta de administraci\u00f3n",
+                    "example": "Administraci\u00f3n por v\u00eda oral"
+                },
+                "status": {
+                    "type": "boolean",
+                    "description": "Estado activo/inactivo",
+                    "default": true
+                }
+            },
+            "type": "object"
+        },
+        "RouteAdministration": {
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "description": "ID \u00fanico de la ruta de administraci\u00f3n"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Nombre de la ruta de administraci\u00f3n",
+                    "example": "Oral"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Descripci\u00f3n de la ruta de administraci\u00f3n",
+                    "example": "Administraci\u00f3n por v\u00eda oral"
+                },
+                "status": {
+                    "type": "boolean",
+                    "description": "Estado activo/inactivo",
+                    "default": true
+                },
+                "created_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Fecha de creaci\u00f3n"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Fecha de \u00faltima actualizaci\u00f3n"
+                }
+            },
+            "type": "object"
+        },
+        "AnimalDiseasesInput": {
+            "required": [
+                "animal_id",
+                "diagnosis_date",
+                "disease_id",
+                "instructor_id"
+            ],
+            "properties": {
+                "animal_id": {
+                    "type": "integer",
+                    "description": "Animal Id"
+                },
+                "disease_id": {
+                    "type": "integer",
+                    "description": "Disease Id"
+                },
+                "instructor_id": {
+                    "type": "integer",
+                    "description": "Instructor Id"
+                },
+                "diagnosis_date": {
+                    "type": "object",
+                    "description": "Diagnosis Date"
+                },
+                "status": {
+                    "type": "string",
+                    "description": "Status"
+                },
+                "notes": {
+                    "type": "string",
+                    "description": "Notes"
+                }
+            },
+            "type": "object"
+        },
+        "AnimalFieldsInput": {
+            "required": [
+                "animal_id",
+                "assignment_date",
+                "field_id"
+            ],
+            "properties": {
+                "animal_id": {
+                    "type": "integer",
+                    "description": "Animal Id"
+                },
+                "field_id": {
+                    "type": "integer",
+                    "description": "Field Id"
+                },
+                "assignment_date": {
+                    "type": "object",
+                    "description": "Assignment Date"
+                },
+                "removal_date": {
+                    "type": "object",
+                    "description": "Removal Date"
+                },
+                "notes": {
+                    "type": "string",
+                    "description": "Notes"
+                }
+            },
+            "type": "object"
+        },
+        "TreatmentMedicationsInput": {
+            "required": [
+                "medication_id",
+                "treatment_id"
+            ],
+            "properties": {
+                "treatment_id": {
+                    "type": "integer",
+                    "description": "Treatment Id"
+                },
+                "medication_id": {
+                    "type": "integer",
+                    "description": "Medication Id"
+                }
+            },
+            "type": "object"
+        },
+        "TreatmentVaccinesInput": {
+            "required": [
+                "treatment_id",
+                "vaccine_id"
+            ],
+            "properties": {
+                "treatment_id": {
+                    "type": "integer",
+                    "description": "Treatment Id"
+                },
+                "vaccine_id": {
+                    "type": "integer",
+                    "description": "Vaccine Id"
+                }
+            },
+            "type": "object"
+        }
+    },
+    "responses": {
+        "ParseError": {
+            "description": "When a mask can't be parsed"
+        },
+        "MaskError": {
+            "description": "When any error occurs on mask"
+        }
+    }
+}

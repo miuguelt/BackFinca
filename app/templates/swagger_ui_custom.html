@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>{{ title or 'API Docs' }} - Swagger UI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css" />
+  <style>
+    body { background:#f7f9fb; }
+    .topbar { background: linear-gradient(135deg, #2c5530 0%, #4a7c59 100%); }
+    .topbar .download-url-wrapper { display:none; }
+    .custom-links { gap:.5rem }
+    .btn-guide { background:#7fb069; color:#fff; border:none }
+    .btn-guide:hover { background:#6aa25a; color:#fff }
+  </style>
+</head>
+<body data-specs-url="{{ specs_url }}">
+  <nav class="navbar navbar-expand-lg topbar navbar-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold" href="#">Finca Villa Luz API</a>
+      <div class="d-flex custom-links">
+        <a class="btn btn-sm btn-outline-light" href="/api/v1/docs/schema" target="_blank" rel="noopener">
+          Esquema
+        </a>
+        <a class="btn btn-sm btn-outline-light" href="/api/v1/docs/examples" target="_blank" rel="noopener">
+          Ejemplos
+        </a>
+        <a class="btn btn-sm btn-guide" href="/api/v1/docs/guia-frontend-html" target="_blank" rel="noopener">
+          📘 Guía Frontend
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <div id="swagger-ui"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script>
+    window.onload = () => {
+      const specUrl = document.body.getAttribute('data-specs-url');
+      const ui = SwaggerUIBundle({
+        url: specUrl,
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [SwaggerUIBundle.presets.apis],
+        layout: 'BaseLayout'
+      });
+      window.ui = ui;
+    };
+  </script>
+</body>
+</html>
