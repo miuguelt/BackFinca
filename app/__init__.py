@@ -197,6 +197,8 @@ def create_app(config_name='development'):
     logger.debug(f"Using configuration: {config_name}")
 
     # Comentado: Evitar exponer URI de conexión con credenciales en logs
+    # db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', 'No URI configurada')
+    # logger.info(f"URI de conexión a la base de datos: {db_uri}")
     
     # Inicializa y enlaza las extensiones con la app
     db.init_app(app)
