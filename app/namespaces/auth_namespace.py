@@ -80,6 +80,14 @@ def set_limiter(app_limiter):
             LogoutResource.post._rate_limit_applied = True
         except Exception:
             logger.exception("No se pudo aplicar rate limit a LogoutResource.post")
+        # Aplicar exención de rate limit para /auth/me solo en desarrollo
+        try:
+            if current_app and current_app.config.get('DEBUG', False):
+                if not hasattr(CurrentUserResource.get, '_rate_limit_exempted'):
+                    CurrentUserResource.get = limiter.exempt(CurrentUserResource.get)
+                    CurrentUserResource.get._rate_limit_exempted = True
+        except Exception:
+            logger.exception("No se pudo configurar la exención de rate limit para CurrentUserResource.get")
     except Exception as e:
         logger.warning(f"No se pudo configurar/aplicar rate limiting en auth_namespace: {e}", exc_info=True)
 
