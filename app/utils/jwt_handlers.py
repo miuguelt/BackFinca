@@ -17,7 +17,9 @@ def configure_jwt_handlers(jwt):
         exp_utc = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
         now_utc = datetime.now(timezone.utc)
         seconds_ago = int((now_utc - exp_utc).total_seconds())
-        logger.warning(f"Expired token: expired {seconds_ago} seconds ago. Payload: {jwt_payload}")
+        # Comentado: Evitar exponer payload del token en logs
+        # logger.warning(f"Expired token: expired {seconds_ago} seconds ago. Payload: {jwt_payload}")
+        logger.warning(f"Expired token: expired {seconds_ago} seconds ago")
         details = {
             'expired_at_utc': exp_utc.isoformat(),
             'current_time_utc': now_utc.isoformat(),

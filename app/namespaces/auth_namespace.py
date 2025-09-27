@@ -127,25 +127,7 @@ class LoginResource(Resource):
                 'password': 'Requerido'
             })
         try:
-            # --- DEBUG: Imprimir variables clave en consola ---
-            print("[DEBUG][LOGIN] identifier:", identifier)
-            print("[DEBUG][LOGIN] password:", password)
-            print("[DEBUG][LOGIN] request.headers.get('Origin'):", request.headers.get('Origin'))
-            print("[DEBUG][LOGIN] request.cookies:", dict(request.cookies))
-            print("[DEBUG][LOGIN] request.remote_addr:", request.remote_addr)
-            print("[DEBUG][LOGIN] request.user_agent:", request.user_agent.string)
-            print("[DEBUG][LOGIN] request.path:", request.path)
-            print("[DEBUG][LOGIN] request.method:", request.method)
-            print("[DEBUG][LOGIN] request.url:", request.url)
-            print("[DEBUG][LOGIN] request.is_secure:", request.is_secure)
-            print("[DEBUG][LOGIN] request.environ.get('wsgi.url_scheme'):", request.environ.get('wsgi.url_scheme'))
-            print("[DEBUG][LOGIN] request.environ.get('SERVER_PORT'):", request.environ.get('SERVER_PORT'))
-            print("[DEBUG][LOGIN] request.environ.get('SERVER_NAME'):", request.environ.get('SERVER_NAME'))
-            print("[DEBUG][LOGIN] request.environ.get('HTTP_HOST'):", request.environ.get('HTTP_HOST'))
-            print("[DEBUG][LOGIN] request.environ.get('HTTP_ORIGIN'):", request.environ.get('HTTP_ORIGIN'))
-            print("[DEBUG][LOGIN] request.environ.get('HTTP_REFERER'):", request.environ.get('HTTP_REFERER'))
-            print("[DEBUG][LOGIN] request.environ.get('HTTP_USER_AGENT'):", request.environ.get('HTTP_USER_AGENT'))
-            # --- FIN DEBUG ---
+            # Eliminado: Bloque de debug que exponía información sensible en consola
             log_authentication_attempt(identifier, False)
             user = User.query.filter(
                 (User.email == identifier) | (User.identification == identifier)

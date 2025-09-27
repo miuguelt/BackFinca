@@ -41,16 +41,25 @@ def log_authentication_attempt(user_identifier, success, additional_info=None):
     """Log de intentos de autenticación"""
     client_info = get_client_info()
     
+    # Ocultar información sensible del identificador
+    safe_identifier = user_identifier[:2] + "*" * (len(str(user_identifier)) - 2) if user_identifier else "unknown"
+    
     log_data = {
         'event': 'AUTHENTICATION_ATTEMPT',
-        'user_identifier': user_identifier,
+        'user_identifier': safe_identifier,
         'success': success,
     'timestamp': datetime.now(timezone.utc).isoformat().replace('+00:00','Z'),
         'client_info': client_info
     }
     
     if additional_info:
-        log_data['additional_info'] = additional_info
+        # Ocultar información sensible en additional_info
+        safe_additional_info = additional_info.copy() if additional_info else {}
+        if 'user_id' in safe_additional_info:
+            safe_additional_info['user_id'] = "****"
+        if 'role' in safe_additional_info:
+            safe_additional_info['role'] = "****"
+        log_data['additional_info'] = safe_additional_info
     
     if success:
         security_logger.info(f"LOGIN_SUCCESS: {json.dumps(log_data)}")
@@ -61,9 +70,12 @@ def log_authorization_failure(user_id, required_role, user_role, resource):
     """Log de fallos de autorización"""
     client_info = get_client_info()
     
+    # Ocultar información sensible del user_id
+    safe_user_id = "****" if user_id else None
+    
     log_data = {
         'event': 'AUTHORIZATION_FAILURE',
-        'user_id': user_id,
+        'user_id': safe_user_id,
         'required_role': required_role,
         'user_role': user_role,
         'resource': resource,
@@ -77,12 +89,18 @@ def log_data_access(user_id, action, resource, resource_id=None):
     """Log de acceso a datos sensibles"""
     client_info = get_client_info()
     
+    # Ocultar información sensible del user_id
+    safe_user_id = "****" if user_id else None
+    
+    # Ocultar información sensible del resource_id
+    safe_resource_id = "****" if resource_id else None
+    
     log_data = {
         'event': 'DATA_ACCESS',
-        'user_id': user_id,
+        'user_id': safe_user_id,
         'action': action,
         'resource': resource,
-        'resource_id': resource_id,
+        'resource_id': safe_resource_id,
     'timestamp': datetime.now(timezone.utc).isoformat().replace('+00:00','Z'),
         'client_info': client_info
     }
@@ -113,11 +131,14 @@ def log_rate_limit_exceeded(endpoint, limit, user_identifier=None):
     """Log de límites de tasa excedidos"""
     client_info = get_client_info()
     
+    # Ocultar información sensible del user_identifier
+    safe_user_identifier = user_identifier[:2] + "*" * (len(str(user_identifier)) - 2) if user_identifier else "unknown"
+    
     log_data = {
         'event': 'RATE_LIMIT_EXCEEDED',
         'endpoint': endpoint,
         'limit': limit,
-        'user_identifier': user_identifier,
+        'user_identifier': safe_user_identifier,
     'timestamp': datetime.now(timezone.utc).isoformat().replace('+00:00','Z'),
         'client_info': client_info
     }
@@ -160,13 +181,27 @@ def log_admin_action(user_id, action, target_resource, target_id=None, changes=N
     """Log de acciones administrativas"""
     client_info = get_client_info()
     
+    # Ocultar información sensible del user_id
+    safe_user_id = "****" if user_id else None
+    
+    # Ocultar información sensible del target_id
+    safe_target_id = "****" if target_id else None
+    
+    # Ocultar información sensible en changes
+    safe_changes = None
+    if changes:
+        safe_changes = {
+            'fields_modified': len(changes) if isinstance(changes, dict) else 0,
+            'sensitive_data_present': True
+        }
+    
     log_data = {
         'event': 'ADMIN_ACTION',
-        'user_id': user_id,
+        'user_id': safe_user_id,
         'action': action,
         'target_resource': target_resource,
-        'target_id': target_id,
-        'changes': changes,
+        'target_id': safe_target_id,
+        'changes': safe_changes,
     'timestamp': datetime.now(timezone.utc).isoformat().replace('+00:00','Z'),
         'client_info': client_info
     }
@@ -177,11 +212,22 @@ def log_jwt_token_event(event_type, user_id=None, token_info=None):
     """Log de eventos relacionados con tokens JWT"""
     client_info = get_client_info()
     
+    # Ocultar información sensible del user_id
+    safe_user_id = "****" if user_id else None
+    
+    # Ocultar información sensible del token
+    safe_token_info = None
+    if token_info:
+        safe_token_info = {
+            'access_token_created': token_info.get('access_token_created', False),
+            'new_access_token_created': token_info.get('new_access_token_created', False)
+        }
+    
     log_data = {
         'event': 'JWT_TOKEN_EVENT',
         'event_type': event_type,  # CREATED, REFRESHED, EXPIRED, INVALID
-        'user_id': user_id,
-        'token_info': token_info,
+        'user_id': safe_user_id,
+        'token_info': safe_token_info,
     'timestamp': datetime.now(timezone.utc).isoformat().replace('+00:00','Z'),
         'client_info': client_info
     }

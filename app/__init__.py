@@ -196,6 +196,8 @@ def create_app(config_name='development'):
     logger.info("Initializing Flask app...")
     logger.debug(f"Using configuration: {config_name}")
 
+    # Comentado: Evitar exponer URI de conexión con credenciales en logs
+    
     # Inicializa y enlaza las extensiones con la app
     db.init_app(app)
     jwt.init_app(app)

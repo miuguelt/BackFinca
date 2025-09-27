@@ -148,8 +148,8 @@ class DashboardStats(Resource):
             return APIResponse.success(dashboard_data, "Estadísticas del dashboard obtenidas exitosamente")
             
         except Exception as e:
-            logger.error(f"Error fetching dashboard stats: {str(e)}")
-            return APIResponse.error("Error interno del servidor al obtener estadísticas.", status_code=500, details={'error': str(e)})
+            logger.error("Error fetching dashboard stats")
+            return APIResponse.error("Error interno del servidor al obtener estadísticas.", status_code=500)
 
 @analytics_ns.route('/alerts')
 class SystemAlerts(Resource):
@@ -437,7 +437,7 @@ class SystemAlerts(Resource):
             )
             
         except Exception as e:
-            logger.error(f"Error generando alertas del sistema: {str(e)}")
+            logger.error("Error generando alertas del sistema")
             return APIResponse.error(
                 message="Error interno del servidor",
                 status_code=500,
@@ -582,7 +582,7 @@ class CustomReports(Resource):
             )
             
         except Exception as e:
-            logger.error(f"Error generando informe personalizado: {str(e)}")
+            logger.error("Error generando informe personalizado")
             return APIResponse.error(
                 message="Error interno del servidor",
                 status_code=500,
@@ -878,7 +878,7 @@ class AnimalMedicalHistory(Resource):
                 details={'field': 'date_format'}
             )
         except Exception as e:
-            logger.error(f"Error obteniendo historial médico del animal {animal_id}: {str(e)}")
+            logger.error("Error obteniendo historial médico del animal")
             return APIResponse.error(
                 message="Error interno del servidor",
                 status_code=500,
@@ -1124,7 +1124,7 @@ class ProductionStatistics(Resource):
             )
             
         except Exception as e:
-            logger.error(f"Error obteniendo estadísticas de producción: {str(e)}")
+            logger.error("Error obteniendo estadísticas de producción")
             return APIResponse.error(
                 message="Error interno del servidor",
                 status_code=500,
@@ -1321,7 +1321,7 @@ class AnimalStatistics(Resource):
             )
             
         except Exception as e:
-            logger.error(f"Error obteniendo estadísticas de animales: {str(e)}")
+            logger.error("Error obteniendo estadísticas de animales")
             return APIResponse.error(
                 message="Error interno del servidor",
                 status_code=500,
@@ -1479,7 +1479,7 @@ class HealthStatistics(Resource):
             )
             
         except Exception as e:
-            logger.error(f"Error obteniendo estadísticas de salud: {str(e)}")
+            logger.error("Error obteniendo estadísticas de salud")
             return APIResponse.error(
                 message="Error interno del servidor",
                 status_code=500,

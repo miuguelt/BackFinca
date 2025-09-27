@@ -65,11 +65,13 @@ def init_security_middlewares(app):
                 'UserLoadError': 'Error cargando usuario para el token'
             }
             human_msg = msg_map.get(err_cls, 'Token faltante o inválido')
-            logger.debug(
-                'JWT verification failed: %s -> %s path=%s auth_header_present=%s cookies=%s',
-                err_cls, str(e), raw_path, bool(request.headers.get('Authorization')),
-                list(request.cookies.keys()) if request.cookies else []
-            )
+            # Comentado: Evitar exponer información sensible en logs de JWT
+            # logger.debug(
+            #     'JWT verification failed: %s -> %s path=%s auth_header_present=%s cookies=%s',
+            #     err_cls, str(e), raw_path, bool(request.headers.get('Authorization')),
+            #     list(request.cookies.keys()) if request.cookies else []
+            # )
+            logger.debug('JWT verification failed for path: %s', raw_path)
             return APIResponse.error(
                 human_msg,
                 status_code=401,
