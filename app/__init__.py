@@ -16,6 +16,7 @@ from sqlalchemy import text
 from .utils.db_optimization import init_db_optimizations
 from .utils.logging_config import configure_logging
 from .utils.jwt_handlers import configure_jwt_handlers
+from app.utils.response_handler import APIResponse
 
 # Importar módulos de seguridad
 from .utils.security_logger import setup_security_logging, log_authentication_attempt, log_jwt_token_event
@@ -270,7 +271,22 @@ def create_app(config_name='development'):
     def swagger_redirect():
         """Redirigir al JSON de Swagger versionado"""
         return redirect('/api/v1/swagger.json', code=302)
-    
+
+    # Ruta raíz pública
+    @app.route('/', methods=['GET', 'OPTIONS'])
+    def root_welcome():
+        """Bienvenida pública en la raíz de la aplicación"""
+        if request.method == 'OPTIONS':
+            return '', 200
+        return APIResponse.success(
+            data={
+                'message': 'Bienvenido al backend de la Finca Villaluz',
+                'public': True,
+                'endpoint': '/',
+                'docs': '/api/v1/docs/'
+            }
+        )
+
     # Endpoint de health check público a nivel de aplicación (sin prefijo /api/v1)
     @app.route('/health', methods=['GET', 'OPTIONS'])
     def app_health():

@@ -12,6 +12,7 @@ from flask_restx import Api
 from sqlalchemy import text
 
 from . import db
+from .utils.response_handler import APIResponse
 
 
 def register_api(app, limiter=None):
@@ -398,6 +399,17 @@ def register_api(app, limiter=None):
     @api_bp.route('/docs/guia-frontend-html', methods=['GET'])
     def docs_frontend_guide_html():
         return render_template('guia_frontend.html', title='Guía Frontend')
+
+    # Endpoint público raíz de confirmación dentro de /api/v1
+    @api_bp.route('/', methods=['GET', 'OPTIONS'])
+    def api_root_confirm():
+        # Permitir preflight CORS
+        if request.method == 'OPTIONS':
+            return '', 200
+        return APIResponse.success(
+            message='Bienvenido al backend de la Finca Villaluz',
+            data={'public': True, 'endpoint': '/api/v1/'}
+        )
 
     # Registrar el blueprint
     app.register_blueprint(api_bp)

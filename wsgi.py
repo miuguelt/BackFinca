@@ -59,13 +59,15 @@ def set_security_headers(response):
         path = (request.path or '').rstrip('/')
         is_docs = path.startswith('/api/v1/docs') or path.startswith('/swaggerui')
         if is_docs:
-            # SwaggerUI requiere inline scripts/estilos y cargar assets locales
+            # SwaggerUI requiere inline scripts/estilos y carga de assets desde CDN (jsdelivr)
             csp = "; ".join([
                 "default-src 'self'",
-                "script-src 'self' 'unsafe-inline'",
-                "style-src 'self' 'unsafe-inline'",
+                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+                "script-src-elem 'self' https://cdn.jsdelivr.net",
+                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+                "style-src-elem 'self' https://cdn.jsdelivr.net",
                 "img-src 'self' data:",
-                "font-src 'self'",
+                "font-src 'self' https://cdn.jsdelivr.net data:",
                 "connect-src 'self'",
                 "worker-src 'self' blob:",
                 "frame-ancestors 'self'",

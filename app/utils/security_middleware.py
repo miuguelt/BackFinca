@@ -21,7 +21,10 @@ def init_security_middlewares(app):
         public_paths = {
             '/api/v1/auth/login',
             '/api/v1/auth/refresh',
+            '/api/v1/auth/public-confirm',
             '/api/v1/health',
+            '/api/v1',  # raíz pública del blueprint
+            '/',        # raíz de la app accesible sin JWT
             '/health',
             '/favicon.ico',  # permitir favicon sin JWT
             '/api/v1/docs',
