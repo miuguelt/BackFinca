@@ -390,7 +390,12 @@ def register_api(app, limiter=None):
         try:
             md_path = pathlib.Path(__file__).parents[1] / 'docs' / 'api-usage-guia-frontend.md'
             if not md_path.exists():
-                return jsonify({'success': False, 'message': 'Guía no encontrada'}), 404
+                fallback = (
+                    "# Guía Frontend\n\n"
+                    "No se encontró el archivo de guía en el servidor (docs/api-usage-guia-frontend.md).\n\n"
+                    "Esta es una versión mínima. Una vez que el archivo exista, esta ruta lo servirá automáticamente.\n"
+                )
+                return fallback, 200, {'Content-Type': 'text/markdown; charset=utf-8'}
             return send_file(str(md_path), mimetype='text/markdown; charset=utf-8')
         except Exception as e:
             return jsonify({'success': False, 'message': 'Error sirviendo la guía', 'details': str(e)}), 500

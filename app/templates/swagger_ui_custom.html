@@ -42,7 +42,7 @@
 
   <div id="swagger-ui"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js" defer></script>
   <script>
     window.onload = () => {
       const specUrl = document.body.getAttribute('data-specs-url');
@@ -55,34 +55,56 @@
         return undefined;
       };
 
-      // Actualizar badges de estado (JWT y CSRF)
+      // Estado previo para evitar actualizaciones innecesarias
       const jwtBadge = document.getElementById('jwtCookieBadge');
       const csrfBadge = document.getElementById('csrfBadge');
       const bearerBadge = document.getElementById('bearerBadge');
-      const updateBadges = () => {
-        const jwt = getCookie('access_token_cookie');
-        const csrf = getCookie('csrf_access_token');
-        if (jwt) {
-          jwtBadge.textContent = 'Cookie JWT: activa';
-          jwtBadge.classList.remove('bg-secondary', 'bg-danger');
-          jwtBadge.classList.add('bg-success');
-        } else {
-          jwtBadge.textContent = 'Cookie JWT: ausente';
-          jwtBadge.classList.remove('bg-secondary', 'bg-success');
-          jwtBadge.classList.add('bg-danger');
-        }
-        if (csrf) {
-          csrfBadge.textContent = 'CSRF: presente';
-          csrfBadge.classList.remove('bg-secondary', 'bg-danger');
-          csrfBadge.classList.add('bg-success');
-        } else {
-          csrfBadge.textContent = 'CSRF: ausente';
-          csrfBadge.classList.remove('bg-secondary', 'bg-success');
-          csrfBadge.classList.add('bg-danger');
-        }
+      let lastStatus = { jwt: null, csrf: null, bearer: null };
+
+      const applyBadgeUpdates = (next) => {
+        // Aplicar cambios de forma agrupada en el próximo frame para minimizar reflows
+        requestAnimationFrame(() => {
+          if (next.jwt !== lastStatus.jwt) {
+            if (next.jwt) {
+              jwtBadge.textContent = 'Cookie JWT: activa';
+              jwtBadge.classList.remove('bg-secondary', 'bg-danger');
+              jwtBadge.classList.add('bg-success');
+            } else {
+              jwtBadge.textContent = 'Cookie JWT: ausente';
+              jwtBadge.classList.remove('bg-secondary', 'bg-success');
+              jwtBadge.classList.add('bg-danger');
+            }
+          }
+          if (next.csrf !== lastStatus.csrf) {
+            if (next.csrf) {
+              csrfBadge.textContent = 'CSRF: presente';
+              csrfBadge.classList.remove('bg-secondary', 'bg-danger');
+              csrfBadge.classList.add('bg-success');
+            } else {
+              csrfBadge.textContent = 'CSRF: ausente';
+              csrfBadge.classList.remove('bg-secondary', 'bg-success');
+              csrfBadge.classList.add('bg-danger');
+            }
+          }
+          if (next.bearer !== lastStatus.bearer) {
+            if (next.bearer) {
+              bearerBadge.textContent = 'Bearer: autorizado';
+              bearerBadge.classList.remove('bg-secondary', 'bg-danger');
+              bearerBadge.classList.add('bg-success');
+            } else {
+              bearerBadge.textContent = 'Bearer: no autorizado';
+              bearerBadge.classList.remove('bg-secondary', 'bg-success');
+              bearerBadge.classList.add('bg-danger');
+            }
+          }
+          lastStatus = next;
+        });
       };
 
-      const updateBearerBadge = () => {
+      const computeBadges = () => {
+        const jwt = !!getCookie('access_token_cookie');
+        const csrf = !!getCookie('csrf_access_token');
+        let bearer = false;
         try {
           const sys = window.ui && window.ui.getSystem ? window.ui.getSystem() : undefined;
           const sel = sys && sys.authSelectors && sys.authSelectors.authorized ? sys.authSelectors.authorized() : undefined;
@@ -90,43 +112,20 @@
           if (authorizedMap && typeof authorizedMap.toJS === 'function') {
             authorizedMap = authorizedMap.toJS();
           }
-          const isAuthorized = authorizedMap && Object.keys(authorizedMap).length > 0 && (
-            authorizedMap['BearerAuth'] || Object.values(authorizedMap).some(v => v)
-          );
-          if (isAuthorized) {
-            bearerBadge.textContent = 'Bearer: autorizado';
-            bearerBadge.classList.remove('bg-secondary', 'bg-danger');
-            bearerBadge.classList.add('bg-success');
-          } else {
-            bearerBadge.textContent = 'Bearer: no autorizado';
-            bearerBadge.classList.remove('bg-secondary', 'bg-success');
-            bearerBadge.classList.add('bg-danger');
-          }
+          bearer = !!(authorizedMap && (authorizedMap['BearerAuth'] || Object.keys(authorizedMap).length > 0));
         } catch (e) {
-          bearerBadge.textContent = 'Bearer: no autorizado';
-          bearerBadge.classList.remove('bg-secondary', 'bg-success');
-          bearerBadge.classList.add('bg-danger');
+          bearer = false;
         }
+        return { jwt, csrf, bearer };
       };
 
-      // Intentar abrir el modal de autorización de Swagger UI
-      const openAuthorizeModal = () => {
-        const selectors = [
-          '#swagger-ui button.authorize',
-          '#swagger-ui .auth-wrapper button',
-          '#swagger-ui [aria-label="Authorize"]',
-          '#swagger-ui button[title="Authorize"]'
-        ];
-        for (const sel of selectors) {
-          const btn = document.querySelector(sel);
-          if (btn) { btn.click(); return true; }
+      const runStatusUpdate = () => applyBadgeUpdates(computeBadges());
+      const scheduleStatusUpdate = () => {
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(runStatusUpdate, { timeout: 500 });
+        } else {
+          setTimeout(runStatusUpdate, 100);
         }
-        // Fallback: intentar buscar por texto del botón
-        const buttons = document.querySelectorAll('#swagger-ui button');
-        for (const b of buttons) {
-          if ((b.textContent || '').trim().toLowerCase().includes('authorize')) { b.click(); return true; }
-        }
-        return false;
       };
 
       const ui = SwaggerUIBundle({
@@ -136,20 +135,16 @@
         presets: [SwaggerUIBundle.presets.apis],
         layout: 'BaseLayout',
         persistAuthorization: true,
-        // 1) Enviar cookies (HttpOnly) en las peticiones de "Try it out"
-        // 2) Adjuntar cabecera CSRF si el backend lo requiere (X-CSRF-TOKEN desde cookie csrf_access_token)
         requestInterceptor: (req) => {
           try {
-            req.credentials = 'include'; // Necesario para incluir cookies en fetch
+            req.credentials = 'include';
             const csrf = getCookie('csrf_access_token');
             if (csrf) {
               req.headers = req.headers || {};
               req.headers['X-CSRF-TOKEN'] = csrf;
             }
           } catch (e) { /* noop */ }
-          // Actualizar badges tras cada intento de request
-          setTimeout(updateBadges, 0);
-          setTimeout(updateBearerBadge, 0);
+          scheduleStatusUpdate();
           return req;
         }
       });
@@ -158,16 +153,36 @@
       // Wire up botón Autorizar
       const authorizeBtn = document.getElementById('authorizeBtn');
       authorizeBtn.addEventListener('click', () => {
-        if (!openAuthorizeModal()) {
-          // Reintentar tras breve retraso (el DOM interno puede tardar en renderizar)
-          setTimeout(openAuthorizeModal, 300);
+        const selectors = [
+          '#swagger-ui button.authorize',
+          '#swagger-ui .auth-wrapper button',
+          '#swagger-ui [aria-label="Authorize"]',
+          '#swagger-ui button[title="Authorize"]'
+        ];
+        for (const sel of selectors) {
+          const btn = document.querySelector(sel);
+          if (btn) { btn.click(); return; }
+        }
+        setTimeout(() => {
+          for (const sel of selectors) {
+            const btn = document.querySelector(sel);
+            if (btn) { btn.click(); return; }
+          }
+        }, 300);
+      }, { passive: true });
+
+      // Actualización inicial y periódica con pausa cuando la pestaña no está visible
+      requestAnimationFrame(runStatusUpdate);
+      let intervalId = setInterval(runStatusUpdate, 15000);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+          clearInterval(intervalId);
+          intervalId = null;
+        } else if (!intervalId) {
+          intervalId = setInterval(runStatusUpdate, 15000);
+          requestAnimationFrame(runStatusUpdate);
         }
       });
-
-      // Actualizar estado inicial y periódicamente
-      updateBadges();
-      updateBearerBadge();
-      setInterval(() => { updateBadges(); updateBearerBadge(); }, 3000);
     };
   </script>
 </body>

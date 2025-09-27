@@ -21,8 +21,9 @@ app = create_app(config_name)
 try:
     display_host = os.getenv('BACKEND_DISPLAY_HOST', 'localhost')
     display_port = int(os.getenv('PORT', 8081))
-    # Permitir forzar esquema de visualización, si no, inferir por USE_HTTPS
-    scheme = os.getenv('BACKEND_DISPLAY_SCHEME') or ('https' if os.getenv('USE_HTTPS', 'true').lower() == 'true' else 'http')
+    # Permitir forzar esquema de visualización, si no, inferir por USE_HTTPS (por defecto https en producción y http en desarrollo)
+    _default_https = 'true' if config_name == 'production' else 'false'
+    scheme = os.getenv('BACKEND_DISPLAY_SCHEME') or ('https' if os.getenv('USE_HTTPS', _default_https).lower() == 'true' else 'http')
     print(f"[WSGI] IMPORT: Backend address hint: {scheme}://{display_host}:{display_port} (wsgi.py; el bind real lo gestiona el servidor WSGI/proxy)")
     logging.getLogger('startup').info(
         '[WSGI] IMPORT: Backend address hint: %s://%s:%s (wsgi.py; el bind real lo gestiona el servidor WSGI/proxy)',
@@ -42,7 +43,8 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=proxy_x_for, x_proto=int(os.getenv('
 @app.after_request
 def set_security_headers(response):
     try:
-        is_secure = request.is_secure or os.getenv('USE_HTTPS', 'true').lower() == 'true'
+        _default_https = 'true' if config_name == 'production' else 'false'
+        is_secure = request.is_secure or os.getenv('USE_HTTPS', _default_https).lower() == 'true'
     except Exception:
         is_secure = False
 
@@ -57,19 +59,21 @@ def set_security_headers(response):
         response.headers.setdefault('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
         # CSP: base estricta por defecto, relajada únicamente para rutas de documentación
         path = (request.path or '').rstrip('/')
-        is_docs = path.startswith('/api/v1/docs') or path.startswith('/swaggerui')
+        is_docs = path.startswith('/api/v1/docs') or path.startswith('/swaggerui') or path.startswith('/docs')
         if is_docs:
             # SwaggerUI requiere inline scripts/estilos y carga de assets desde CDN (jsdelivr)
+            # Ampliamos CSP para permitir recursos necesarios en producción
             csp = "; ".join([
                 "default-src 'self'",
-                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net",
                 "script-src-elem 'self' https://cdn.jsdelivr.net",
                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
                 "style-src-elem 'self' https://cdn.jsdelivr.net",
-                "img-src 'self' data:",
+                "img-src 'self' data: blob: https://cdn.jsdelivr.net",
                 "font-src 'self' https://cdn.jsdelivr.net data:",
-                "connect-src 'self'",
+                "connect-src *",
                 "worker-src 'self' blob:",
+                "frame-src 'self' blob:",
                 "frame-ancestors 'self'",
             ])
         else:
@@ -94,7 +98,9 @@ with app.app_context():
         db.create_all()
 
 def _resolve_ssl_context():
-    use_https = os.getenv('USE_HTTPS', 'true').lower() == 'true'
+    # En desarrollo, desactivar HTTPS por defecto para evitar problemas con certificados 'adhoc'.
+    _default_https = 'true' if config_name == 'production' else 'false'
+    use_https = os.getenv('USE_HTTPS', _default_https).lower() == 'true'
     if not use_https:
         return None
 

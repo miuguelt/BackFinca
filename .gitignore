@@ -191,3 +191,5 @@ cython_debug/
 .cursorindexingignore
 /migrations
 /scripts
+/docs
+!docs/api-usage-guia-frontend.md
