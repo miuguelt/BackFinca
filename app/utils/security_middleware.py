@@ -23,6 +23,7 @@ def init_security_middlewares(app):
             '/api/v1/auth/refresh',
             '/api/v1/health',
             '/health',
+            '/favicon.ico',  # permitir favicon sin JWT
             '/api/v1/docs',
             '/api/v1/docs/schema',
             '/api/v1/docs/examples',
@@ -41,8 +42,12 @@ def init_security_middlewares(app):
         # Permitir rutas públicas sin JWT
         if path in public_paths:
             return
-        # Permitir recursos estáticos de Swagger UI sin JWT
-        if path.startswith('/api/v1/swaggerui/') or path.startswith('/swaggerui/'):
+        # Permitir recursos estáticos de Swagger UI y documentación sin JWT (wildcards)
+        if (
+            path.startswith('/api/v1/swaggerui/')
+            or path.startswith('/swaggerui/')
+            or raw_path.startswith('/api/v1/docs/')  # cubrir /api/v1/docs/*
+        ):
             return
         try:
             verify_jwt_in_request()
