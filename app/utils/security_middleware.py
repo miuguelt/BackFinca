@@ -22,6 +22,7 @@ def init_security_middlewares(app):
             '/api/v1/auth/login',
             '/api/v1/auth/refresh',
             '/api/v1/health',
+            '/health',
             '/api/v1/docs',
             '/api/v1/docs/schema',
             '/api/v1/docs/examples',

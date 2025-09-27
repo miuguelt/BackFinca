@@ -271,6 +271,34 @@ def create_app(config_name='development'):
         """Redirigir al JSON de Swagger versionado"""
         return redirect('/api/v1/swagger.json', code=302)
     
+    # Endpoint de health check público a nivel de aplicación (sin prefijo /api/v1)
+    @app.route('/health', methods=['GET', 'OPTIONS'])
+    def app_health():
+        """Health check público accesible en /health (sin prefijo /api/v1)"""
+        # Permitir preflight CORS
+        if request.method == 'OPTIONS':
+            return '', 200
+        try:
+            # Verificar conexión simple a la base de datos
+            db.session.execute(text('SELECT 1'))
+            db_status = 'healthy'
+            status_code = 200
+        except Exception as e:  # pragma: no cover - comportamiento en fallos
+            db_status = f'unhealthy: {str(e)}'
+            status_code = 503
+
+        payload = {
+            'success': True if status_code == 200 else False,
+            'status': 'healthy' if status_code == 200 else 'unhealthy',
+            'services': {
+                'database': db_status
+            },
+            'timestamp': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
+            'uptime_seconds': time.time() - app.config.get('START_TIME', time.time()),
+            'version': app.config.get('APP_VERSION', app.config.get('VERSION', '1.0.0')),
+        }
+        return jsonify(payload), status_code
+    
     # ====================================================================
     # DOCUMENTACIÓN: Flask-RESTX genera automáticamente la documentación
     # Swagger en /swagger.json y la interfaz interactiva en /docs/

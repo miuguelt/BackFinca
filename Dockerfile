@@ -48,7 +48,7 @@ USER app
 EXPOSE 8081
 
 # Healthcheck (el endpoint /health ya existe en la app)
-#HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD wget -q -O /dev/null http://127.0.0.1:${PORT}/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD wget -q -O /dev/null http://127.0.0.1:${PORT}/health || exit 1
 
 # Ejecutar con Gunicorn
 CMD ["gunicorn", "--bind", "0.0.0.0:8081", "--workers", "4", "--forwarded-allow-ips=*", "wsgi:app"]
