@@ -278,14 +278,7 @@ def create_app(config_name='development'):
         """Bienvenida pública en la raíz de la aplicación"""
         if request.method == 'OPTIONS':
             return '', 200
-        return APIResponse.success(
-            data={
-                'message': 'Bienvenido al backend de la Finca Villaluz',
-                'public': True,
-                'endpoint': '/',
-                'docs': '/api/v1/docs/'
-            }
-        )
+        return "Bienvenido al backend de la Finca Villaluz.", 200, {'Content-Type': 'text/plain; charset=utf-8'}
 
     # Endpoint de health check público a nivel de aplicación (sin prefijo /api/v1)
     @app.route('/health', methods=['GET', 'OPTIONS'])
