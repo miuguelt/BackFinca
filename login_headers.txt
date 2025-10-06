@@ -1,0 +1,19 @@
+{
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc1OTEwODc0NywianRpIjoiYjllNmYyY2EtNGI0OS00ODZjLWIxYzYtYTlkMjc0M2E3M2VmIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjQyIiwibmJmIjoxNzU5MTA4NzQ3LCJjc3JmIjoiMTQ3Y2U4ZWEtMWI5ZS00MDRkLWIyZjgtY2U3Y2UxYmNlMGNkIiwiZXhwIjoxNzU5MTE1OTQ3LCJzZXJ2ZXJfdGltZV91dGMiOiIyMDI1LTA5LTI5VDAxOjE5OjA3LjYwODk4MSswMDowMCIsInNlcnZlcl9lbnYiOiJkZXZlbG9wbWVudCIsImlkIjo0MiwiaWRlbnRpZmljYXRpb24iOjEwOTgsInJvbGUiOiJBZG1pbmlzdHJhZG9yIiwiZnVsbG5hbWUiOiJKdWFuIFBcdTAwZTlyZXoifQ.QF1GCjj9bfFtI48CiE9ySW2WdAmYutvg_ngrQjSelTc",
+    "expires_in": 7200,
+    "token_type": "Bearer",
+    "user": {
+      "address": "Calle 123 #45-67",
+      "created_at": "2025-09-06T17:34:32Z",
+      "email": "juan1@example.com",
+      "fullname": "Juan P\u00e9rez",
+      "id": 42,
+      "identification": 1098,
+      "phone": "3011234578",
+      "role": "Administrador",
+      "status": true
+    }
+  },
+  "success": true
+}

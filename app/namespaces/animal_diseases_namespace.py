@@ -3,7 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, get_current_user
 from flask_restx import Resource, Namespace, fields
 from app import db, models
 from app.utils.response_handler import APIResponse
-from app.utils.namespace_helpers import create_optimized_namespace
+from app.utils.namespace_helpers import create_optimized_namespace, _cache_clear
 
 model_for_update = models.AnimalDisease.__table__.columns.keys()
 
@@ -25,15 +25,23 @@ class AnimalDiseaseById(Resource):
     def put(self, record_id):
         try:
             data = request.get_json()
+            # Consulta directa a BD (sin cache)
             disease_record = db.session.query(models.AnimalDisease).filter_by(id=record_id).first()
             if not disease_record:
                 return APIResponse.error(message='Registro de enfermedad no encontrado', status_code=404)
-            
+
             for attr, value in data.items():
                 if attr in model_for_update:
                     setattr(disease_record, attr, value)
-            
+
+            db.session.flush()
             db.session.commit()
+            db.session.refresh(disease_record)
+
+            # Invalidar cache INMEDIATAMENTE después de sincronización
+            _cache_clear('AnimalDisease')
+
+            # Respuesta con datos sincronizados desde BD
             return APIResponse.success(message='Enfermedad actualizada exitosamente', data=disease_record.to_dict())
         except Exception as e:
             db.session.rollback()
@@ -42,12 +50,18 @@ class AnimalDiseaseById(Resource):
     @jwt_required()
     def delete(self, record_id):
         try:
+            # Consulta directa a BD (sin cache)
             disease_record = db.session.query(models.AnimalDisease).filter_by(id=record_id).first()
             if not disease_record:
                 return APIResponse.error(message='Registro de enfermedad no encontrado', status_code=404)
-            
+
             db.session.delete(disease_record)
             db.session.commit()
+
+            # Invalidar cache INMEDIATAMENTE después de commit exitoso
+            _cache_clear('AnimalDisease')
+
+            # Respuesta rápida confirmando eliminación
             return APIResponse.success(message='Enfermedad eliminada exitosamente')
         except Exception as e:
             db.session.rollback()
@@ -57,15 +71,23 @@ class AnimalDiseaseById(Resource):
     def patch(self, record_id):
         try:
             data = request.get_json()
+            # Consulta directa a BD (sin cache)
             disease_record = db.session.query(models.AnimalDisease).filter_by(id=record_id).first()
             if not disease_record:
                 return APIResponse.error(message='Registro de enfermedad no encontrado', status_code=404)
-            
+
             for attr, value in data.items():
                 if attr in model_for_update:
                     setattr(disease_record, attr, value)
-            
+
+            db.session.flush()
             db.session.commit()
+            db.session.refresh(disease_record)
+
+            # Invalidar cache INMEDIATAMENTE después de sincronización
+            _cache_clear('AnimalDisease')
+
+            # Respuesta con datos sincronizados desde BD
             return APIResponse.success(message='Enfermedad actualizada parcialmente', data=disease_record.to_dict())
         except Exception as e:
             db.session.rollback()
@@ -121,8 +143,14 @@ class AnimalDiseasesList(Resource):
             
             new_disease_record = models.AnimalDisease(**data)
             db.session.add(new_disease_record)
+            db.session.flush()
             db.session.commit()
-            
+            db.session.refresh(new_disease_record)
+
+            # Invalidar cache INMEDIATAMENTE después de sincronización
+            _cache_clear('AnimalDisease')
+
+            # Respuesta rápida con datos desde BD (sin cache)
             return APIResponse.success(
                 message='Enfermedad registrada exitosamente',
                 data=new_disease_record.to_dict()

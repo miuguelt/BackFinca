@@ -4,7 +4,11 @@ from app.models.base_model import BaseModel, ValidationError
 class Diseases(BaseModel):
     """Modelo para enfermedades que pueden afectar a los animales optimizado para namespaces"""
     __tablename__ = 'diseases'
-    
+    __table_args__ = (
+        db.Index('ix_diseases_updated_at', 'updated_at'),
+        db.Index('ix_diseases_created_at', 'created_at'),
+    )
+
     id = db.Column(db.Integer, autoincrement=True, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
     symptoms = db.Column(db.String(255), nullable=False)
@@ -21,6 +25,15 @@ class Diseases(BaseModel):
     _sortable_fields = ['id', 'name', 'created_at', 'updated_at']
     _required_fields = ['name', 'symptoms', 'details']
     _unique_fields = ['name']
+
+    # Configuración de caché: datos maestros, cambian poco, caché público largo
+    _cache_config = {
+        'ttl': 1800,  # 30 minutos
+        'type': 'public',
+        'strategy': 'cache-first',
+        'max_age': 1800,
+        'stale_while_revalidate': 600,  # 10 minutos
+    }
 
     # Relaciones optimizadas
     animals = db.relationship('AnimalDiseases', back_populates='disease', lazy='dynamic')

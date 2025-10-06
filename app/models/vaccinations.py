@@ -18,7 +18,7 @@ class Vaccinations(BaseModel):
     instructor_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
     # Configuración específica para namespaces
-    _namespace_fields = ['id', 'animal_id', 'vaccine_id', 'vaccination_date', 'apprentice_id', 'instructor_id', 'created_at']
+    _namespace_fields = ['id', 'animal_id', 'vaccine_id', 'vaccination_date', 'apprentice_id', 'instructor_id', 'created_at', 'updated_at']
     _namespace_relations = {
         'animals': {'fields': ['id', 'record', 'sex', 'status'], 'depth': 1},
         'vaccines': {'fields': ['id', 'name', 'type'], 'depth': 1},

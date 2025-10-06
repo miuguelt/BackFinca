@@ -19,7 +19,10 @@ if len(sys.argv) > 1 and sys.argv[1] == '--config' and len(sys.argv) > 2:
 elif os.getenv('FLASK_ENV'):
     config_name = os.getenv('FLASK_ENV')
 
-print(f"[RUN] Using configuration: {config_name}")
+# Solo mostrar mensaje en el proceso principal del reloader
+if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+    print(f"[RUN] Using configuration: {config_name}")
+
 app = create_app(config_name)
 
 # Aplicar ProxyFix si se ejecuta detrás de un reverse proxy (configurable vía env)
@@ -62,17 +65,20 @@ with app.app_context():
 def _resolve_ssl_context():
     use_https = os.getenv('USE_HTTPS', 'true').lower() == 'true'
     if not use_https:
-        print("[RUN] HTTPS desactivado (USE_HTTPS=false)")
+        if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+            print("[RUN] HTTPS desactivado (USE_HTTPS=false)")
         return None
 
     cert_file = os.getenv('SSL_CERT_FILE')
     key_file = os.getenv('SSL_KEY_FILE')
 
     if cert_file and key_file and os.path.exists(cert_file) and os.path.exists(key_file):
-        print(f"[RUN] HTTPS con certificado provisto\n  CERT: {cert_file}\n  KEY : {key_file}")
+        if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+            print(f"[RUN] HTTPS con certificado provisto\n  CERT: {cert_file}\n  KEY : {key_file}")
         return (cert_file, key_file)
 
-    print("[RUN] HTTPS con certificado adhoc (autofirmado)")
+    if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+        print("[RUN] HTTPS con certificado adhoc (autofirmado)")
     return 'adhoc'
 
 
@@ -147,38 +153,40 @@ if __name__ == "__main__":
 
     ssl_context = _resolve_ssl_context()  # Configurar HTTPS con certificados locales o adhoc
 
-    # DEBUG: Log detallado de binding y SSL para troubleshooting localhost
-    import socket
-    try:
-        # Resolver localhost para ver IPs asociadas
-        localhost_ips = socket.getaddrinfo('localhost', port, family=socket.AF_UNSPEC, type=socket.SOCK_STREAM)
-        ip_list = [addr[4][0] for addr in localhost_ips]
-        print(f"[DEBUG] Binding a 'localhost' resuelve a IPs: {ip_list}")
-        print(f"[DEBUG] SSL Context: {ssl_context} (type: {type(ssl_context)})")
-        
-        if isinstance(ssl_context, tuple):
-            cert_file, key_file = ssl_context
-            print(f"[DEBUG] Cert file: {cert_file}, exists: {os.path.exists(cert_file)}")
-            print(f"[DEBUG] Key file: {key_file}, exists: {os.path.exists(key_file)}")
-    except Exception as e:
-        print(f"[DEBUG] Error resolviendo localhost o SSL: {e}")
+    # DEBUG: Log detallado de binding y SSL para troubleshooting localhost (solo en proceso principal)
+    if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+        import socket
+        try:
+            # Resolver localhost para ver IPs asociadas
+            localhost_ips = socket.getaddrinfo('localhost', port, family=socket.AF_UNSPEC, type=socket.SOCK_STREAM)
+            ip_list = [addr[4][0] for addr in localhost_ips]
+            print(f"[DEBUG] Binding a 'localhost' resuelve a IPs: {ip_list}")
+            print(f"[DEBUG] SSL Context: {ssl_context} (type: {type(ssl_context)})")
 
-    # Log startup characteristics (masked) to help verify runtime config
-    try:
-        log_startup_info(app, ssl_context)
-    except Exception as e:
-        logging.getLogger('startup').exception('Failed to log startup info: %s', e)
+            if isinstance(ssl_context, tuple):
+                cert_file, key_file = ssl_context
+                print(f"[DEBUG] Cert file: {cert_file}, exists: {os.path.exists(cert_file)}")
+                print(f"[DEBUG] Key file: {key_file}, exists: {os.path.exists(key_file)}")
+        except Exception as e:
+            print(f"[DEBUG] Error resolviendo localhost o SSL: {e}")
 
-    # NUEVO: Log de URL y puerto del backend en modo debug (run.py)
-    try:
-        scheme = 'https' if ssl_context else 'http'
-        display_host = os.getenv('BACKEND_DISPLAY_HOST', 'localhost')
-        logger = logging.getLogger('startup')
-        msg = f"Backend escuchando en {scheme}://{display_host}:{port} (run.py)"
-        print(f"[RUN] DEBUG: {msg}")
-        logger.info("[RUN] DEBUG: %s", msg)
-    except Exception:
-        pass
+    # Log startup characteristics (masked) to help verify runtime config (solo en proceso principal)
+    if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+        try:
+            log_startup_info(app, ssl_context)
+        except Exception as e:
+            logging.getLogger('startup').exception('Failed to log startup info: %s', e)
+
+        # NUEVO: Log de URL y puerto del backend en modo debug (run.py)
+        try:
+            scheme = 'https' if ssl_context else 'http'
+            display_host = os.getenv('BACKEND_DISPLAY_HOST', 'localhost')
+            logger = logging.getLogger('startup')
+            msg = f"Backend escuchando en {scheme}://{display_host}:{port} (run.py)"
+            print(f"[RUN] DEBUG: {msg}")
+            logger.info("[RUN] DEBUG: %s", msg)
+        except Exception:
+            pass
     
     # DEBUG: Wrapper para loggear requests a /api/v1/docs
     from functools import wraps

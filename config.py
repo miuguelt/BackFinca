@@ -66,11 +66,12 @@ class Config:
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': 25,
-        'max_overflow': 40,
-        'pool_timeout': 20,
-        'pool_recycle': 3600,
-        'pool_pre_ping': True,
+        # Connection Pool optimizado para alta concurrencia
+        'pool_size': 20,  # Conexiones permanentes (reducido de 25)
+        'max_overflow': 30,  # Conexiones adicionales (reducido de 40)
+        'pool_timeout': 30,  # Timeout para obtener conexión (aumentado de 20)
+        'pool_recycle': 1800,  # Reciclar cada 30 min (reducido de 3600 para evitar stale connections)
+        'pool_pre_ping': True,  # Verificar conexiones antes de usar
         'echo': False,
         'connect_args': {
             'charset': 'utf8mb4',
@@ -90,7 +91,9 @@ class Config:
     # -----------------------
     # Cache & Rendimiento
     # -----------------------
-    CACHE_TYPE = 'simple'
+    CACHE_TYPE = 'redis'
+    REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+    CACHE_REDIS_URL = os.getenv('CACHE_REDIS_URL', REDIS_URL)
     CACHE_DEFAULT_TIMEOUT = 600
     CACHE_THRESHOLD = 1000
     PERFORMANCE_MONITORING = True
@@ -154,7 +157,7 @@ class Config:
     # -----------------------
     # Rate Limiting
     # -----------------------
-    RATE_LIMIT_STORAGE_URI = 'memory://'
+    RATE_LIMIT_STORAGE_URI = os.getenv('RATE_LIMIT_STORAGE_URI', REDIS_URL)
     RATE_LIMIT_ENABLED = True
 
     # -----------------------
@@ -200,6 +203,13 @@ class DevelopmentConfig(Config):
     # Configuración adicional para desarrollo
     JWT_COOKIE_PATH = '/'
 
+    # Plan B: permitir desactivar temporalmente la protección CSRF de cookies JWT para validar el flujo de refresh.
+    # Usa DEV_JWT_COOKIE_CSRF_PROTECT=true para reactivar cuando terminemos la validación.
+    from os import getenv as _getenv
+    JWT_COOKIE_CSRF_PROTECT = _getenv('DEV_JWT_COOKIE_CSRF_PROTECT', 'false').lower() == 'true'
+    # Permitir uso de JWT tanto en cookies como en encabezados para facilitar pruebas
+    JWT_TOKEN_LOCATION = ['cookies', 'headers']
+
     # Allow small clock skew when decoding tokens to avoid "Signature has expired"
     # errors caused by minor time differences between clients and server.
     # Value is in seconds.
@@ -215,7 +225,6 @@ class ProductionConfig(Config):
     
     # Configuraciones de seguridad más estrictas en producción
     MAX_CONTENT_LENGTH = 8 * 1024 * 1024  # 8MB en producción (más restrictivo)
-    RATE_LIMIT_STORAGE_URI = 'redis://localhost:6379'  # Redis para production
     
     # JWT - Atributos específicos de producción
     # JWT_COOKIE_SECURE debe ser True para HTTPS
@@ -267,10 +276,14 @@ class TestingConfig(Config):
     SQLALCHEMY_ENGINE_OPTIONS = {}
     DEBUG = False
     LOG_LEVEL = logging.DEBUG
-    # Desactivar rate limiting en pruebas para evitar 429 en flujos repetitivos (login/CRUD)
-    RATE_LIMIT_ENABLED = False
+    RATE_LIMIT_ENABLED = True
     # Forzar uso de headers en testing ya que las cookies no funcionan bien en entorno de pruebas
     JWT_TOKEN_LOCATION = ['headers']
+    CACHE_TYPE = 'redis'
+    # Permitir usar una BD distinta en pruebas por defecto (db 2)
+    REDIS_URL = os.getenv('TEST_REDIS_URL', os.getenv('REDIS_URL', 'redis://localhost:6379/2'))
+    CACHE_REDIS_URL = os.getenv('TEST_CACHE_REDIS_URL', REDIS_URL)
+    RATE_LIMIT_STORAGE_URI = os.getenv('TEST_RATE_LIMIT_STORAGE_URI', REDIS_URL)
 
 # Diccionario de configuración final
 config = {

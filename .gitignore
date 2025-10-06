@@ -193,3 +193,5 @@ cython_debug/
 /scripts
 /docs
 !docs/api-usage-guia-frontend.md
+/.claude
+*.md

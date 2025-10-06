@@ -43,7 +43,9 @@ class VaccinationDetail(Resource):
         data = vaccinations_ns.payload
         for key, value in data.items():
             setattr(vaccination, key, value)
+        db.session.flush()
         db.session.commit()
+        db.session.refresh(vaccination)
         return APIResponse.success(data=vaccination.to_json())
 
     @vaccinations_ns.doc('delete_vaccination', description='Eliminar vacunación')
@@ -74,5 +76,7 @@ class VaccinationsList(Resource):
         data = vaccinations_ns.payload
         vaccination = Vaccinations(**data)
         db.session.add(vaccination)
+        db.session.flush()
         db.session.commit()
+        db.session.refresh(vaccination)
         return APIResponse.success(data=vaccination.to_json(), message='Vacunación creada')

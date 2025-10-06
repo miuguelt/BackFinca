@@ -80,12 +80,11 @@ def set_limiter(app_limiter):
             LogoutResource.post._rate_limit_applied = True
         except Exception:
             logger.exception("No se pudo aplicar rate limit a LogoutResource.post")
-        # Aplicar exención de rate limit para /auth/me solo en desarrollo
+        # Aplicar exención de rate limit para /auth/me (endpoint de verificación frecuente)
         try:
-            if current_app and current_app.config.get('DEBUG', False):
-                if not hasattr(CurrentUserResource.get, '_rate_limit_exempted'):
-                    CurrentUserResource.get = limiter.exempt(CurrentUserResource.get)
-                    CurrentUserResource.get._rate_limit_exempted = True
+            if not hasattr(CurrentUserResource.get, '_rate_limit_exempted'):
+                CurrentUserResource.get = limiter.exempt(CurrentUserResource.get)
+                CurrentUserResource.get._rate_limit_exempted = True
         except Exception:
             logger.exception("No se pudo configurar la exención de rate limit para CurrentUserResource.get")
     except Exception as e:
@@ -197,7 +196,12 @@ class RefreshTokenResource(Resource):
         """Renovar access token usando refresh token."""
         try:
             current_user_id = get_jwt_identity()
-            user = User.query.get(current_user_id)
+            # Convertir a int si es posible (tokens usan identity string)
+            try:
+                user_id_int = int(current_user_id)
+            except Exception:
+                user_id_int = current_user_id
+            user = User.get_by_id(user_id_int)
             if not user or not user.status:
                 return APIResponse.error('Usuario inválido o inactivo', status_code=403)
             
@@ -229,7 +233,7 @@ class RefreshTokenResource(Resource):
             return resp
         except Exception as e:
             logger.error(f'Error en refresh token: {e}', exc_info=True)
-            return APIResponse.error('Error al renovar token', status_code=500)
+            return APIResponse.error('Error al renovar token', status_code=500, details={'error': str(e)})
 
 # --- Rutas de Autenticación ---
 

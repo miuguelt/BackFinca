@@ -349,35 +349,42 @@ class SystemAlerts(Resource):
                 # Calcular promedio de ganancia diaria del último mes
                 last_month = current_date - timedelta(days=30)
                 
-                # Cálculo de ganancia diaria promedio (reimplementado para evitar ambigüedad de JOIN)
-                # Usamos pesos registrados en controles consecutivos por animal.
-                # Fórmula: (peso_actual - peso_prev) / DATEDIFF(fecha_actual, fecha_prev)
-                # Nota: Si el motor no soporta DATEDIFF (p.ej. SQLite), devolvemos None silenciosamente.
+                # Cálculo de ganancia diaria promedio (versión compatible con MySQL)
+                # Usamos una subquery para evitar problemas con funciones de ventana
                 try:
-                    weight_diff = (
-                        Control.weight - func.lag(Control.weight).over(
-                            partition_by=Control.animal_id,
-                            order_by=Control.checkup_date
-                        )
-                    )
-                    days_diff = func.datediff(
-                        Control.checkup_date,
-                        func.lag(Control.checkup_date).over(
-                            partition_by=Control.animal_id,
-                            order_by=Control.checkup_date
-                        )
-                    )
-                    avg_daily_gain = db.session.query(
-                        func.avg(
-                            weight_diff / func.nullif(days_diff, 0)
-                        ).label('daily_gain')
-                    ).select_from(Control).join(
-                        Animals, Animals.id == Control.animal_id
+                    # Subquery para obtener controles anteriores por animal
+                    prev_control = db.session.query(
+                        Control.animal_id,
+                        Control.checkup_date.label('prev_date'),
+                        Control.weight.label('prev_weight')
+                    ).subquery()
+                    
+                    # Join para obtener control actual y anterior
+                    weight_gains = db.session.query(
+                        Control.animal_id,
+                        Control.weight.label('current_weight'),
+                        Control.checkup_date.label('current_date'),
+                        prev_control.c.prev_weight,
+                        prev_control.c.prev_date
+                    ).join(
+                        prev_control,
+                        (Control.animal_id == prev_control.c.animal_id) &
+                        (Control.checkup_date > prev_control.c.prev_date)
                     ).filter(
                         Animals.status == AnimalStatus.Vivo,
                         Control.checkup_date >= last_month,
-                        Control.weight.isnot(None)
+                        Control.weight.isnot(None),
+                        prev_control.c.prev_weight.isnot(None)
+                    ).subquery()
+                    
+                    # Calcular ganancia diaria
+                    avg_daily_gain = db.session.query(
+                        func.avg(
+                            (weight_gains.c.current_weight - weight_gains.c.prev_weight) /
+                            func.datediff(weight_gains.c.current_date, weight_gains.c.prev_date)
+                        ).label('daily_gain')
                     ).scalar()
+                    
                 except Exception as calc_err:
                     logger.debug(f"No se pudo calcular avg_daily_gain: {calc_err}")
                     avg_daily_gain = None

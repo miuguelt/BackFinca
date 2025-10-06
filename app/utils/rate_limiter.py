@@ -59,25 +59,46 @@ def rate_limit_handler(request_limit):
 
 def init_rate_limiter(app):
     """Inicializar y configurar el rate limiter"""
-    storage_uri = app.config.get('RATE_LIMIT_STORAGE_URI', 'memory://')
+    # Usar la URL de Redis configurada en la aplicación
+    storage_uri = app.config.get('RATE_LIMIT_STORAGE_URI')
+    redis_url = app.config.get('REDIS_URL')
+    
+    # Si no se configuró RATE_LIMIT_STORAGE_URI pero sí REDIS_URL, usar REDIS_URL
+    if not storage_uri and redis_url:
+        storage_uri = redis_url
+        app.config['RATE_LIMIT_STORAGE_URI'] = storage_uri
+    
+    # Si todavía no hay storage_uri, usar Redis por defecto
+    if not storage_uri:
+        storage_uri = 'redis://localhost:6379/0'
+        app.config['RATE_LIMIT_STORAGE_URI'] = storage_uri
+    
     try:
+        # Importar el storage de Redis solo cuando se necesita
+        from flask_limiter.util import get_redis_storage
+        from redis import Redis
+        
+        # Crear conexión Redis específica para rate limiting
+        redis_client = Redis.from_url(storage_uri)
+        storage = get_redis_storage(redis_client)
+        
         limiter = Limiter(
             app=app,
             key_func=get_remote_address_with_forwarded,
-            default_limits=["1000 per day", "100 per hour"],
+            default_limits=["10000 per day", "1000 per hour"],
             on_breach=rate_limit_handler,
-            storage_uri=storage_uri,
+            storage=storage,
             headers_enabled=True,
         )
-        app.logger.info(f"Rate limiter inicializado con storage: {storage_uri}")
+        app.logger.info(f"Rate limiter inicializado con storage Redis: {storage_uri}")
         return limiter
     except Exception as e:
-        # Fallback a almacenamiento en memoria si la configuración falla (p.ej. redis no disponible)
-        app.logger.warning(f"Rate limiter storage '{storage_uri}' fallo: {e}. Reintentando con memory://")
+        # Fallback a almacenamiento en memoria si Redis no está disponible
+        app.logger.warning(f"Rate limiter Redis '{storage_uri}' fallo: {e}. Reintentando con memory://")
         limiter = Limiter(
             app=app,
             key_func=get_remote_address_with_forwarded,
-            default_limits=["1000 per day", "100 per hour"],
+            default_limits=["10000 per day", "1000 per hour"],
             on_breach=rate_limit_handler,
             storage_uri='memory://',
             headers_enabled=True,
@@ -88,8 +109,8 @@ def init_rate_limiter(app):
 
 # Configuración de rate limiting por defecto por tipo de endpoint
 RATE_LIMIT_CONFIG = {
-    'auth': {'login': "5 per minute", 'refresh': "10 per minute", 'logout': "20 per minute"},
-    'users': {'create': "3 per hour", 'read': "200 per hour", 'update': "30 per hour", 'delete': "10 per hour"},
-    'animals': {'create': "50 per hour", 'read': "500 per hour", 'update': "100 per hour", 'delete': "20 per hour"},
-    'general': {'read': "200 per hour", 'write': "50 per hour", 'admin': "1000 per hour"}
+    'auth': {'login': "10 per minute", 'refresh': "20 per minute", 'logout': "30 per minute"},
+    'users': {'create': "10 per hour", 'read': "500 per hour", 'update': "100 per hour", 'delete': "20 per hour"},
+    'animals': {'create': "100 per hour", 'read': "1000 per hour", 'update': "200 per hour", 'delete': "50 per hour"},
+    'general': {'read': "500 per hour", 'write': "100 per hour", 'admin': "2000 per hour"}
 }

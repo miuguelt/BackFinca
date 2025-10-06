@@ -23,6 +23,10 @@ class Role(enum.Enum):
 class User(BaseModel):
     """Modelo de usuario optimizado para namespaces"""
     __tablename__ = 'user'
+    __table_args__ = (
+        db.Index('ix_user_updated_at', 'updated_at'),
+        db.Index('ix_user_created_at', 'created_at'),
+    )
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     identification = db.Column(db.BigInteger, unique=True, nullable=False)
@@ -35,18 +39,27 @@ class User(BaseModel):
     status = db.Column(db.Boolean, default=True)
 
     # Configuración específica para namespaces
-    _namespace_fields = ['id', 'identification', 'fullname', 'email', 'phone', 'address', 'role', 'status', 'created_at']
+    _namespace_fields = ['id', 'identification', 'fullname', 'email', 'phone', 'address', 'role', 'status', 'created_at', 'updated_at']
     _namespace_relations = {
         'diseases': {'fields': ['id', 'animal_id', 'disease_id', 'diagnosis_date'], 'depth': 1},
         'vaccines_as_apprentice': {'fields': ['id', 'animal_id', 'vaccine_id', 'vaccination_date'], 'depth': 1},
         'vaccines_as_instructor': {'fields': ['id', 'animal_id', 'vaccine_id', 'vaccination_date'], 'depth': 1}
     }
-    _searchable_fields = ['fullname', 'email', 'identification']
+    _searchable_fields = ['fullname', 'email']
     _filterable_fields = ['role', 'status', 'created_at']
     _sortable_fields = ['id', 'fullname', 'email', 'identification', 'created_at', 'updated_at']
     _required_fields = ['identification', 'fullname', 'password', 'email', 'phone', 'role']
     _unique_fields = ['identification', 'email', 'phone']
     _enum_fields = {'role': Role}
+
+    # Configuración de caché: datos de usuario son privados y cambian frecuentemente
+    _cache_config = {
+        'ttl': 60,  # 1 minuto
+        'type': 'private',
+        'strategy': 'network-first',
+        'max_age': 60,
+        'stale_while_revalidate': 30,
+    }
 
     # Relaciones optimizadas
     diseases = db.relationship('AnimalDiseases', back_populates='instructor', lazy='dynamic')

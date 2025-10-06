@@ -47,6 +47,11 @@
     window.onload = () => {
       const specUrl = document.body.getAttribute('data-specs-url');
 
+      // Toggle de depuración desde querystring ?debug=1|true o localStorage('swaggerDebug')
+      const urlParamDebug = new URLSearchParams(window.location.search).get('debug');
+      const DEBUG_SWAGGER = urlParamDebug === '1' || urlParamDebug === 'true' || !!localStorage.getItem('swaggerDebug');
+      const dlog = (...args) => { if (DEBUG_SWAGGER) console.log('[SwaggerUI]', ...args); };
+
       // Utilidad para leer cookies
       const getCookie = (name) => {
         const value = `; ${document.cookie}`;
@@ -98,12 +103,13 @@
             }
           }
           lastStatus = next;
+          dlog('Badges status', next);
         });
       };
 
       const computeBadges = () => {
         const jwt = !!getCookie('access_token_cookie');
-        const csrf = !!getCookie('csrf_access_token');
+        const csrf = !!(getCookie('csrf_access_token') || getCookie('csrf_refresh_token'));
         let bearer = false;
         try {
           const sys = window.ui && window.ui.getSystem ? window.ui.getSystem() : undefined;
@@ -129,7 +135,7 @@
       };
 
       const ui = SwaggerUIBundle({
-        url: specUrl,
+        url: specUrl, // relativo al origen actual
         dom_id: '#swagger-ui',
         deepLinking: true,
         presets: [SwaggerUIBundle.presets.apis],
@@ -137,12 +143,82 @@
         persistAuthorization: true,
         requestInterceptor: (req) => {
           try {
+            const originalUrl = req.url;
+            let parsedUrl;
+            try { parsedUrl = new URL(req.url, window.location.origin); } catch (e) { parsedUrl = null; }
+
+            // Reescribir a relativo si el host del request difiere del host actual
+            if (parsedUrl && parsedUrl.host !== window.location.host) {
+              const relativeHref = new URL(parsedUrl.pathname + parsedUrl.search + parsedUrl.hash, window.location.origin).href;
+              if (DEBUG_SWAGGER) {
+                console.warn('[SwaggerUI] Reescribiendo URL absoluta a relativa', { from: parsedUrl.href, to: relativeHref });
+              }
+              req.url = relativeHref;
+              parsedUrl = new URL(req.url);
+            }
+
+            const path = parsedUrl ? parsedUrl.pathname : '';
+
             req.credentials = 'include';
-            const csrf = getCookie('csrf_access_token');
+
+            const csrfAccess = getCookie('csrf_access_token');
+            const csrfRefresh = getCookie('csrf_refresh_token');
+            const accessCookie = getCookie('access_token_cookie');
+            const refreshCookie = getCookie('refresh_token_cookie');
+
+            let csrf = null;
+            // Elegir token CSRF según endpoint (robusto ante variaciones de ruta)
+            const isRefreshEndpoint = path && path.includes('/auth/refresh');
+            if (isRefreshEndpoint) {
+              // Evitar interferencia del header Authorization en el flujo de refresh (usar solo cookies)
+              if (req.headers) {
+                if (req.headers['Authorization']) delete req.headers['Authorization'];
+                if (req.headers['authorization']) delete req.headers['authorization'];
+              }
+            }
+            if (isRefreshEndpoint) {
+              // Para /auth/refresh usar EXCLUSIVAMENTE csrf_refresh_token.
+              // No hacer fallback al csrf_access_token para evitar mismatch de CSRF doble submit.
+              csrf = csrfRefresh || null;
+            } else {
+              // Para cualquier otro endpoint, preferir csrf_access_token, con fallback al de refresh
+              csrf = csrfAccess || csrfRefresh;
+            }
+            if (!csrf) {
+              // Fallback general si no se encontró ninguno (solo aplica para endpoints no-refresh)
+              // En refresh, si no hay csrf_refresh_token, omitimos el header y dejamos que el backend rechace con CSRF_ERROR.
+              if (!isRefreshEndpoint) {
+                csrf = csrfAccess || csrfRefresh;
+              }
+            }
             if (csrf) {
-              req.headers = req.headers || {};
+              // Enviar ambos encabezados por compatibilidad
+              req.headers['X-CSRF-Token'] = csrf;
               req.headers['X-CSRF-TOKEN'] = csrf;
             }
+
+            if (DEBUG_SWAGGER) {
+              console.groupCollapsed('[SwaggerUI] requestInterceptor');
+              console.log('origin', window.location.origin);
+              console.log('originalUrl', originalUrl);
+              console.log('finalUrl', req.url);
+              console.log('path', path);
+              console.log('isRefreshEndpoint', isRefreshEndpoint);
+              console.log('cookies', {
+                access_token_cookie: accessCookie,
+                refresh_token_cookie: refreshCookie,
+                csrf_access_token: csrfAccess,
+                csrf_refresh_token: csrfRefresh,
+              });
+              console.log('selectedCsrf', csrf);
+              console.log('removedAuthHeaderForRefresh', isRefreshEndpoint);
+              console.log('setHeaders', { 'X-CSRF-Token': req.headers['X-CSRF-Token'], 'X-CSRF-TOKEN': req.headers['X-CSRF-TOKEN'] });
+              console.log('credentials', req.credentials);
+              console.groupEnd();
+            }
+
+            scheduleStatusUpdate();
+            return req;
           } catch (e) { /* noop */ }
           scheduleStatusUpdate();
           return req;

@@ -42,7 +42,7 @@ class Control(BaseModel):
     animal_id = db.Column(db.Integer, db.ForeignKey('animals.id'), nullable=False)
 
     # Configuración específica para namespaces
-    _namespace_fields = ['id', 'checkup_date', 'health_status', 'weight', 'height', 'description', 'animal_id', 'created_at']
+    _namespace_fields = ['id', 'checkup_date', 'health_status', 'weight', 'height', 'description', 'animal_id', 'created_at', 'updated_at']
     _namespace_relations = {
         'animals': {'fields': ['id', 'record', 'sex', 'status'], 'depth': 1}
     }

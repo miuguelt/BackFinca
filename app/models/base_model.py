@@ -42,6 +42,15 @@ class BaseModel(db.Model):
     _unique_fields = []
     _enum_fields = {}
 
+    # Configuración de caché para PWA (optimizado para diferentes tipos de datos)
+    _cache_config = {
+        'ttl': 120,  # TTL en segundos (2 minutos por defecto)
+        'type': 'private',  # 'public' (compartido) o 'private' (por usuario)
+        'strategy': 'stale-while-revalidate',  # estrategia para Service Worker
+        'max_age': 120,  # max-age para Cache-Control header
+        'stale_while_revalidate': 60,  # tiempo para usar caché stale mientras revalida
+    }
+
     @classmethod
     def _validate_and_normalize(cls, data, is_update=False, instance_id=None):
         """
@@ -95,7 +104,17 @@ class BaseModel(db.Model):
         """
         from app.utils.json_utils import JSONEncoder
 
-        target_fields = fields or self._namespace_fields
+        # Si no se especifican campos, usar todos los campos de la tabla
+        if fields is None:
+            # Si el modelo tiene _namespace_fields definido, usarlos
+            if hasattr(self, '_namespace_fields') and self._namespace_fields:
+                target_fields = self._namespace_fields
+            else:
+                # Si no, incluir automáticamente todos los campos de la tabla
+                target_fields = [col.name for col in self.__table__.columns]
+        else:
+            target_fields = fields
+
         data = {field: JSONEncoder.serialize(getattr(self, field, None)) for field in target_fields}
 
         # Relaciones (solo si se solicita y depth>0)
@@ -132,7 +151,7 @@ class BaseModel(db.Model):
         return self.to_namespace_dict()
 
     @classmethod
-    def get_namespace_query(cls, filters=None, search=None, sort_by=None, sort_order='asc',
+    def get_namespace_query(cls, filters=None, search=None, search_type='auto', sort_by=None, sort_order='asc',
                            page=None, per_page=None, include_relations=False):  # per_page retained for backward compat
         """Construir consulta optimizada para namespaces"""
         query = cls.query
@@ -142,7 +161,11 @@ class BaseModel(db.Model):
             try:
                 for relation_name in cls._namespace_relations.keys():
                     if hasattr(cls, relation_name):
-                        query = query.options(selectinload(getattr(cls, relation_name)))
+                        # Verificar si la relación es dinámica antes de aplicar selectinload
+                        relation_attr = getattr(cls, relation_name)
+                        if hasattr(relation_attr.property, 'lazy') and relation_attr.property.lazy == 'dynamic':
+                            continue  # Saltar relaciones dinámicas
+                        query = query.options(selectinload(relation_attr))
             except Exception:
                 # Fallback silencioso si el backend de ORM no soporta la opción
                 pass
@@ -151,32 +174,387 @@ class BaseModel(db.Model):
         if filters:
             filter_conditions = []
             for key, value in filters.items():
+                # Filtro especial para delta sync (sincronización incremental)
+                if key == '_since':
+                    # Filtrar por updated_at >= since_date (registros modificados desde timestamp)
+                    if hasattr(cls, 'updated_at'):
+                        filter_conditions.append(cls.updated_at >= value)
+                        logger.debug(f"Delta sync filter: {cls.__name__}.updated_at >= {value}")
+                    continue
+
                 if key in cls._filterable_fields and hasattr(cls, key):
                     if isinstance(value, list):
                         filter_conditions.append(getattr(cls, key).in_(value))
+                        logger.debug(f"Filtro aplicado: {cls.__name__}.{key} IN {value} (tipo: {type(value[0]) if value else 'empty'})")
                     else:
                         filter_conditions.append(getattr(cls, key) == value)
+                        logger.debug(f"Filtro aplicado: {cls.__name__}.{key} == {value} (tipo: {type(value)})")
+                else:
+                    logger.warning(f"Filtro ignorado: {key} no está en _filterable_fields de {cls.__name__}")
 
             if filter_conditions:
                 query = query.filter(and_(*filter_conditions))
+                logger.debug(f"Query con filtros: {len(filter_conditions)} condiciones aplicadas en {cls.__name__}")
 
-        # Aplicar búsqueda
-        if search and cls._searchable_fields:
+        # Aplicar búsqueda: texto, id exacto y fechas (año, mes, día)
+        if search:
+            logger.debug(f"[SEARCH DEBUG] {cls.__name__} - Término de búsqueda: '{search}', search_type: '{search_type}'")
             search_conditions = []
-            for field in cls._searchable_fields:
-                if hasattr(cls, field):
-                    search_conditions.append(getattr(cls, field).ilike(f'%{search}%'))
+            is_date_search = False
+            
+            # Búsqueda por fechas: año, mes, día específico
+            from sqlalchemy import Date, DateTime, extract
+            from datetime import datetime
+            
+            parsed_date = None
+            parsed_datetime = None
+            year_only = None
+            month_only = None
+            day_only = None
+            
+            if isinstance(search, str):
+                search = search.strip()
+                
+                # Detectar si es solo un año (4 dígitos)
+                if search.isdigit() and len(search) == 4:
+                    try:
+                        year_only = int(search)
+                        is_date_search = True
+                    except ValueError:
+                        pass
+                
+                # Detectar formatos con barra o guión
+                elif '-' in search or '/' in search:
+                    try:
+                        parts = search.replace('/', '-').split('-')
+                        parts = [p for p in parts if p]  # Remover partes vacías (ej: "7/9/" → ["7", "9"])
+
+                        if len(parts) == 2:
+                            # Puede ser YYYY-MM, DD-MM, o MM-DD
+                            first = int(parts[0])
+                            second = int(parts[1])
+
+                            # Si el primer número tiene 4 dígitos, es año-mes (YYYY-MM)
+                            if len(parts[0]) == 4:
+                                year_only = first
+                                month_only = second
+                                is_date_search = True
+                                logger.debug(f"[SEARCH DEBUG] Detectado año-mes: {year_only}-{month_only}")
+                            # Si ambos son <= 31, asumimos día-mes o mes-día
+                            elif first <= 31 and second <= 12:
+                                # Asumimos formato DD/MM (día/mes) - común en Latinoamérica
+                                day_only = first
+                                month_only = second
+                                is_date_search = True
+                                logger.debug(f"[SEARCH DEBUG] Detectado día-mes: {day_only}/{month_only}")
+                            elif first <= 12 and second <= 31:
+                                # Podría ser MM/DD, pero priorizamos DD/MM
+                                day_only = first
+                                month_only = second
+                                is_date_search = True
+                                logger.debug(f"[SEARCH DEBUG] Detectado día-mes (ambiguo): {day_only}/{month_only}")
+                    except (ValueError, IndexError) as e:
+                        logger.debug(f"[SEARCH DEBUG] Error parseando formato fecha con separador: {e}")
+                        pass
+                
+                # Intentar parsear como fecha completa
+                else:
+                    date_formats = ['%Y-%m-%d', '%d/%m/%Y', '%Y/%m/%d']
+                    datetime_formats = [
+                        '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M',
+                        '%d/%m/%Y %H:%M:%S', '%d/%m/%Y %H:%M'
+                    ]
+                    
+                    for fmt in date_formats:
+                        try:
+                            parsed_date = datetime.strptime(search, fmt).date()
+                            is_date_search = True
+                            break
+                        except Exception:
+                            continue
+                    
+                    if not parsed_date:
+                        for fmt in datetime_formats:
+                            try:
+                                parsed_datetime = datetime.strptime(search, fmt)
+                                is_date_search = True
+                                break
+                            except Exception:
+                                continue
+
+            # Aplicar búsqueda según el tipo especificado
+            if search_type == 'dates':
+                # Búsqueda SOLO en campos de fecha (cuando se especifica explícitamente)
+                try:
+                    for col in cls.__table__.columns:
+                        if isinstance(col.type, (Date, DateTime)):
+                            col_attr = getattr(cls, col.name)
+
+                            # Búsqueda por día Y mes combinados (ej: 7/9 = día 7, mes 9)
+                            if day_only is not None and month_only is not None:
+                                search_conditions.append(
+                                    and_(
+                                        extract('day', col_attr) == day_only,
+                                        extract('month', col_attr) == month_only
+                                    )
+                                )
+
+                            # Búsqueda por año solo
+                            elif year_only is not None and month_only is None:
+                                search_conditions.append(extract('year', col_attr) == year_only)
+
+                            # Búsqueda por año-mes
+                            elif year_only is not None and month_only is not None:
+                                search_conditions.append(
+                                    and_(
+                                        extract('year', col_attr) == year_only,
+                                        extract('month', col_attr) == month_only
+                                    )
+                                )
+
+                            # Búsqueda solo por mes
+                            elif month_only is not None:
+                                search_conditions.append(extract('month', col_attr) == month_only)
+
+                            # Búsqueda por fecha completa
+                            elif parsed_date is not None:
+                                if isinstance(col.type, Date):
+                                    search_conditions.append(col_attr == parsed_date)
+                                elif isinstance(col.type, DateTime):
+                                    search_conditions.append(db.func.date(col_attr) == parsed_date)
+
+                            # Búsqueda por datetime completo
+                            if parsed_datetime is not None and isinstance(col.type, DateTime):
+                                search_conditions.append(col_attr == parsed_datetime)
+
+                except Exception:
+                    pass
+
+            elif search_type == 'text' or search_type == 'auto':
+                # Búsqueda en campos de texto y numéricos
+                # Para 'auto': siempre buscar en texto/números, y ADEMÁS en fechas si parece fecha
+                all_text_fields = set(cls._searchable_fields) if cls._searchable_fields else set()
+
+                # Agregar todas las columnas de tipo texto del modelo
+                from sqlalchemy import String, Text, Integer, BigInteger, Numeric
+                for col in cls.__table__.columns:
+                    if isinstance(col.type, (String, Text)) and col.name not in ['created_at', 'updated_at']:
+                        all_text_fields.add(col.name)
+
+                # Aplicar búsqueda ILIKE en todos los campos de texto
+                for field in all_text_fields:
+                    if hasattr(cls, field):
+                        try:
+                            search_conditions.append(getattr(cls, field).ilike(f'%{search}%'))
+                        except Exception:
+                            # Ignorar campos no compatibles con ilike
+                            pass
+
+                # Coincidencia exacta/parcial en campos numéricos si el término es numérico
+                try:
+                    # Intentar convertir a número para búsqueda exacta
+                    numeric_val = int(str(search))
+                    logger.debug(f"[SEARCH DEBUG] {cls.__name__} - Búsqueda numérica detectada: {numeric_val}")
+
+                    # Búsqueda exacta por ID
+                    if hasattr(cls, 'id'):
+                        search_conditions.append(getattr(cls, 'id') == numeric_val)
+                        logger.debug(f"[SEARCH DEBUG] {cls.__name__} - Agregada condición: id == {numeric_val}")
+
+                    # Búsqueda exacta en TODOS los campos numéricos
+                    for col in cls.__table__.columns:
+                        if isinstance(col.type, (Integer, BigInteger, Numeric)) and col.name != 'id':
+                            try:
+                                search_conditions.append(getattr(cls, col.name) == numeric_val)
+                                logger.debug(f"[SEARCH DEBUG] {cls.__name__} - Agregada condición: {col.name} == {numeric_val}")
+                            except Exception as e:
+                                logger.debug(f"[SEARCH DEBUG] {cls.__name__} - Error en campo {col.name}: {e}")
+
+                    # Búsqueda parcial: convertir columnas numéricas a string para búsqueda tipo LIKE
+                    # Útil para números largos como identificaciones donde se busca parte del número
+                    for col in cls.__table__.columns:
+                        if isinstance(col.type, (Integer, BigInteger)) and col.name != 'id':
+                            try:
+                                # CAST a texto para permitir búsquedas parciales en números
+                                from sqlalchemy import cast, String as SQLString
+                                search_conditions.append(
+                                    cast(getattr(cls, col.name), SQLString).ilike(f'%{search}%')
+                                )
+                                logger.debug(f"[SEARCH DEBUG] {cls.__name__} - Agregada condición CAST: CAST({col.name} AS TEXT) ILIKE '%{search}%'")
+                            except Exception as e:
+                                logger.debug(f"[SEARCH DEBUG] {cls.__name__} - Error en CAST de campo {col.name}: {e}")
+
+                except (ValueError, TypeError):
+                    # Si no es numérico, solo buscar en campos de texto
+                    logger.debug(f"[SEARCH DEBUG] {cls.__name__} - Búsqueda NO numérica")
+                    pass
+
+                # Si 'auto' detectó que parece fecha, TAMBIÉN buscar en fechas
+                if search_type == 'auto' and is_date_search:
+                    logger.debug(f"[SEARCH DEBUG] {cls.__name__} - Búsqueda AUTO: también buscando en fechas")
+                    try:
+                        for col in cls.__table__.columns:
+                            if isinstance(col.type, (Date, DateTime)):
+                                col_attr = getattr(cls, col.name)
+
+                                # Búsqueda por día Y mes combinados (ej: 7/9 = día 7, mes 9)
+                                if day_only is not None and month_only is not None:
+                                    search_conditions.append(
+                                        and_(
+                                            extract('day', col_attr) == day_only,
+                                            extract('month', col_attr) == month_only
+                                        )
+                                    )
+                                    logger.debug(f"[SEARCH DEBUG] {cls.__name__} - Agregada condición: DAY({col.name}) == {day_only} AND MONTH({col.name}) == {month_only}")
+
+                                # Búsqueda por año
+                                elif year_only is not None and month_only is None:
+                                    search_conditions.append(extract('year', col_attr) == year_only)
+
+                                # Búsqueda por año-mes
+                                elif year_only is not None and month_only is not None:
+                                    search_conditions.append(
+                                        and_(
+                                            extract('year', col_attr) == year_only,
+                                            extract('month', col_attr) == month_only
+                                        )
+                                    )
+
+                                # Búsqueda solo por mes
+                                elif month_only is not None:
+                                    search_conditions.append(extract('month', col_attr) == month_only)
+
+                                # Búsqueda por fecha completa
+                                elif parsed_date is not None:
+                                    if isinstance(col.type, Date):
+                                        search_conditions.append(col_attr == parsed_date)
+                                    elif isinstance(col.type, DateTime):
+                                        search_conditions.append(db.func.date(col_attr) == parsed_date)
+
+                                # Búsqueda por datetime completo
+                                if parsed_datetime is not None and isinstance(col.type, DateTime):
+                                    search_conditions.append(col_attr == parsed_datetime)
+
+                    except Exception:
+                        pass
+            
+            elif search_type == 'all':
+                # Búsqueda en todos los campos (texto, ID, y fechas)
+
+                # Búsqueda por texto
+                all_text_fields = set(cls._searchable_fields) if cls._searchable_fields else set()
+                from sqlalchemy import String, Text, Integer, BigInteger, Numeric
+                for col in cls.__table__.columns:
+                    if isinstance(col.type, (String, Text)) and col.name not in ['created_at', 'updated_at']:
+                        all_text_fields.add(col.name)
+
+                for field in all_text_fields:
+                    if hasattr(cls, field):
+                        try:
+                            search_conditions.append(getattr(cls, field).ilike(f'%{search}%'))
+                        except Exception:
+                            pass
+
+                # Búsqueda en campos numéricos si el término es numérico
+                try:
+                    numeric_val = int(str(search))
+
+                    # Búsqueda exacta por ID
+                    if hasattr(cls, 'id'):
+                        search_conditions.append(getattr(cls, 'id') == numeric_val)
+
+                    # Búsqueda exacta en TODOS los campos numéricos
+                    for col in cls.__table__.columns:
+                        if isinstance(col.type, (Integer, BigInteger, Numeric)) and col.name != 'id':
+                            try:
+                                search_conditions.append(getattr(cls, col.name) == numeric_val)
+                            except Exception:
+                                pass
+
+                    # Búsqueda parcial en campos numéricos (CAST a texto)
+                    for col in cls.__table__.columns:
+                        if isinstance(col.type, (Integer, BigInteger)) and col.name != 'id':
+                            try:
+                                from sqlalchemy import cast, String as SQLString
+                                search_conditions.append(
+                                    cast(getattr(cls, col.name), SQLString).ilike(f'%{search}%')
+                                )
+                            except Exception:
+                                pass
+
+                except (ValueError, TypeError):
+                    pass
+                
+                # Búsqueda por fechas
+                try:
+                    for col in cls.__table__.columns:
+                        if isinstance(col.type, (Date, DateTime)):
+                            col_attr = getattr(cls, col.name)
+
+                            # Búsqueda por día Y mes combinados (ej: 7/9 = día 7, mes 9)
+                            if day_only is not None and month_only is not None:
+                                search_conditions.append(
+                                    and_(
+                                        extract('day', col_attr) == day_only,
+                                        extract('month', col_attr) == month_only
+                                    )
+                                )
+
+                            # Búsqueda por año solo
+                            elif year_only is not None and month_only is None:
+                                search_conditions.append(extract('year', col_attr) == year_only)
+
+                            # Búsqueda por año-mes
+                            elif year_only is not None and month_only is not None:
+                                search_conditions.append(
+                                    and_(
+                                        extract('year', col_attr) == year_only,
+                                        extract('month', col_attr) == month_only
+                                    )
+                                )
+
+                            # Búsqueda solo por mes
+                            elif month_only is not None:
+                                search_conditions.append(extract('month', col_attr) == month_only)
+
+                            # Búsqueda por fecha completa
+                            elif parsed_date is not None:
+                                if isinstance(col.type, Date):
+                                    search_conditions.append(col_attr == parsed_date)
+                                elif isinstance(col.type, DateTime):
+                                    search_conditions.append(db.func.date(col_attr) == parsed_date)
+
+                            # Búsqueda por datetime completo
+                            if parsed_datetime is not None and isinstance(col.type, DateTime):
+                                search_conditions.append(col_attr == parsed_datetime)
+
+                except Exception:
+                    pass
 
             if search_conditions:
+                logger.debug(f"[SEARCH DEBUG] {cls.__name__} - Total de condiciones de búsqueda: {len(search_conditions)}")
                 query = query.filter(or_(*search_conditions))
+            else:
+                logger.debug(f"[SEARCH DEBUG] {cls.__name__} - NO se generaron condiciones de búsqueda")
 
         # Aplicar ordenamiento
         if sort_by and sort_by in cls._sortable_fields and hasattr(cls, sort_by):
             order_func = asc if sort_order.lower() == 'asc' else desc
             query = query.order_by(order_func(getattr(cls, sort_by)))
         else:
-            # Orden por defecto
-            query = query.order_by(desc(cls.created_at))
+            # Orden por defecto robusto:
+            # 1) updated_at desc para reflejar cambios recientes
+            # 2) created_at desc para nuevos registros
+            # 3) id desc como fallback estable ante valores nulos o desfases de tiempo
+            try:
+                query = query.order_by(
+                    desc(getattr(cls, 'updated_at')),
+                    desc(getattr(cls, 'created_at')),
+                    desc(getattr(cls, 'id'))
+                )
+            except Exception:
+                # Fallback mínimo si alguna columna no existe
+                query = query.order_by(desc(cls.id))
 
         # Aplicar paginación
         if page and per_page:
@@ -236,15 +614,19 @@ class BaseModel(db.Model):
 
     @classmethod
     def bulk_create(cls, items_data):
-        """Crear múltiples instancias de forma optimizada."""
+        """Crear múltiples instancias de forma optimizada con sincronización completa."""
         instances = [cls(**cls._validate_and_normalize(data)) for data in items_data]
         db.session.add_all(instances)
-        db.session.commit()
+        db.session.flush()  # Obtener IDs generados
+        db.session.commit()  # Persistir en BD
+        # Refrescar todas las instancias para sincronizar con BD
+        for instance in instances:
+            db.session.refresh(instance)
         return instances
 
     @classmethod
     def bulk_update(cls, updates_data):
-        """Actualizar múltiples instancias de forma optimizada."""
+        """Actualizar múltiples instancias de forma optimizada con sincronización completa."""
         updated_instances = []
         for update_data in updates_data:
             instance_id = update_data.get('id')
@@ -257,26 +639,32 @@ class BaseModel(db.Model):
 
             data_to_update = {k: v for k, v in update_data.items() if k != 'id'}
             normalized_data = cls._validate_and_normalize(data_to_update, is_update=True, instance_id=instance_id)
-            
+
             for key, value in normalized_data.items():
                 if hasattr(instance, key):
                     setattr(instance, key, value)
-            
+
             updated_instances.append(instance)
 
-        db.session.commit()
+        db.session.flush()  # Aplicar cambios antes del commit
+        db.session.commit()  # Persistir en BD
+        # Refrescar todas las instancias para sincronizar con BD
+        for instance in updated_instances:
+            db.session.refresh(instance)
         return updated_instances
 
 
     def save(self):
-        """Persistir cambios en DB con actualización de timestamp."""
+        """Persistir cambios en DB con actualización de timestamp y sincronización completa."""
         from datetime import datetime, timezone
         try:
             self.updated_at = datetime.now(timezone.utc)
         except Exception:
             pass
         db.session.add(self)
-        db.session.commit()
+        db.session.flush()  # Obtener IDs generados y aplicar defaults de BD
+        db.session.commit()  # Persistir en BD
+        db.session.refresh(self)  # Sincronizar instancia con datos reales de BD
         return self
 
     def delete(self, commit=True):  # Mantener solo UNA definición de delete
@@ -317,7 +705,11 @@ class BaseModel(db.Model):
         if include_relations:
             for relation_name in cls._namespace_relations.keys():
                 if hasattr(cls, relation_name):
-                    query = query.options(selectinload(getattr(cls, relation_name)))
+                    # Verificar si la relación es dinámica antes de aplicar selectinload
+                    relation_attr = getattr(cls, relation_name)
+                    if hasattr(relation_attr.property, 'lazy') and relation_attr.property.lazy == 'dynamic':
+                        continue  # Saltar relaciones dinámicas
+                    query = query.options(selectinload(relation_attr))
         
         return query.filter_by(id=record_id).first()
 
@@ -354,7 +746,11 @@ class BaseModel(db.Model):
             query = cls.query
             for relation_name in cls._namespace_relations.keys():
                 if hasattr(cls, relation_name):
-                    query = query.options(selectinload(getattr(cls, relation_name)))
+                    # Verificar si la relación es dinámica antes de aplicar selectinload
+                    relation_attr = getattr(cls, relation_name)
+                    if hasattr(relation_attr.property, 'lazy') and relation_attr.property.lazy == 'dynamic':
+                        continue  # Saltar relaciones dinámicas
+                    query = query.options(selectinload(relation_attr))
             return query.all()
         else:
             return cls.query.all()
@@ -408,7 +804,11 @@ class BaseModel(db.Model):
         if include_relations:
             for relation_name in cls._namespace_relations.keys():
                 if hasattr(cls, relation_name):
-                    query = query.options(selectinload(getattr(cls, relation_name)))
+                    # Verificar si la relación es dinámica antes de aplicar selectinload
+                    relation_attr = getattr(cls, relation_name)
+                    if hasattr(relation_attr.property, 'lazy') and relation_attr.property.lazy == 'dynamic':
+                        continue  # Saltar relaciones dinámicas
+                    query = query.options(selectinload(relation_attr))
 
         return query.all()
 

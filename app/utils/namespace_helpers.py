@@ -19,15 +19,28 @@ Las optimizaciones buscan equilibrio entre simplicidad y funcionalidades útiles
 from flask_restx import Namespace, Resource, fields
 from flask import request, make_response, jsonify
 from typing import Dict, List, Type, Any, Optional, Callable
+from app import db
 from app.utils.response_handler import APIResponse
 from app.models.base_model import ValidationError
 import logging
 import csv
 import io
 import time
+import hashlib
+from datetime import datetime
 from functools import wraps
+from collections import OrderedDict
+from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+from flask_jwt_extended.exceptions import NoAuthorizationError
 
 logger = logging.getLogger(__name__)
+
+# Versión de la API para headers
+API_VERSION = "1.0.0"
+
+# Configuración de caché LRU
+MAX_CACHE_ENTRIES_PER_MODEL = 1000  # Máximo 1000 variantes por modelo
+MAX_TOTAL_CACHE_SIZE_MB = 100  # Límite total de 100MB para todo el caché
 
 
 def _field_definitions_for_model(model_class, exclude: List[str]) -> Dict[str, fields.Raw]:
@@ -112,30 +125,212 @@ def _parse_bool(val: Any, default=False):
     return str(val).lower() in ('1', 'true', 'yes', 'y')
 
 
-_LIST_CACHE: Dict[str, Dict[str, Any]] = {}
-_CACHE_TTL_SECONDS = 15  # TTL corto para evitar datos muy desactualizados
+class LRUCache:
+    """Cache LRU (Least Recently Used) con límite de tamaño.
 
+    Evita memory leaks manteniendo solo las entradas más recientes.
+    Cuando se alcanza el límite, elimina las entradas más antiguas.
+    """
 
-def _cache_get(model_name: str, key: str):
-    bucket = _LIST_CACHE.get(model_name)
-    if not bucket:
+    def __init__(self, max_size=1000):
+        self.cache = OrderedDict()
+        self.max_size = max_size
+        self.hits = 0
+        self.misses = 0
+
+    def get(self, key):
+        """Obtener valor y mover al final (más reciente)."""
+        if key in self.cache:
+            self.hits += 1
+            # Mover al final (más reciente)
+            self.cache.move_to_end(key)
+            return self.cache[key]
+        self.misses += 1
         return None
-    entry = bucket.get(key)
+
+    def set(self, key, value):
+        """Guardar valor y aplicar política LRU si es necesario."""
+        if key in self.cache:
+            # Actualizar valor existente
+            self.cache.move_to_end(key)
+            self.cache[key] = value
+        else:
+            # Nuevo valor
+            self.cache[key] = value
+            # Aplicar límite de tamaño
+            if len(self.cache) > self.max_size:
+                # Eliminar el más antiguo (primero en OrderedDict)
+                oldest_key = next(iter(self.cache))
+                del self.cache[oldest_key]
+                logger.debug(f"LRU eviction: removed oldest cache entry")
+
+    def clear(self):
+        """Limpiar todo el caché."""
+        self.cache.clear()
+
+    def size(self):
+        """Tamaño actual del caché."""
+        return len(self.cache)
+
+    def stats(self):
+        """Estadísticas del caché."""
+        total = self.hits + self.misses
+        hit_rate = (self.hits / total * 100) if total > 0 else 0
+        return {
+            'size': len(self.cache),
+            'max_size': self.max_size,
+            'hits': self.hits,
+            'misses': self.misses,
+            'hit_rate': f'{hit_rate:.1f}%'
+        }
+
+
+# Cache global: cada modelo tiene su propio LRUCache
+_LIST_CACHE: Dict[str, LRUCache] = {}
+
+
+def _get_cache_key_with_user(model_name: str, base_key: str, model_class) -> str:
+    """Genera una cache key incluyendo user_id si el modelo es privado."""
+    cache_config = getattr(model_class, '_cache_config', {})
+    cache_type = cache_config.get('type', 'private')
+
+    if cache_type == 'public':
+        return base_key
+
+    # Para caché privada, incluir user_id en la key
+    try:
+        verify_jwt_in_request(optional=True)
+        user_id = get_jwt_identity()
+        if user_id:
+            return f"user:{user_id}:{base_key}"
+    except (NoAuthorizationError, Exception):
+        pass
+
+    return f"anonymous:{base_key}"
+
+
+def _get_cache_ttl(model_class) -> int:
+    """Obtiene el TTL configurado para un modelo."""
+    cache_config = getattr(model_class, '_cache_config', {})
+    return cache_config.get('ttl', 120)  # 2 minutos por defecto
+
+
+def _cache_get(model_name: str, key: str, model_class):
+    """Obtiene valor de caché con TTL configurable por modelo."""
+    # Crear LRUCache si no existe para este modelo
+    if model_name not in _LIST_CACHE:
+        return None
+
+    lru_cache = _LIST_CACHE[model_name]
+    full_key = _get_cache_key_with_user(model_name, key, model_class)
+    entry = lru_cache.get(full_key)
+
     if not entry:
         return None
-    if time.time() - entry['ts'] > _CACHE_TTL_SECONDS:
-        # Expirado
-        try:
-            del bucket[key]
-        except KeyError:
-            pass
+
+    ttl = _get_cache_ttl(model_class)
+    if time.time() - entry['ts'] > ttl:
+        # Expirado - el LRUCache lo eliminará eventualmente
         return None
+
     return entry['value']
 
 
-def _cache_set(model_name: str, key: str, value: Any):
-    bucket = _LIST_CACHE.setdefault(model_name, {})
-    bucket[key] = {'value': value, 'ts': time.time()}
+def _cache_set(model_name: str, key: str, value: Any, model_class):
+    """Guarda valor en caché con segmentación por usuario."""
+    # Crear LRUCache si no existe para este modelo
+    if model_name not in _LIST_CACHE:
+        _LIST_CACHE[model_name] = LRUCache(max_size=MAX_CACHE_ENTRIES_PER_MODEL)
+
+    lru_cache = _LIST_CACHE[model_name]
+    full_key = _get_cache_key_with_user(model_name, key, model_class)
+    lru_cache.set(full_key, {'value': value, 'ts': time.time()})
+
+
+def _cache_clear(model_name: str):
+    """Invalida toda la cache de un modelo específico.
+
+    Limpia TODAS las variantes de caché incluyendo:
+    - Cache por usuario (user:{id}:...)
+    - Cache anónima (anonymous:...)
+    - Cache pública
+
+    Esto garantiza que TODOS los usuarios vean datos actualizados
+    después de CREATE/UPDATE/DELETE.
+    """
+    if model_name in _LIST_CACHE:
+        lru_cache = _LIST_CACHE[model_name]
+        num_entries = lru_cache.size()
+        lru_cache.clear()
+        logger.info(f"Cache cleared for model {model_name}: {num_entries} entries invalidated")
+
+
+def _generate_cache_headers(model_class, max_updated_at=None) -> Dict[str, str]:
+    """Genera headers HTTP de caché optimizados para PWA."""
+    cache_config = getattr(model_class, '_cache_config', {})
+    headers = {}
+
+    # X-API-Version para versionado
+    headers['X-API-Version'] = API_VERSION
+
+    # Cache-Control header
+    cache_type = cache_config.get('type', 'private')
+    max_age = cache_config.get('max_age', 120)
+    stale_while_revalidate = cache_config.get('stale_while_revalidate', 60)
+
+    cache_control_parts = [cache_type, f'max-age={max_age}']
+
+    if stale_while_revalidate > 0:
+        cache_control_parts.append(f'stale-while-revalidate={stale_while_revalidate}')
+
+    headers['Cache-Control'] = ', '.join(cache_control_parts)
+
+    # Last-Modified header basado en el registro más reciente
+    if max_updated_at:
+        if isinstance(max_updated_at, str):
+            try:
+                max_updated_at = datetime.fromisoformat(max_updated_at.replace('Z', '+00:00'))
+            except:
+                pass
+        if isinstance(max_updated_at, datetime):
+            # Formato HTTP date (RFC 7231)
+            headers['Last-Modified'] = max_updated_at.strftime('%a, %d %b %Y %H:%M:%S GMT')
+
+    # X-Cache-Strategy hint para Service Workers
+    strategy = cache_config.get('strategy', 'stale-while-revalidate')
+    headers['X-Cache-Strategy'] = strategy
+
+    # Vary header para indicar que la respuesta puede variar según el usuario
+    if cache_type == 'private':
+        headers['Vary'] = 'Authorization, Cookie'
+    else:
+        headers['Vary'] = 'Accept-Encoding'
+
+    return headers
+
+
+def _check_conditional_request(etag: str, last_modified: str = None) -> bool:
+    """Verifica si se debe retornar 304 Not Modified."""
+    # Verificar If-None-Match (ETag)
+    if_none_match = request.headers.get('If-None-Match')
+    if if_none_match and etag:
+        # Puede contener múltiples ETags separados por coma
+        client_etags = [tag.strip() for tag in if_none_match.split(',')]
+        if etag in client_etags or f'W/{etag}' in client_etags:
+            return True
+
+    # Verificar If-Modified-Since
+    if_modified_since = request.headers.get('If-Modified-Since')
+    if if_modified_since and last_modified:
+        try:
+            client_date = datetime.strptime(if_modified_since, '%a, %d %b %Y %H:%M:%S GMT')
+            server_date = datetime.strptime(last_modified, '%a, %d %b %Y %H:%M:%S GMT')
+            if server_date <= client_date:
+                return True
+        except:
+            pass
+
+    return False
 
 
 def create_optimized_namespace(
@@ -171,14 +366,14 @@ def create_optimized_namespace(
     # Documentar parámetros comunes del listado
     ns.doc(params={
         'page': 'Página (int)',
-    'limit': 'Elementos por página (int)',
-        'search': 'Texto de búsqueda simple',
-        'sort_by': 'Campo para ordenar',
-        'sort_order': 'asc o desc',
+        'limit': 'Elementos por página (int)',
+        'search': 'Texto de búsqueda simple (coincide por texto, ID exacto y fechas)',
+        'sort_by': 'Campo para ordenar (alias: sort)',
+        'sort_order': 'asc o desc (alias: order)',
         'include_relations': 'true para incluir relaciones configuradas',
         'cache_bust': '1 para ignorar caché',
         'fields': 'Lista de campos separados por coma a incluir en items (ej: id,name,status)',
-    'export': 'Exportar formato (csv); si se usa, ignora paginación salvo page/limit explícitos',
+        'export': 'Exportar formato (csv); si se usa, ignora paginación salvo page/limit explícitos',
         **{f: f'Filtro por campo {f}' for f in getattr(model_class, '_filterable_fields', [])}
     })
     from flask import jsonify, make_response as flask_make_response
@@ -191,10 +386,42 @@ def create_optimized_namespace(
                 cache_key = str(args_items)
                 model_key = model_class.__name__
                 if cache_enabled and request.args.get('cache_bust') != '1':
-                    cached_payload = _cache_get(model_key, cache_key)
+                    cached_payload = _cache_get(model_key, cache_key, model_class)
                     if cached_payload:
-                        # Ya es respuesta completa estandarizada
-                        return flask_make_response(jsonify(cached_payload), 200)
+                        # Verificar si el cliente ya tiene esta versión (304 Not Modified)
+                        cached_meta = cached_payload.get('meta', {}).get('pagination', {})
+                        cached_total = cached_meta.get('total_items', 0)
+                        # Extraer max_updated si está disponible
+                        max_updated_cached = None
+                        try:
+                            if cached_payload.get('data'):
+                                upd_vals = [item.get('updated_at') for item in cached_payload['data'] if item.get('updated_at')]
+                                if upd_vals:
+                                    max_updated_cached = max(upd_vals)
+                        except:
+                            pass
+
+                        # ETag estable basado en datos (total y último updated_at)
+                        from datetime import datetime, timezone
+                        etag = f'"{cached_total}-{max_updated_cached}"' if max_updated_cached else f'"{cached_total}-none"'
+                        cache_headers = _generate_cache_headers(model_class, max_updated_cached)
+                        # Forzar revalidación del cliente siempre para listados
+                        cache_headers['Cache-Control'] = 'private, max-age=0, must-revalidate'
+
+                        if _check_conditional_request(etag, cache_headers.get('Last-Modified')):
+                            # Cliente tiene versión válida, retornar 304 Not Modified
+                            resp = flask_make_response('', 304)
+                            resp.headers['ETag'] = etag
+                            for k, v in cache_headers.items():
+                                resp.headers[k] = v
+                            return resp
+
+                        # Ya es respuesta completa estandarizada, agregar headers PWA
+                        resp = flask_make_response(jsonify(cached_payload), 200)
+                        resp.headers['ETag'] = etag
+                        for k, v in cache_headers.items():
+                            resp.headers[k] = v
+                        return resp
 
                 page = request.args.get('page', type=int)
                 # Accept new 'limit' param or legacy 'per_page' for compatibility
@@ -219,22 +446,139 @@ def create_optimized_namespace(
                     per_page = 50
 
                 search = request.args.get('search', type=str)
-                sort_by = request.args.get('sort_by', type=str)
-                sort_order = request.args.get('sort_order', default='asc', type=str)
+                search_type = request.args.get('search_type', default='auto', type=str)
+                # Aceptar alias desde frontend: sort -> sort_by, order -> sort_order
+                sort_by = request.args.get('sort_by', type=str) or request.args.get('sort', type=str)
+                sort_order = request.args.get('sort_order', type=str) or request.args.get('order', type=str)
+                # Default más seguro para UX: descendente cuando no se especifica
+                if not sort_order:
+                    sort_order = 'desc'
                 include_rel = _parse_bool(request.args.get('include_relations'))
+                # Si la búsqueda es por fechas y no se especifica include_relations,
+                # activarlo por defecto para asegurar serialización completa en listados.
+                try:
+                    if not request.args.get('include_relations') and search_type in ('dates', 'all'):
+                        include_rel = True
+                except Exception:
+                    pass
 
                 filters = {}
+                
+                # Mapeo de campos del frontend al backend para compatibilidad
+                frontend_to_backend_map = {
+                    'father_id': 'idFather',
+                    'mother_id': 'idMother',
+                    # Nota: animal_id es el campo correcto en las tablas hijas, no animals_id
+                    # Este mapeo se eliminó para evitar conflictos con el cacheo
+                }
+                
+                # Primero mapear campos del frontend
+                mapped_args = {}
+                for frontend_field, backend_field in frontend_to_backend_map.items():
+                    if frontend_field in request.args:
+                        mapped_args[backend_field] = request.args[frontend_field]
+                
+                # Combinar con los argumentos originales (prioridad a los mapeados)
+                combined_args = dict(request.args)
+                combined_args.update(mapped_args)
+                
                 for field in getattr(model_class, '_filterable_fields', []):
-                    if field in request.args:
-                        raw = request.args.get(field)
-                        if raw and ',' in raw:
-                            filters[field] = [v for v in raw.split(',') if v]
-                        else:
-                            filters[field] = raw
+                    if field in combined_args:
+                        raw = combined_args.get(field)
+
+                        # Convertir tipo según la columna del modelo
+                        try:
+                            column = getattr(model_class, field, None)
+                            if column is not None and hasattr(column, 'type'):
+                                column_type = column.type
+                                from sqlalchemy import Enum as SQLEnum, Date, DateTime
+                                import datetime as dt
+
+                                def convert_single_value(v):
+                                    """Convierte un valor según el tipo de columna"""
+                                    # Enums
+                                    if isinstance(column_type, SQLEnum) and field in getattr(model_class, '_enum_fields', {}):
+                                        enum_class = model_class._enum_fields[field]
+                                        try:
+                                            return enum_class(v)
+                                        except (ValueError, KeyError):
+                                            logger.warning(f"Valor enum inválido para {field}: {v}")
+                                            return v
+
+                                    # Dates y DateTimes
+                                    elif isinstance(column_type, (Date, DateTime)):
+                                        try:
+                                            if isinstance(column_type, DateTime):
+                                                return dt.datetime.fromisoformat(v)
+                                            else:
+                                                return dt.date.fromisoformat(v)
+                                        except (ValueError, TypeError):
+                                            logger.warning(f"Fecha inválida para {field}: {v}")
+                                            return v
+
+                                    # Tipos primitivos
+                                    elif hasattr(column_type, 'python_type'):
+                                        py_type = column_type.python_type
+                                        if py_type is int:
+                                            return int(v)
+                                        elif py_type is float:
+                                            return float(v)
+                                        elif py_type is bool:
+                                            return v.lower() in ('true', '1', 'yes')
+                                        else:
+                                            return v
+                                    else:
+                                        return v
+
+                                # Manejar listas de valores (múltiples filtros)
+                                if raw and ',' in raw:
+                                    values = [v.strip() for v in raw.split(',') if v.strip()]
+                                    converted_values = []
+                                    for v in values:
+                                        try:
+                                            converted_values.append(convert_single_value(v))
+                                        except (ValueError, TypeError):
+                                            converted_values.append(v)
+                                    filters[field] = converted_values
+                                else:
+                                    # Valor único
+                                    filters[field] = convert_single_value(raw)
+
+                        except (ValueError, TypeError, AttributeError) as e:
+                            # Si falla la conversión, usar el valor raw como fallback
+                            logger.warning(f"No se pudo convertir filtro {field}={raw}: {e}")
+                            if raw and ',' in raw:
+                                filters[field] = [v.strip() for v in raw.split(',') if v.strip()]
+                            else:
+                                filters[field] = raw
+
+                # Log de filtros aplicados (debug)
+                if filters:
+                    logger.debug(f"Filtros aplicados en {model_class.__name__}: {filters}")
+
+                # Soporte para sincronización delta: ?since=timestamp
+                # Retorna solo registros modificados/creados después de la fecha especificada
+                since_param = request.args.get('since', type=str)
+                if since_param:
+                    try:
+                        # Parsear timestamp ISO 8601 (ej: 2025-09-06T12:00:00Z)
+                        from datetime import datetime as _dt
+                        since_date = _dt.fromisoformat(since_param.replace('Z', '+00:00'))
+
+                        # Agregar filtro automático en updated_at >= since_date
+                        if not filters:
+                            filters = {}
+
+                        # Crear condición para obtener cambios recientes
+                        filters['_since'] = since_date  # Usar '_since' especial para diferenciarlo
+                        logger.debug(f"Delta sync enabled: since={since_date}")
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Parámetro 'since' inválido: {since_param} - {e}")
 
                 query_or_paginated = model_class.get_namespace_query(
                     filters=filters or None,
                     search=search,
+                    search_type=search_type,
                     sort_by=sort_by,
                     sort_order=sort_order,
                     page=page,
@@ -260,12 +604,40 @@ def create_optimized_namespace(
                 except Exception:
                     pass
                 # Filtrado de campos (?fields=)
+                # En búsquedas por fechas, devolver objetos completos y evitar recortes de columnas.
                 fields_param = request.args.get('fields')
+                try:
+                    raw_search = request.args.get('search', type=str) or ''
+                    st = (request.args.get('search_type', default='auto', type=str) or 'auto').lower()
+                    # Heurística para detectar término de fecha (año, año-mes, fecha completa)
+                    def _looks_like_date(s: str) -> bool:
+                        s = (s or '').strip()
+                        if not s:
+                            return False
+                        if s.isdigit() and len(s) == 4:
+                            return True
+                        if ('-' in s or '/' in s):
+                            parts = s.replace('/', '-').split('-')
+                            if len(parts) in (2, 3):
+                                return all(p.isdigit() for p in parts)
+                        return False
+
+                    is_date_like = _looks_like_date(raw_search)
+                    # Si es búsqueda por fechas efectiva (dates/all o auto con término de fecha), ignorar 'fields'
+                    if fields_param and (st in ('dates', 'all') or (st == 'auto' and is_date_like)):
+                        fields_param = None
+                except Exception:
+                    # Ante cualquier error, mantener comportamiento previo
+                    pass
+
                 if fields_param:
                     selected = [f.strip() for f in fields_param.split(',') if f.strip()]
-                    if selected:
+                    # Agregar campos de filtro a selected para asegurar que estén en la respuesta
+                    filter_fields = set(filters.keys()) if filters else set()
+                    selected_set = set(selected) | filter_fields
+                    if selected_set:
                         items = [
-                            {k: v for k, v in obj.items() if k in selected}
+                            {k: v for k, v in obj.items() if k in selected_set}
                             for obj in items
                         ]
 
@@ -303,12 +675,43 @@ def create_optimized_namespace(
                 # Debug: log the response payload to help trace test failures where
                 # an item appears in the list but detail GET returns 404.
                 logger.debug(f"List response payload for {model_class.__name__}: {response_payload}")
+
+                # Generar ETag estable basado en datos reales (total y último updated_at)
+                from datetime import datetime, timezone
+                etag = f'"{total_val}-{max_updated}"' if max_updated else f'"{total_val}-none"'
+                pwa_headers = _generate_cache_headers(model_class, max_updated)
+                # Forzar revalidación del cliente siempre para listados
+                pwa_headers['Cache-Control'] = 'private, max-age=0, must-revalidate'
+
+                # Verificar si el cliente ya tiene esta versión
+                if _check_conditional_request(etag, pwa_headers.get('Last-Modified')):
+                    # Cliente tiene versión válida, retornar 304 Not Modified
+                    resp = flask_make_response('', 304)
+                    resp.headers['ETag'] = etag
+                    for k, v in pwa_headers.items():
+                        resp.headers[k] = v
+                    return resp
+
+                # Guardar en caché DESPUÉS de verificar 304
                 if cache_enabled:
-                    _cache_set(model_key, cache_key, response_payload)
-                headers = {'ETag': f"W/{total_val}-{max_updated}"} if max_updated else {}
+                    _cache_set(model_key, cache_key, response_payload, model_class)
+
+                # Retornar respuesta completa con headers PWA
                 resp = flask_make_response(jsonify(response_payload), 200)
-                for k, v in headers.items():
+                resp.headers['ETag'] = etag
+                for k, v in pwa_headers.items():
                     resp.headers[k] = v
+
+                # Header X-Has-More para paginación infinita en PWA
+                pagination_meta = response_payload.get('meta', {}).get('pagination', {})
+                if pagination_meta.get('has_next_page', False):
+                    resp.headers['X-Has-More'] = 'true'
+                else:
+                    resp.headers['X-Has-More'] = 'false'
+
+                # Header X-Total-Count para ayudar a PWA a dimensionar carga
+                resp.headers['X-Total-Count'] = str(total_val)
+
                 return resp
                 
             except Exception as e:
@@ -369,16 +772,55 @@ def create_optimized_namespace(
                 except Exception:
                     pass
 
+                # Crear registro (commit incluido en model_class.create())
+                logger.debug(f"Creating {model_class.__name__} instance...")
                 instance = model_class.create(**payload)
-                result = instance.to_namespace_dict()
-                logger.info(f"{model_class.__name__} created successfully with ID: {instance.id}")
-                
-                return APIResponse.created(result, message=f'{model_class.__name__} creado exitosamente')
-                
+                logger.debug(f"Instance created with ID: {instance.id}")
+
+                # Serializar INMEDIATAMENTE después de create (antes de cualquier operación que pueda detach)
+                try:
+                    logger.debug(f"Serializing {model_class.__name__} instance...")
+                    result = instance.to_namespace_dict()
+                    instance_id = instance.id
+                    logger.info(f"{model_class.__name__} created successfully with ID: {instance_id}")
+                except Exception as e:
+                    logger.error(f"Error serializing {model_class.__name__} after create: {e}", exc_info=True)
+                    # Fallback: re-query desde BD
+                    logger.debug(f"Re-querying {model_class.__name__} ID {instance.id} from DB...")
+                    instance = model_class.query.get(instance.id)
+                    if instance:
+                        result = instance.to_namespace_dict()
+                        instance_id = instance.id
+                        logger.info(f"{model_class.__name__} re-queried and serialized successfully with ID: {instance_id}")
+                    else:
+                        raise Exception(f"Failed to serialize and re-query {model_class.__name__}")
+
+                # Invalidar cache DESPUÉS de serialización exitosa
+                _cache_clear(model_class.__name__)
+                logger.debug(f"Cache cleared for {model_class.__name__}")
+
+                # Construir respuesta con datos serializados
+                from flask import make_response
+                response = APIResponse.created(result, message=f'{model_class.__name__} creado exitosamente')
+                if isinstance(response, tuple) and len(response) >= 2:
+                    resp_body, status_code = response[0], response[1]
+                    resp = make_response(jsonify(resp_body), status_code)
+                    # Headers para invalidar caché del cliente
+                    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                    resp.headers['Pragma'] = 'no-cache'
+                    resp.headers['Expires'] = '0'
+                    resp.headers['ETag'] = f'"{instance_id}"'
+                    logger.debug(f"Response prepared for {model_class.__name__} ID {instance_id}")
+                    return resp
+                logger.debug(f"Returning simple response for {model_class.__name__}")
+                return response
+
             except ValidationError as ve:
+                db.session.rollback()
                 logger.warning(f"Validation error creating {model_class.__name__}: {ve.message}")
                 return APIResponse.validation_error({'error': ve.message})
             except Exception as e:
+                db.session.rollback()
                 logger.error(f"Error creando {model_class.__name__}: {e}", exc_info=True)
                 return APIResponse.error('Error interno del servidor', details={'error': str(e), 'context': f'create {model_class.__name__}'})
 
@@ -415,18 +857,53 @@ def create_optimized_namespace(
                 instance = model_class.get_by_id(record_id)
                 if not instance:
                     return APIResponse.not_found(name.capitalize(), as_tuple=True)
-                
+
                 payload = request.get_json(force=True, silent=True)
                 if not payload or not isinstance(payload, dict):
                     return APIResponse.validation_error({'payload': 'Se requiere un objeto JSON válido y no vacío.'})
 
+                # Actualizar (commit incluido en instance.update())
+                logger.debug(f"Updating {model_class.__name__} ID {record_id}...")
                 instance.update(**payload)
-                return APIResponse.success(data=instance.to_namespace_dict(), message=f'{name.capitalize()} actualizado exitosamente')
+
+                # Serializar INMEDIATAMENTE después de update
+                try:
+                    logger.debug(f"Serializing updated {model_class.__name__} ID {record_id}...")
+                    result = instance.to_namespace_dict()
+                    logger.info(f"{model_class.__name__} ID {record_id} updated successfully")
+                except Exception as e:
+                    logger.error(f"Error serializing {model_class.__name__} after update: {e}", exc_info=True)
+                    # Fallback: re-query desde BD
+                    instance = model_class.query.get(record_id)
+                    if instance:
+                        result = instance.to_namespace_dict()
+                        logger.info(f"{model_class.__name__} ID {record_id} re-queried and serialized")
+                    else:
+                        raise Exception(f"Failed to serialize and re-query {model_class.__name__} ID {record_id}")
+
+                # Invalidar cache DESPUÉS de serialización exitosa
+                _cache_clear(model_class.__name__)
+
+                # Construir respuesta
+                from flask import make_response
+                response = APIResponse.success(data=result, message=f'{name.capitalize()} actualizado exitosamente')
+                if isinstance(response, tuple) and len(response) >= 2:
+                    resp_body, status_code = response[0], response[1]
+                    resp = make_response(jsonify(resp_body), status_code)
+                    # Headers para invalidar caché del cliente
+                    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                    resp.headers['Pragma'] = 'no-cache'
+                    resp.headers['Expires'] = '0'
+                    resp.headers['ETag'] = f'"{instance.id}-{instance.updated_at}"' if hasattr(instance, 'updated_at') else f'"{instance.id}"'
+                    return resp
+                return response
 
             except ValidationError as ve:
+                db.session.rollback()
                 logger.warning(f"Validation error updating {model_class.__name__} id={record_id}: {ve.message}")
                 return APIResponse.validation_error({'error': ve.message})
             except Exception as e:
+                db.session.rollback()
                 logger.error(f"Error actualizando {model_class.__name__} id={record_id}: {e}", exc_info=True)
                 return APIResponse.error('Error interno del servidor', details={'error': str(e), 'context': f'update {model_class.__name__}'})
 
@@ -439,18 +916,53 @@ def create_optimized_namespace(
                     instance = model_class.get_by_id(record_id)
                     if not instance:
                         return APIResponse.not_found(name.capitalize(), as_tuple=True)
-                    
+
                     payload = request.get_json(force=True, silent=True) or {}
                     if not isinstance(payload, dict):
                         return APIResponse.validation_error({'payload': 'Se requiere un objeto JSON.'})
 
+                    # Actualizar parcialmente (commit incluido en instance.update())
+                    logger.debug(f"Patching {model_class.__name__} ID {record_id}...")
                     instance.update(**payload)
-                    return APIResponse.success(data=instance.to_namespace_dict(), message=f'{name.capitalize()} actualizado parcialmente')
+
+                    # Serializar INMEDIATAMENTE después de patch
+                    try:
+                        logger.debug(f"Serializing patched {model_class.__name__} ID {record_id}...")
+                        result = instance.to_namespace_dict()
+                        logger.info(f"{model_class.__name__} ID {record_id} patched successfully")
+                    except Exception as e:
+                        logger.error(f"Error serializing {model_class.__name__} after patch: {e}", exc_info=True)
+                        # Fallback: re-query desde BD
+                        instance = model_class.query.get(record_id)
+                        if instance:
+                            result = instance.to_namespace_dict()
+                            logger.info(f"{model_class.__name__} ID {record_id} re-queried and serialized")
+                        else:
+                            raise Exception(f"Failed to serialize and re-query {model_class.__name__} ID {record_id}")
+
+                    # Invalidar cache DESPUÉS de serialización exitosa
+                    _cache_clear(model_class.__name__)
+
+                    # Construir respuesta
+                    from flask import make_response
+                    response = APIResponse.success(data=result, message=f'{name.capitalize()} actualizado parcialmente')
+                    if isinstance(response, tuple) and len(response) >= 2:
+                        resp_body, status_code = response[0], response[1]
+                        resp = make_response(jsonify(resp_body), status_code)
+                        # Headers para invalidar caché del cliente
+                        resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                        resp.headers['Pragma'] = 'no-cache'
+                        resp.headers['Expires'] = '0'
+                        resp.headers['ETag'] = f'"{instance.id}-{instance.updated_at}"' if hasattr(instance, 'updated_at') else f'"{instance.id}"'
+                        return resp
+                    return response
 
                 except ValidationError as ve:
+                    db.session.rollback()
                     logger.warning(f"Validation error patching {model_class.__name__} id={record_id}: {ve.message}")
                     return APIResponse.validation_error({'error': ve.message})
                 except Exception as e:
+                    db.session.rollback()
                     logger.error(f"Error patch {model_class.__name__} id={record_id}: {e}", exc_info=True)
                     return APIResponse.error('Error interno del servidor', details={'error': str(e), 'context': f'patch {model_class.__name__}'})
 
@@ -462,10 +974,63 @@ def create_optimized_namespace(
                 if not instance:
                     body, status = APIResponse.not_found(name.capitalize())
                     return flask_make_response(jsonify(body), status)
+
+                # Verificación de integridad referencial optimizada
+                from app.utils.integrity_checker import OptimizedIntegrityChecker
+                
+                can_delete, warnings = OptimizedIntegrityChecker.can_delete_safely(model_class, record_id)
+                
+                if not can_delete:
+                    # No se puede eliminar - hay dependencias que lo bloquean
+                    warning_messages = [w.warning_message for w in warnings if not w.cascade_delete]
+                    body, status = APIResponse.error(
+                        'No se puede eliminar el registro por dependencias existentes',
+                        details={
+                            'warnings': [w.to_dict() for w in warnings],
+                            'blocking_dependencies': len(warning_messages),
+                            'messages': warning_messages
+                        },
+                        status_code=409  # Conflict
+                    )
+                    return flask_make_response(jsonify(body), status)
+
+                # Si hay dependencias con cascade, informar antes de eliminar
+                cascade_warnings = [w for w in warnings if w.cascade_delete and w.dependent_count > 0]
+                if cascade_warnings:
+                    logger.info(f"Eliminando {model_class.__name__} id={record_id} con {len(cascade_warnings)} dependencias en cascade")
+
+                # Eliminar de BD (commit incluido en instance.delete())
                 instance.delete()
-                body, status = APIResponse.success(data={'deleted_id': record_id}, message=f'{name.capitalize()} eliminado exitosamente')
-                return flask_make_response(jsonify(body), status)
+
+                # Invalidar cache INMEDIATAMENTE después de commit exitoso
+                _cache_clear(model_class.__name__)
+
+                # Respuesta con información de eliminación cascade si aplica
+                response_data = {'deleted_id': record_id}
+                if cascade_warnings:
+                    response_data['cascade_deletions'] = {
+                        'total_records': sum(w.dependent_count for w in cascade_warnings),
+                        'details': [w.to_dict() for w in cascade_warnings]
+                    }
+
+                body, status = APIResponse.success(
+                    data=response_data,
+                    message=f'{name.capitalize()} eliminado exitosamente' +
+                           (f" con {sum(w.dependent_count for w in cascade_warnings)} registro(s) relacionados" if cascade_warnings else "")
+                )
+                resp = flask_make_response(jsonify(body), status)
+                # Headers para invalidar caché del cliente
+                resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                resp.headers['Pragma'] = 'no-cache'
+                resp.headers['Expires'] = '0'
+                # Usar timestamp actual para ETag de eliminación
+                from datetime import datetime, timezone
+                now = datetime.now(timezone.utc).isoformat()
+                resp.headers['ETag'] = f'"deleted-{record_id}-{now}"'
+                return resp
             except Exception as e:
+                # Rollback explícito en caso de error
+                db.session.rollback()
                 logger.error(f"Error eliminando {model_class.__name__} id={record_id}: {e}", exc_info=True)
                 body, status = APIResponse.error('Error interno del servidor', details={'error': str(e), 'context': f'delete {model_class.__name__}'}, status_code=500)
                 return flask_make_response(jsonify(body), status)
@@ -483,6 +1048,64 @@ def create_optimized_namespace(
 
     ns.add_resource(ModelListResource, '/')
     ns.add_resource(ModelDetailResource, '/<int:record_id>')
+
+    # ---- Metadata endpoint para PWA (revalidación ligera) ----
+    @ns.route('/metadata')
+    class ModelMetadataResource(Resource):
+        @ns.doc('metadata_' + name, description='Obtener metadatos del recurso (total, last_modified) sin body completo - optimizado para PWA')
+        @_maybe_rate_limit
+        def get(self):
+            """Endpoint ligero para verificar si hay cambios sin descargar datos."""
+            try:
+                # Optimización: 1 sola query con COUNT(*) y MAX(updated_at)
+                from sqlalchemy import func
+                result = db.session.query(
+                    func.count(model_class.id).label('total'),
+                    func.max(model_class.updated_at).label('last_modified')
+                ).first()
+
+                total_count = result.total if result else 0
+                max_updated = None
+                if result and result.last_modified:
+                    max_updated = result.last_modified.isoformat() if hasattr(result.last_modified, 'isoformat') else str(result.last_modified)
+
+                # Generar ETag estable basado en total y último updated_at
+                from datetime import datetime, timezone
+                etag = f'"{total_count}-{max_updated}"' if max_updated else f'"{total_count}-none"'
+                pwa_headers = _generate_cache_headers(model_class, max_updated)
+                # Forzar revalidación del cliente para metadata
+                pwa_headers['Cache-Control'] = 'private, max-age=0, must-revalidate'
+
+                # Verificar si el cliente ya tiene esta versión
+                if _check_conditional_request(etag, pwa_headers.get('Last-Modified')):
+                    # Cliente tiene versión válida, retornar 304 Not Modified
+                    resp = flask_make_response('', 304)
+                    resp.headers['ETag'] = etag
+                    for k, v in pwa_headers.items():
+                        resp.headers[k] = v
+                    return resp
+
+                # Retornar metadatos ligeros
+                metadata = {
+                    'success': True,
+                    'data': {
+                        'resource': name,
+                        'total_count': total_count,
+                        'last_modified': max_updated,
+                        'etag': etag
+                    }
+                }
+
+                resp = flask_make_response(jsonify(metadata), 200)
+                resp.headers['ETag'] = etag
+                for k, v in pwa_headers.items():
+                    resp.headers[k] = v
+                return resp
+
+            except Exception as e:
+                logger.error(f"Error obteniendo metadata de {model_class.__name__}: {e}", exc_info=True)
+                body, status = APIResponse.error('Error interno del servidor', details={'error': str(e)}, status_code=500)
+                return flask_make_response(jsonify(body), status)
 
     # ---- Bulk ----
     if enable_bulk:
@@ -504,14 +1127,52 @@ def create_optimized_namespace(
                                         enum_cls(obj[ef])
                                     except Exception:
                                         return APIResponse.validation_error({ef: f'Valor inválido para enum {ef}'})
+                    # Crear múltiples registros (commit incluido en bulk_create())
+                    logger.debug(f"Bulk creating {len(payload)} {model_class.__name__} instances...")
                     instances = model_class.bulk_create(payload)
-                    return APIResponse.created(
-                        [inst.to_namespace_dict() for inst in instances],
-                        message=f'{len(instances)} registros creados'
+                    logger.debug(f"{len(instances)} {model_class.__name__} instances created")
+
+                    # Serializar INMEDIATAMENTE después de bulk_create
+                    try:
+                        logger.debug(f"Serializing {len(instances)} {model_class.__name__} instances...")
+                        results = [inst.to_namespace_dict() for inst in instances]
+                        logger.info(f"{len(results)} {model_class.__name__} instances created and serialized successfully")
+                    except Exception as e:
+                        logger.error(f"Error serializing {model_class.__name__} after bulk_create: {e}", exc_info=True)
+                        # Fallback: re-query desde BD
+                        logger.debug(f"Re-querying {len(instances)} {model_class.__name__} instances...")
+                        instance_ids = [inst.id for inst in instances]
+                        instances = model_class.query.filter(model_class.id.in_(instance_ids)).all()
+                        results = [inst.to_namespace_dict() for inst in instances]
+                        logger.info(f"{len(results)} {model_class.__name__} instances re-queried and serialized")
+
+                    # Invalidar cache DESPUÉS de serialización exitosa
+                    _cache_clear(model_class.__name__)
+
+                    # Construir respuesta
+                    from flask import make_response
+                    response = APIResponse.created(
+                        results,
+                        message=f'{len(results)} registros creados'
                     )
+                    if isinstance(response, tuple) and len(response) >= 2:
+                        resp_body, status_code = response[0], response[1]
+                        resp = make_response(jsonify(resp_body), status_code)
+                        # Headers para invalidar caché del cliente
+                        resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                        resp.headers['Pragma'] = 'no-cache'
+                        resp.headers['Expires'] = '0'
+                        # Usar timestamp actual para ETag de creación masiva
+                        from datetime import datetime, timezone
+                        now = datetime.now(timezone.utc).isoformat()
+                        resp.headers['ETag'] = f'"bulk-{len(instances)}-{now}"'
+                        return resp
+                    return response
                 except ValidationError as ve:
+                    db.session.rollback()
                     return APIResponse.validation_error({'error': ve.message})
                 except Exception as e:
+                    db.session.rollback()
                     logger.error(f"Error bulk create {model_class.__name__}: {e}", exc_info=True)
                     return APIResponse.error('Error interno del servidor', details={'error': str(e)}, status_code=500)
 

@@ -1,0 +1,19 @@
+HTTP/1.1 401 UNAUTHORIZED
+Server: Werkzeug/3.0.4 Python/3.13.7
+Date: Mon, 29 Sep 2025 01:20:51 GMT
+Content-Type: application/json; charset=utf-8
+Content-Length: 780
+Access-Control-Allow-Origin: https://localhost:5173
+Access-Control-Expose-Headers: Authorization, Content-Range, X-Content-Range, X-Total-Count
+Access-Control-Allow-Credentials: true
+Vary: Origin
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 7
+X-RateLimit-Reset: 1759108864
+Retry-After: 12
+Connection: close
+

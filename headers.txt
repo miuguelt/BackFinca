@@ -1,0 +1,19 @@
+HTTP/1.1 400 BAD REQUEST
+Server: Werkzeug/3.0.4 Python/3.13.7
+Date: Mon, 29 Sep 2025 00:52:30 GMT
+Content-Type: application/json
+Content-Length: 127
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-RateLimit-Limit: 5
+X-RateLimit-Remaining: 3
+X-RateLimit-Reset: 1759107178
+Retry-After: 27
+Access-Control-Allow-Origin: https://localhost:5173
+Access-Control-Expose-Headers: Authorization, Content-Range, X-Content-Range, X-Total-Count
+Access-Control-Allow-Credentials: true
+Vary: Origin
+Connection: close
+

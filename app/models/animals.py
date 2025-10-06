@@ -45,6 +45,7 @@ class Animals(BaseModel):
     __table_args__ = (
         db.Index('ix_animals_breeds_status', 'breeds_id', 'status'),
         db.Index('ix_animals_created_at', 'created_at'),
+        db.Index('ix_animals_updated_at', 'updated_at'),  # Para ?since= y /metadata
     )
     
     id = db.Column(db.Integer, primary_key=True)
@@ -59,7 +60,7 @@ class Animals(BaseModel):
     idMother = db.Column(db.Integer, db.ForeignKey('animals.id'), nullable=True)
     
     # Configuración específica para namespaces
-    _namespace_fields = ['id', 'record', 'sex', 'birth_date', 'weight', 'status', 'breeds_id', 'idFather', 'idMother', 'created_at']
+    _namespace_fields = ['id', 'record', 'sex', 'birth_date', 'weight', 'status', 'breeds_id', 'idFather', 'idMother', 'created_at', 'updated_at']
     _namespace_relations = {
         'breed': {'fields': ['id', 'name', 'species_id'], 'depth': 1},
         'father': {'fields': ['id', 'record', 'sex'], 'depth': 1},
@@ -70,7 +71,7 @@ class Animals(BaseModel):
         'controls': {'fields': ['id', 'checkup_date', 'weight', 'height'], 'depth': 1}
     }
     _searchable_fields = ['record']
-    _filterable_fields = ['sex', 'status', 'breeds_id', 'birth_date', 'weight', 'created_at']
+    _filterable_fields = ['sex', 'status', 'breeds_id', 'birth_date', 'weight', 'created_at', 'idFather', 'idMother']
     _sortable_fields = ['id', 'record', 'birth_date', 'weight', 'created_at', 'updated_at']
     _required_fields = ['sex', 'birth_date', 'weight', 'record', 'breeds_id']
     _unique_fields = ['record']
@@ -81,14 +82,14 @@ class Animals(BaseModel):
     father = db.relationship('Animals', remote_side=[id], foreign_keys=[idFather], lazy='select')
     mother = db.relationship('Animals', remote_side=[id], foreign_keys=[idMother], lazy='select')
 
-    # Relaciones con lazy loading optimizado
-    treatments = db.relationship('Treatments', back_populates='animals', lazy='dynamic')
-    vaccinations = db.relationship('Vaccinations', back_populates='animals', lazy='dynamic')
-    diseases = db.relationship('AnimalDiseases', back_populates='animal', lazy='dynamic')
+    # Relaciones con lazy loading optimizado y cascade delete
+    treatments = db.relationship('Treatments', back_populates='animals', lazy='dynamic', cascade='all, delete-orphan')
+    vaccinations = db.relationship('Vaccinations', back_populates='animals', lazy='dynamic', cascade='all, delete-orphan')
+    diseases = db.relationship('AnimalDiseases', back_populates='animal', lazy='dynamic', cascade='all, delete-orphan')
     controls = db.relationship('Control', back_populates='animals', lazy='dynamic', 
-                              order_by='desc(Control.checkup_date)')
-    genetic_improvements = db.relationship('GeneticImprovements', back_populates='animals', lazy='dynamic')
-    animal_fields = db.relationship('AnimalFields', back_populates='animal', lazy='dynamic')
+                              order_by='desc(Control.checkup_date)', cascade='all, delete-orphan')
+    genetic_improvements = db.relationship('GeneticImprovements', back_populates='animals', lazy='dynamic', cascade='all, delete-orphan')
+    animal_fields = db.relationship('AnimalFields', back_populates='animal', lazy='dynamic', cascade='all, delete-orphan')
 
     @classmethod
     def _validate_and_normalize(cls, data, is_update=False, instance_id=None):

@@ -32,7 +32,9 @@ class RouteAdministrationDetail(Resource):
         data = route_administrations_ns.payload
         for key, value in data.items():
             setattr(route, key, value)
+        db.session.flush()
         db.session.commit()
+        db.session.refresh(route)
         return APIResponse.success(data=route.to_dict())
 
     @route_administrations_ns.doc('delete_route_administration')
@@ -63,5 +65,7 @@ class RouteAdministrationsList(Resource):
         data = route_administrations_ns.payload
         route = RouteAdministration(**data)
         db.session.add(route)
+        db.session.flush()
         db.session.commit()
+        db.session.refresh(route)
         return APIResponse.success(data=route.to_dict(), message='Ruta de administración creada')

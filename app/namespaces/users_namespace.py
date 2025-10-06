@@ -136,7 +136,9 @@ class UserPublicCreate(Resource):
             user = User(**data)
             user.set_password(password_raw)
             db.session.add(user)
+            db.session.flush()
             db.session.commit()
+            db.session.refresh(user)
             # APIResponse.created(data, message=...)
             return APIResponse.created(user.to_namespace_dict(), message='Usuario creado exitosamente')
         except IntegrityError as ie:

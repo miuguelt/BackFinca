@@ -19,7 +19,7 @@ class Treatments(BaseModel):
     animal_id = db.Column(db.Integer, db.ForeignKey('animals.id'), nullable=False)
     
     # Configuración específica para namespaces
-    _namespace_fields = ['id', 'treatment_date', 'description', 'frequency', 'observations', 'dosis', 'animal_id', 'created_at']
+    _namespace_fields = ['id', 'treatment_date', 'description', 'frequency', 'observations', 'dosis', 'animal_id', 'created_at', 'updated_at']
     _namespace_relations = {
         'animals': {'fields': ['id', 'record', 'sex', 'status'], 'depth': 1},
         'vaccines_treatments': {'fields': ['id', 'vaccine_id'], 'depth': 1},

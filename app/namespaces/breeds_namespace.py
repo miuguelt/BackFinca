@@ -43,7 +43,9 @@ class BreedDetail(Resource):
         data = breeds_ns.payload
         for key, value in data.items():
             setattr(breed, key, value)
+        db.session.flush()
         db.session.commit()
+        db.session.refresh(breed)
         return APIResponse.success(data=breed.to_json())
 
     @breeds_ns.doc('delete_breed', description='Eliminar raza')
@@ -105,5 +107,7 @@ class BreedsList(Resource):
         data = breeds_ns.payload
         breed = Breeds(**data)
         db.session.add(breed)
+        db.session.flush()
         db.session.commit()
+        db.session.refresh(breed)
         return APIResponse.success(data=breed.to_json(), message='Raza creada')

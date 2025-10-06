@@ -52,6 +52,7 @@ def init_cors(app, logger: logging.Logger = None):
             "Cache-Control",
             "X-File-Name",
             "X-CSRF-Token",
+            "X-CSRF-TOKEN",  # variante en mayúsculas usada por Swagger/otros clientes
             "X-App-Version",
             "X-Client-Timezone",
             "X-Client-Locale",
@@ -61,7 +62,14 @@ def init_cors(app, logger: logging.Logger = None):
             "Content-Range",
             "X-Content-Range",
             "X-Total-Count",
-            "Authorization"
+            "Authorization",
+            "ETag",
+            "Last-Modified",
+            "Cache-Control",
+            "X-API-Version",
+            "X-Cache-Strategy",
+            "X-Has-More",
+            "Vary"
         ],
         supports_credentials=True,
         max_age=86400
@@ -102,6 +110,12 @@ def init_cors(app, logger: logging.Logger = None):
             response.headers['Access-Control-Allow-Origin'] = origin
             response.headers['Access-Control-Allow-Credentials'] = 'true'
             response.headers['Vary'] = 'Origin'
+        elif origin and origin not in allowed_origins:
+            logger.warning(
+                "CORS: Origin %s no está en CORS_ORIGINS. Agregue '%s' a la variable CORS_ORIGINS en .env",
+                origin,
+                origin
+            )
         if request.method != 'OPTIONS':
             logger.debug(
                 "Response -> path: %s, status: %s, origin: %s, A-C-Allow-Origin: %s",
@@ -122,7 +136,7 @@ def init_cors(app, logger: logging.Logger = None):
             ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
             [
                 "Content-Type", "Authorization", "X-Requested-With", "Accept",
-                "Origin", "Cache-Control", "X-File-Name", "X-CSRF-Token",
+                "Origin", "Cache-Control", "X-File-Name", "X-CSRF-Token", "X-CSRF-TOKEN",
                 "X-App-Version", "X-Client-Timezone", "X-Client-Locale",
                 "ngrok-skip-browser-warning"
             ],

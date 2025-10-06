@@ -33,9 +33,24 @@ def configure_jwt_handlers(jwt):
         return APIResponse.error("Token inválido", status_code=401, error_code="INVALID_TOKEN", details={'error': str(error)})
 
     @jwt.unauthorized_loader
-    def missing_token_callback(error):
-        logger.warning(f"Missing token: {error}")
-        return APIResponse.error("Token ausente en la solicitud", status_code=401, error_code="MISSING_TOKEN", details={'error': str(error)})
+    def unauthorized_callback(error):
+        reason = str(error or "")
+        if "CSRF" in reason.upper():
+            logger.warning(f"CSRF error: {reason}")
+            return APIResponse.error(
+                "CSRF token inválido o ausente",
+                status_code=401,
+                error_code="CSRF_ERROR",
+                details={"reason": reason}
+            )
+        else:
+            logger.warning(f"Unauthorized: {reason}")
+            return APIResponse.error(
+                "Token ausente o no autorizado",
+                status_code=401,
+                error_code="MISSING_TOKEN",
+                details={"error": reason}
+            )
 
     @jwt.additional_claims_loader
     def add_claims_to_jwt(identity):

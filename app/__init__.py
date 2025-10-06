@@ -1,8 +1,10 @@
 from flask import Flask, request, jsonify, current_app, json, redirect
 from flask_sqlalchemy import SQLAlchemy
-from flask_jwt_extended import JWTManager, verify_jwt_in_request, get_jwt_identity
+from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from flask_restx import Api
+from flask_caching import Cache
+from flask_migrate import Migrate
 from datetime import timezone, datetime
 from config import config
 import logging
@@ -28,6 +30,8 @@ from .utils.rate_limiter import init_rate_limiter
 # ====================================================================
 db = SQLAlchemy()
 jwt = JWTManager()
+cache = Cache()
+migrate = Migrate()
 
 # ====================================================================
 # 2. Funciones de ayuda y configuración modular
@@ -204,7 +208,9 @@ def create_app(config_name='development'):
     # Inicializa y enlaza las extensiones con la app
     db.init_app(app)
     jwt.init_app(app)
-    
+    cache.init_app(app)
+    migrate.init_app(app, db)
+
     # Inicializar optimizaciones de base de datos
     init_db_optimizations(app)
     logger.info("Database optimizations initialized")
@@ -259,6 +265,17 @@ def create_app(config_name='development'):
         seed_admin_user(app, logger)
     except Exception:
         logger.exception('Fallo al ejecutar seed_admin_user')
+    
+    # Warmup de caché para acelerar primera carga (controlado por config)
+    try:
+        if app.config.get('CACHE_WARMUP_ENABLED', True):
+            from app.utils.bootstrap import warmup_initial_caches
+            warmup_initial_caches(app, logger)
+            logger.info('Warmup de caché inicial ejecutado')
+        else:
+            logger.info('CACHE_WARMUP_ENABLED desactivado; se omite warmup')
+    except Exception:
+        logger.exception('Fallo al ejecutar warmup_initial_caches')
     
     # Redirecciones públicas convenientes para documentación
     @app.route('/docs')

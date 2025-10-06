@@ -1,0 +1,23 @@
+HTTP/1.1 200 OK
+Server: Werkzeug/3.0.4 Python/3.13.7
+Date: Mon, 29 Sep 2025 01:19:07 GMT
+Content-Type: application/json
+Content-Length: 959
+Set-Cookie: access_token_cookie=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc1OTEwODc0NywianRpIjoiYjllNmYyY2EtNGI0OS00ODZjLWIxYzYtYTlkMjc0M2E3M2VmIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjQyIiwibmJmIjoxNzU5MTA4NzQ3LCJjc3JmIjoiMTQ3Y2U4ZWEtMWI5ZS00MDRkLWIyZjgtY2U3Y2UxYmNlMGNkIiwiZXhwIjoxNzU5MTE1OTQ3LCJzZXJ2ZXJfdGltZV91dGMiOiIyMDI1LTA5LTI5VDAxOjE5OjA3LjYwODk4MSswMDowMCIsInNlcnZlcl9lbnYiOiJkZXZlbG9wbWVudCIsImlkIjo0MiwiaWRlbnRpZmljYXRpb24iOjEwOTgsInJvbGUiOiJBZG1pbmlzdHJhZG9yIiwiZnVsbG5hbWUiOiJKdWFuIFBcdTAwZTlyZXoifQ.QF1GCjj9bfFtI48CiE9ySW2WdAmYutvg_ngrQjSelTc; Secure; HttpOnly; Path=/; SameSite=None
+Set-Cookie: csrf_access_token=147ce8ea-1b9e-404d-b2f8-ce7ce1bce0cd; Secure; Path=/; SameSite=None
+Set-Cookie: refresh_token_cookie=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc1OTEwODc0NywianRpIjoiYzcwYzQ3MTktMzBkYS00Nzk3LTk4NjgtOTQwYTJkNDQyMGYxIiwidHlwZSI6InJlZnJlc2giLCJzdWIiOiI0MiIsIm5iZiI6MTc1OTEwODc0NywiY3NyZiI6ImFmYzA2NjJkLWQzZDgtNDgwOC1hYjZkLTk2OGJjODllNzQ2ZiIsImV4cCI6MTc2MTcwMDc0Nywic2VydmVyX3RpbWVfdXRjIjoiMjAyNS0wOS0yOVQwMToxOTowNy42MDkxNjMrMDA6MDAiLCJzZXJ2ZXJfZW52IjoiZGV2ZWxvcG1lbnQiLCJpZCI6NDIsImlkZW50aWZpY2F0aW9uIjoxMDk4LCJyb2xlIjoiQWRtaW5pc3RyYWRvciIsImZ1bGxuYW1lIjoiSnVhbiBQXHUwMGU5cmV6In0.tyTARGeimPf50IMlN6RISt8CfQpbCrNyb5W9-N_8Sb0; Secure; HttpOnly; Path=/; SameSite=None
+Set-Cookie: csrf_refresh_token=afc0662d-d3d8-4808-ab6d-968bc89e746f; Secure; Path=/; SameSite=None
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-RateLimit-Limit: 5
+X-RateLimit-Remaining: 4
+X-RateLimit-Reset: 1759108808
+Retry-After: 60
+Access-Control-Allow-Origin: https://localhost:5173
+Access-Control-Expose-Headers: Authorization, Content-Range, X-Content-Range, X-Total-Count
+Access-Control-Allow-Credentials: true
+Vary: Origin
+Connection: close
+

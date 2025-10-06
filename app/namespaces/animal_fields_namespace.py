@@ -6,7 +6,7 @@ from app.models.animalFields import AnimalFields
 from app.models.animals import Animals  # Corregido: Animals en lugar de Animal
 from app.models.fields import Fields  # Corregido: Fields en lugar de Field
 from app import db
-from app.utils.namespace_helpers import create_optimized_namespace
+from app.utils.namespace_helpers import create_optimized_namespace, _cache_clear
 from app.utils.response_handler import APIResponse
 
 animal_fields_ns = create_optimized_namespace(
@@ -62,12 +62,20 @@ class AnimalFieldsDetail(Resource):
         """Actualizar completamente un campo de animal por ID"""
         try:
             data = request.get_json() or {}
+            # Consulta directa a BD (sin cache)
             record = AnimalFields.query.get_or_404(record_id)
             for attr, value in data.items():
                 if hasattr(record, attr):
                     setattr(record, attr, value)
             record.updated_at = datetime.utcnow()
+            db.session.flush()
             db.session.commit()
+            db.session.refresh(record)
+
+            # Invalidar cache INMEDIATAMENTE después de sincronización
+            _cache_clear('AnimalFields')
+
+            # Respuesta con datos sincronizados desde BD
             return APIResponse.success(record, animal_fields_ns)
         except Exception as e:
             db.session.rollback()
@@ -78,9 +86,15 @@ class AnimalFieldsDetail(Resource):
     def delete(self, record_id):
         """Eliminar permanentemente un campo de animal por ID"""
         try:
+            # Consulta directa a BD (sin cache)
             record = AnimalFields.query.get_or_404(record_id)
             db.session.delete(record)
             db.session.commit()
+
+            # Invalidar cache INMEDIATAMENTE después de commit exitoso
+            _cache_clear('AnimalFields')
+
+            # Respuesta rápida HTTP 204 (sin contenido)
             return '', 204
         except Exception as e:
             db.session.rollback()
@@ -95,12 +109,20 @@ class AnimalFieldsDetail(Resource):
             data = request.get_json() or {}
             if not data:
                 return APIResponse.error('No se proporcionaron datos para actualizar', 404)
+            # Consulta directa a BD (sin cache)
             record = AnimalFields.query.get_or_404(record_id)
             for attr, value in data.items():
                 if hasattr(record, attr):
                     setattr(record, attr, value)
             record.updated_at = datetime.utcnow()
+            db.session.flush()
             db.session.commit()
+            db.session.refresh(record)
+
+            # Invalidar cache INMEDIATAMENTE después de sincronización
+            _cache_clear('AnimalFields')
+
+            # Respuesta con datos sincronizados desde BD
             return APIResponse.success(record, animal_fields_ns)
         except Exception as e:
             db.session.rollback()
@@ -164,7 +186,14 @@ class AnimalFieldsList(Resource):
                 animal_id=animal_id
             )
             db.session.add(record)
+            db.session.flush()
             db.session.commit()
+            db.session.refresh(record)
+
+            # Invalidar cache INMEDIATAMENTE después de sincronización
+            _cache_clear('AnimalFields')
+
+            # Respuesta rápida con datos desde BD (sin cache)
             return APIResponse.success(record, animal_fields_ns), 201
         except Exception as e:
             db.session.rollback()

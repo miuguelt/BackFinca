@@ -35,17 +35,19 @@ class APIResponse:
     """
     
     @staticmethod
-    def success(data: Any = None, message: str = "Operación exitosa", 
-                status_code: int = 200, meta: Optional[Dict] = None) -> tuple:
+    def success(data: Any = None, message: str = "Operación exitosa",
+                status_code: int = 200, meta: Optional[Dict] = None,
+                include_token: bool = False) -> tuple:
         """
         Respuesta de éxito estandarizada.
-        
+
         Args:
             data: Datos a retornar (puede ser dict, list, etc.)
             message: Mensaje descriptivo
             status_code: Código HTTP (200, 201, etc.)
             meta: Metadatos adicionales (paginación, totales, etc.)
-        
+            include_token: Si True, incluye el access_token en la respuesta (solo para auth)
+
         Returns:
             Tuple con (response_json, status_code)
         """
@@ -53,31 +55,32 @@ class APIResponse:
             "success": True,
             "data": data
         }
-        
-        # Incluir access_token si está presente en la solicitud (HttpOnly cookie o Authorization)
-        token = _current_access_token()
-        if token:
-            response["access_token"] = token
-        
+
+        # Solo incluir access_token si se solicita explícitamente (endpoints de auth)
+        if include_token:
+            token = _current_access_token()
+            if token:
+                response["access_token"] = token
+
         if meta:
             response["meta"] = meta
-            
+
         logger.info(f"Success response: {status_code} - {message}")
         return response, status_code
     
     @staticmethod
-    def error(message: str, status_code: int = 400, 
-              error_code: Optional[str] = None, 
+    def error(message: str, status_code: int = 400,
+              error_code: Optional[str] = None,
               details: Optional[Dict] = None) -> tuple:
         """
         Respuesta de error estandarizada.
-        
+
         Args:
             message: Mensaje de error descriptivo
             status_code: Código HTTP de error
             error_code: Código interno de error (opcional)
             details: Detalles adicionales del error
-        
+
         Returns:
             Tuple con (response_json, status_code)
         """
@@ -93,12 +96,7 @@ class APIResponse:
                 "trace_id": trace_id
             }
         }
-        
-        # También reflejar el access_token si está disponible, para que el frontend pueda mantenerlo
-        token = _current_access_token()
-        if token:
-            response["access_token"] = token
-        
+
         return response, status_code
     
     @staticmethod
