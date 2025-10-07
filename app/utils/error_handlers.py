@@ -5,7 +5,7 @@ Manejo centralizado de errores para la aplicación Flask
 from flask import jsonify, current_app
 from werkzeug.exceptions import HTTPException
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from flask_jwt_extended.exceptions import JWTExtendedException
+from flask_jwt_extended.exceptions import JWTExtendedException, CSRFError
 from app.utils.security_logger import log_suspicious_activity, security_logger
 import logging
 
@@ -219,6 +219,23 @@ def register_error_handlers(app):
             status_code=500,
             error_code='DATABASE_ERROR',
             details={'error': 'Ha ocurrido un error al acceder a la base de datos'}
+        )
+
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(error):
+        logger.warning(f"CSRF error: {error}")
+        # Log del evento JWT/CSRF para seguridad
+        try:
+            from app.utils.security_logger import log_jwt_token_event
+            log_jwt_token_event('ERROR', token_info={'csrf_error': str(error)})
+        except Exception:
+            pass
+
+        return APIResponse.error(
+            message='CSRF token inválido o ausente',
+            status_code=401,
+            error_code='CSRF_ERROR',
+            details={'error': str(error)}
         )
 
     @app.errorhandler(JWTExtendedException)
