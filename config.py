@@ -169,6 +169,13 @@ class Config:
     LOG_FILE_ENABLED = False
 
     # -----------------------
+    # Flags de características
+    # -----------------------
+    # Permite habilitar la creación pública de usuarios incluso si ya existen
+    # usuarios en la base de datos. Úsese con precaución.
+    PUBLIC_USER_CREATION_ENABLED = os.getenv('PUBLIC_USER_CREATION_ENABLED', 'false').lower() == 'true'
+
+    # -----------------------
     # URLs
     # -----------------------
     API_BASE_URL = os.getenv('API_BASE_URL', 'https://finca.isladigital.xyz/api/v1')

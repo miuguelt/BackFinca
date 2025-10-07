@@ -1,6 +1,6 @@
 
 from flask_restx import Resource, fields
-from flask import request, jsonify
+from flask import request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from app.models.user import User, Role
 from app.utils.namespace_helpers import create_optimized_namespace
@@ -121,11 +121,12 @@ class UserRolesStats(Resource):
 # Ruta pública opcional para crear usuarios iniciales cuando no existe autenticación todavía
 @users_ns.route('/public', endpoint='users_public_create')
 class UserPublicCreate(Resource):
-    @users_ns.doc('public_create_user', description='Crear un usuario sin autenticación (solo permitido si no existen usuarios previos).')
+    @users_ns.doc('public_create_user', description='Crear un usuario sin autenticación (permitido si no existen usuarios previos o si PUBLIC_USER_CREATION_ENABLED=true).')
     def post(self):
         try:
             existing_count = User.query.count()
-            if existing_count > 0:
+            allow_public_creation = bool(current_app.config.get('PUBLIC_USER_CREATION_ENABLED', False))
+            if existing_count > 0 and not allow_public_creation:
                 return APIResponse.error('Creación pública deshabilitada: ya existen usuarios', status_code=403)
             data = request.get_json() or {}
             missing = [f for f in ['identification','fullname','password','email','phone','role'] if f not in data]
