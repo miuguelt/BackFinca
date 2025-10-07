@@ -29,8 +29,20 @@ class BaseModel(db.Model):
     __abstract__ = True
 
     # Campos comunes para todos los modelos
-    created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
-    updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now(), nullable=False)
+    # Defaults en cliente y servidor para evitar errores en BD sin defaults
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,              # client-side default
+        server_default=db.func.now(),         # server-side default
+        nullable=False
+    )
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,              # client-side default
+        onupdate=datetime.utcnow,             # client-side onupdate
+        server_default=db.func.now(),         # server-side default
+        nullable=False
+    )
 
     # Configuraciones por defecto para namespaces (pueden ser sobreescritas en subclases)
     _namespace_fields = []
