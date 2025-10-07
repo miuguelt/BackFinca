@@ -9,6 +9,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models.animals import Animals
 from app.utils.response_handler import APIResponse
 from app.utils.namespace_helpers import create_optimized_namespace, _cache_clear
+from app.utils.tree_builder import build_ancestor_tree, build_descendant_tree, invalidate_animal_tree_cache_for
 from app.utils.integrity_checker import OptimizedIntegrityChecker
 
 # Helper para mapear campos del frontend al backend
@@ -106,6 +107,15 @@ class AnimalsList(Resource):
             db.session.refresh(animal)  # Sincronizar con BD
             # Invalida todas las variantes de caché relacionadas con Animals
             _cache_clear(Animals)
+            # Invalidar caché de árboles relacionados
+            try:
+                invalidate_animal_tree_cache_for(animal.id)
+                if animal.idFather:
+                    invalidate_animal_tree_cache_for(animal.idFather)
+                if animal.idMother:
+                    invalidate_animal_tree_cache_for(animal.idMother)
+            except Exception:
+                pass
 
             return APIResponse.success(
                 data=animal.to_namespace_dict(),
@@ -138,6 +148,15 @@ class AnimalDetail(Resource):
             db.session.refresh(animal)  # Sincronizar con BD
             # Invalida todas las variantes de caché relacionadas con Animals
             _cache_clear(Animals)
+            # Invalidar caché de árboles relacionados
+            try:
+                invalidate_animal_tree_cache_for(animal.id)
+                if animal.idFather:
+                    invalidate_animal_tree_cache_for(animal.idFather)
+                if animal.idMother:
+                    invalidate_animal_tree_cache_for(animal.idMother)
+            except Exception:
+                pass
             return APIResponse.success(data=animal.to_namespace_dict(), message='Animal actualizado correctamente')
         except Exception as e:
             db.session.rollback()
@@ -151,6 +170,15 @@ class AnimalDetail(Resource):
             db.session.commit()
             # Invalida todas las variantes de caché relacionadas con Animals
             _cache_clear(Animals)
+            # Invalidar caché de árboles relacionados
+            try:
+                invalidate_animal_tree_cache_for(record_id)
+                if getattr(animal, 'idFather', None):
+                    invalidate_animal_tree_cache_for(animal.idFather)
+                if getattr(animal, 'idMother', None):
+                    invalidate_animal_tree_cache_for(animal.idMother)
+            except Exception:
+                pass
             return APIResponse.success(message='Animal eliminado correctamente')
         except Exception as e:
             db.session.rollback()
@@ -373,6 +401,52 @@ class AnimalBatchDependencies(Resource):
                 message=f'Error en verificación batch: {str(e)}',
                 status_code=500
             )
+
+@animals_ns.route('/tree/ancestors')
+class AnimalAncestorsTree(Resource):
+    @jwt_required()
+    def get(self):
+        try:
+            animal_id = request.args.get('animal_id', type=int)
+            if not animal_id:
+                return APIResponse.error(message='Parámetro animal_id es requerido', status_code=400)
+
+            max_depth = request.args.get('max_depth', default=5, type=int)
+            fields_param = request.args.get('fields')
+            fields = [f.strip() for f in fields_param.split(',')] if fields_param else None
+
+            tree = build_ancestor_tree(
+                root_id=animal_id,
+                max_depth=max_depth,
+                fields=fields
+            )
+
+            return APIResponse.success(data=tree, message='Árbol de ancestros generado exitosamente')
+        except Exception as e:
+            return APIResponse.error(message=f'Error al generar árbol de ancestros: {str(e)}')
+
+@animals_ns.route('/tree/descendants')
+class AnimalDescendantsTree(Resource):
+    @jwt_required()
+    def get(self):
+        try:
+            animal_id = request.args.get('animal_id', type=int)
+            if not animal_id:
+                return APIResponse.error(message='Parámetro animal_id es requerido', status_code=400)
+
+            max_depth = request.args.get('max_depth', default=5, type=int)
+            fields_param = request.args.get('fields')
+            fields = [f.strip() for f in fields_param.split(',')] if fields_param else None
+
+            tree = build_descendant_tree(
+                root_id=animal_id,
+                max_depth=max_depth,
+                fields=fields
+            )
+
+            return APIResponse.success(data=tree, message='Árbol de descendientes generado exitosamente')
+        except Exception as e:
+            return APIResponse.error(message=f'Error al generar árbol de descendientes: {str(e)}')
 
 @animals_ns.route('/status')
 class AnimalStatus(Resource):
