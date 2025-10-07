@@ -7,6 +7,29 @@ import sqlalchemy as sa
 import time
 import hashlib
 
+def _safe_cache_get(key: str):
+    """Intento de lectura de caché con fallback silencioso si Redis no está disponible."""
+    try:
+        return cache.get(key)
+    except Exception:
+        return None
+
+def _safe_cache_set(key: str, value, timeout: Optional[int] = None) -> None:
+    """Intento de escritura de caché con fallback silencioso si Redis no está disponible."""
+    try:
+        if timeout is None:
+            timeout = _cache_timeout()
+        cache.set(key, value, timeout=timeout)
+    except Exception:
+        pass
+
+def _safe_cache_delete(key: str) -> None:
+    """Intento de borrado de caché con fallback silencioso si Redis no está disponible."""
+    try:
+        cache.delete(key)
+    except Exception:
+        pass
+
 
 def _serialize(animal: Animals, fields: Optional[List[str]] = None) -> Dict:
     if not animal:
@@ -44,7 +67,7 @@ def _cache_timeout() -> int:
 def build_ancestor_tree(root_id: int, max_depth: int = 5, fields: Optional[List[str]] = None) -> Dict:
     """Construye árbol de ancestros (padre y madre por niveles) con caché."""
     key = _cache_key('ancestors', root_id, max_depth, fields)
-    cached = cache.get(key)
+    cached = _safe_cache_get(key)
     if cached:
         return cached
 
@@ -171,14 +194,14 @@ def build_ancestor_tree(root_id: int, max_depth: int = 5, fields: Optional[List[
         },
         'generated_at': int(time.time())
     }
-    cache.set(key, result, timeout=_cache_timeout())
+    _safe_cache_set(key, result, timeout=_cache_timeout())
     return result
 
 
 def build_descendant_tree(root_id: int, max_depth: int = 5, fields: Optional[List[str]] = None) -> Dict:
     """Construye árbol de descendientes (hijos por niveles) con caché."""
     key = _cache_key('descendants', root_id, max_depth, fields)
-    cached = cache.get(key)
+    cached = _safe_cache_get(key)
     if cached:
         return cached
 
@@ -288,7 +311,7 @@ def build_descendant_tree(root_id: int, max_depth: int = 5, fields: Optional[Lis
         },
         'generated_at': int(time.time())
     }
-    cache.set(key, result, timeout=_cache_timeout())
+    _safe_cache_set(key, result, timeout=_cache_timeout())
     return result
 
 
@@ -302,10 +325,7 @@ def invalidate_animal_tree_cache_for(root_id: int):
         for d in depths:
             for kind in ('ancestors', 'descendants'):
                 key = _cache_key(kind, root_id, d, None)
-                try:
-                    cache.delete(key)
-                except Exception:
-                    pass
+                _safe_cache_delete(key)
     except Exception:
         pass
 
