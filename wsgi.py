@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from werkzeug.middleware.proxy_fix import ProxyFix
-from flask import request, jsonify
+from flask import request, jsonify, current_app
 import logging
 from flask_jwt_extended.exceptions import JWTExtendedException
 
@@ -16,6 +16,13 @@ else:
 
 from app import create_app, db
 app = create_app(config_name)
+
+# En producción, asegurar que las URLs generadas usen https
+if config_name == 'production':
+    try:
+        app.config.setdefault('PREFERRED_URL_SCHEME', 'https')
+    except Exception:
+        pass
 
 # Log en tiempo de importación para despliegues WSGI (cuando no se ejecuta __main__)
 try:
@@ -32,12 +39,7 @@ try:
 except Exception:
     pass
 
-# Aplicar ProxyFix si se ejecuta detrás de un reverse proxy (configurable vía env)
-try:
-    proxy_x_for = int(os.getenv('PROXY_FIX_X_FOR', '1'))
-except Exception:
-    proxy_x_for = 1
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=proxy_x_for, x_proto=int(os.getenv('PROXY_FIX_X_PROTO', '1')), x_host=int(os.getenv('PROXY_FIX_X_HOST', '1')), x_port=int(os.getenv('PROXY_FIX_X_PORT', '1')))
+# Nota: ProxyFix ya se aplica dentro de create_app. Evitamos duplicarlo aquí
 
 # Seguridad: encabezados HTTP seguros (aplicar en producción y en HTTPS)
 @app.after_request
@@ -77,6 +79,12 @@ def set_security_headers(response):
                 "frame-ancestors 'self'",
             ])
         else:
+            # Permitir conexiones salientes hacia orígenes definidos en CORS_ORIGINS además de 'self'
+            try:
+                allowed_origins = current_app.config.get('CORS_ORIGINS', []) or []
+            except Exception:
+                allowed_origins = []
+            connect_src_values = ["'self'"] + allowed_origins
             csp = "; ".join([
                 "default-src 'self'",
                 "object-src 'none'",
@@ -84,7 +92,7 @@ def set_security_headers(response):
                 "font-src 'self'",
                 "style-src 'self'",
                 "script-src 'self'",
-                "connect-src 'self'",
+                f"connect-src {' '.join(connect_src_values)}",
                 "frame-ancestors 'self'",
             ])
         # Sobrescribir para asegurar la política correcta
