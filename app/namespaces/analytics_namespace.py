@@ -1,13 +1,13 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from sqlalchemy import func, extract, desc, literal
+from sqlalchemy import func, extract, desc, literal, and_, or_
 from datetime import datetime, timedelta, timezone
 import logging
 import decimal
 
 from app import db, cache
-from app.models.animals import Animals, AnimalStatus
+from app.models.animals import Animals, AnimalStatus, Sex
 from app.models.treatments import Treatments
 from app.models.vaccinations import Vaccinations
 from app.models.control import Control, HealthStatus
@@ -208,6 +208,12 @@ class CompleteDashboardStats(Resource):
             thirty_days_ago = current_date - timedelta(days=30)
             sixty_days_ago = current_date - timedelta(days=60)
             seven_days_ago = current_date - timedelta(days=7)
+            # Fechas normalizadas para columnas tipo Date
+            current_date_date = current_date.date()
+            thirty_days_ago_date = thirty_days_ago.date()
+            sixty_days_ago_date = sixty_days_ago.date()
+            seven_days_ago_date = seven_days_ago.date()
+            six_months_ago_date = (current_date - timedelta(days=180)).date()
 
             # ============================================
             # SECCIÓN 1: USUARIOS
@@ -217,7 +223,10 @@ class CompleteDashboardStats(Resource):
 
             # Usuarios del período anterior (30-60 días atrás)
             total_users_previous = db.session.query(func.count(User.id)).filter(
-                User.created_at < thirty_days_ago
+                and_(
+                    User.created_at >= sixty_days_ago,
+                    User.created_at < thirty_days_ago
+                )
             ).scalar() or 0
 
             # Calcular porcentaje de cambio en usuarios
@@ -230,7 +239,7 @@ class CompleteDashboardStats(Resource):
             active_users = db.session.query(func.count(User.id)).filter(
                 or_(
                     User.updated_at >= thirty_days_ago,
-                    # Aquí podrías agregar más condiciones según tu lógica de "activo"
+                    User.status == True
                 )
             ).scalar() or 0
 
@@ -258,7 +267,10 @@ class CompleteDashboardStats(Resource):
 
             # Animales del período anterior
             total_animals_previous = db.session.query(func.count(Animals.id)).filter(
-                Animals.created_at < thirty_days_ago
+                and_(
+                    Animals.created_at >= sixty_days_ago,
+                    Animals.created_at < thirty_days_ago
+                )
             ).scalar() or 0
 
             # Calcular porcentaje de cambio en animales
@@ -296,7 +308,7 @@ class CompleteDashboardStats(Resource):
 
             # Tratamientos activos (en curso - últimos 30 días)
             active_treatments = db.session.query(func.count(Treatments.id)).filter(
-                Treatments.treatment_date >= thirty_days_ago
+                Treatments.treatment_date >= thirty_days_ago_date
             ).scalar() or 0
 
             # Tratamientos recientes
@@ -312,7 +324,10 @@ class CompleteDashboardStats(Resource):
 
             # Vacunaciones del período anterior
             total_vaccinations_previous = db.session.query(func.count(Vaccinations.id)).filter(
-                Vaccinations.created_at < thirty_days_ago
+                and_(
+                    Vaccinations.created_at >= sixty_days_ago,
+                    Vaccinations.created_at < thirty_days_ago
+                )
             ).scalar() or 0
 
             # Calcular porcentaje de cambio en vacunaciones
@@ -323,7 +338,7 @@ class CompleteDashboardStats(Resource):
 
             # Vacunaciones recientes
             recent_vaccinations = db.session.query(func.count(Vaccinations.id)).filter(
-                Vaccinations.vaccination_date >= seven_days_ago
+                Vaccinations.vaccination_date >= seven_days_ago_date
             ).scalar() or 0
 
             # ============================================
@@ -334,7 +349,10 @@ class CompleteDashboardStats(Resource):
 
             # Controles del período anterior
             total_controls_previous = db.session.query(func.count(Control.id)).filter(
-                Control.created_at < thirty_days_ago
+                and_(
+                    Control.created_at >= sixty_days_ago,
+                    Control.created_at < thirty_days_ago
+                )
             ).scalar() or 0
 
             # Calcular porcentaje de cambio en controles
@@ -345,7 +363,7 @@ class CompleteDashboardStats(Resource):
 
             # Controles recientes
             recent_controls = db.session.query(func.count(Control.id)).filter(
-                Control.checkup_date >= seven_days_ago
+                Control.checkup_date >= seven_days_ago_date
             ).scalar() or 0
 
             # ============================================
@@ -355,7 +373,10 @@ class CompleteDashboardStats(Resource):
 
             # Campos del período anterior
             total_fields_previous = db.session.query(func.count(Fields.id)).filter(
-                Fields.created_at < thirty_days_ago
+                and_(
+                    Fields.created_at >= sixty_days_ago,
+                    Fields.created_at < thirty_days_ago
+                )
             ).scalar() or 0
 
             # Calcular porcentaje de cambio en campos
@@ -417,18 +438,17 @@ class CompleteDashboardStats(Resource):
                 Animals.status == AnimalStatus.Vivo,
                 ~Animals.id.in_(
                     db.session.query(Control.animal_id).filter(
-                        Control.checkup_date >= thirty_days_ago
+                        Control.checkup_date >= thirty_days_ago_date
                     )
                 )
             ).scalar() or 0
 
             # Animales sin vacunación reciente (>180 días)
-            six_months_ago = current_date - timedelta(days=180)
             animals_without_vaccination = db.session.query(func.count(Animals.id)).filter(
                 Animals.status == AnimalStatus.Vivo,
                 ~Animals.id.in_(
                     db.session.query(Vaccinations.animal_id).filter(
-                        Vaccinations.vaccination_date >= six_months_ago
+                        Vaccinations.vaccination_date >= six_months_ago_date
                     )
                 )
             ).scalar() or 0
@@ -439,7 +459,7 @@ class CompleteDashboardStats(Resource):
             ).join(Animals).filter(
                 Animals.status == AnimalStatus.Vivo,
                 Control.health_status.in_([HealthStatus.Malo, HealthStatus.Regular]),
-                Control.checkup_date >= thirty_days_ago
+                Control.checkup_date >= thirty_days_ago_date
             ).scalar() or 0
 
             # Total de alertas del sistema
@@ -452,8 +472,8 @@ class CompleteDashboardStats(Resource):
                 ~Animals.id.in_(
                     db.session.query(Control.animal_id).filter(
                         and_(
-                            Control.checkup_date >= sixty_days_ago,
-                            Control.checkup_date < thirty_days_ago
+                            Control.checkup_date >= sixty_days_ago_date,
+                            Control.checkup_date < thirty_days_ago_date
                         )
                     )
                 )
@@ -465,8 +485,8 @@ class CompleteDashboardStats(Resource):
                 ~Animals.id.in_(
                     db.session.query(Vaccinations.animal_id).filter(
                         and_(
-                            Vaccinations.vaccination_date >= current_date - timedelta(days=210),  # 180 + 30 días
-                            Vaccinations.vaccination_date < six_months_ago
+                            Vaccinations.vaccination_date >= (current_date_date - timedelta(days=210)),  # 180 + 30 días
+                            Vaccinations.vaccination_date < six_months_ago_date
                         )
                     )
                 )
@@ -479,8 +499,8 @@ class CompleteDashboardStats(Resource):
                 Animals.status == AnimalStatus.Vivo,
                 Control.health_status.in_([HealthStatus.Malo, HealthStatus.Regular]),
                 and_(
-                    Control.checkup_date >= sixty_days_ago,
-                    Control.checkup_date < thirty_days_ago
+                    Control.checkup_date >= sixty_days_ago_date,
+                    Control.checkup_date < thirty_days_ago_date
                 )
             ).scalar() or 0
 
@@ -502,8 +522,8 @@ class CompleteDashboardStats(Resource):
             # Tratamientos activos del período anterior (30-60 días atrás)
             active_treatments_previous = db.session.query(func.count(Treatments.id)).filter(
                 and_(
-                    Treatments.treatment_date >= sixty_days_ago,
-                    Treatments.treatment_date < thirty_days_ago
+                    Treatments.treatment_date >= sixty_days_ago_date,
+                    Treatments.treatment_date < thirty_days_ago_date
                 )
             ).scalar() or 0
 
@@ -647,7 +667,7 @@ class CompleteDashboardStats(Resource):
 
             # Promedio de controles por animal (últimos 30 días)
             recent_controls_count = db.session.query(func.count(Control.id)).filter(
-                Control.checkup_date >= thirty_days_ago
+                Control.checkup_date >= thirty_days_ago_date
             ).scalar() or 0
 
             if active_animals > 0:
