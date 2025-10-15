@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Sistema de Gestión Ganadera</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f3f4f6;
+            padding: 20px;
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .dashboard-header h1 {
+            font-size: 28px;
+            color: #333;
+        }
+
+        .btn-refresh {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-refresh:hover {
+            background: #2563eb;
+        }
+
+        .btn-refresh:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fee2e2;
+            border: 2px solid #ef4444;
+            color: #991b1b;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stats-section {
+            margin-bottom: 40px;
+        }
+
+        .stats-section h2 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .stats-grid-small {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-card.warning {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .stat-card.danger {
+            border-left: 4px solid #ef4444;
+        }
+
+        .stat-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat-icon {
+            font-size: 24px;
+        }
+
+        .stat-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+        }
+
+        .stat-card-body {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .stat-card-small .stat-value {
+            font-size: 24px;
+        }
+
+        .stat-change {
+            font-size: 14px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+
+        .stat-change.positive {
+            color: #10b981;
+            background: #d1fae5;
+        }
+
+        .stat-change.negative {
+            color: #ef4444;
+            background: #fee2e2;
+        }
+
+        .stat-description {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .alert-breakdown {
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .alert-breakdown h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #92400e;
+            margin-bottom: 10px;
+        }
+
+        .alert-breakdown ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .alert-breakdown li {
+            font-size: 13px;
+            color: #78350f;
+            padding: 5px 0;
+            border-bottom: 1px solid #fde68a;
+        }
+
+        .alert-breakdown li:last-child {
+            border-bottom: none;
+        }
+
+        .dashboard-footer {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            border-top: 1px solid #e5e7eb;
+            margin-top: 40px;
+            background: white;
+            border-radius: 12px;
+        }
+
+        .login-form {
+            max-width: 400px;
+            margin: 100px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .login-form h2 {
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 12px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-login:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Form (initially hidden if token exists) -->
+    <div id="loginForm" class="login-form" style="display: none;">
+        <h2>🔐 Iniciar Sesión</h2>
+        <div class="form-group">
+            <label>Usuario:</label>
+            <input type="text" id="username" value="admin" placeholder="Ingrese su usuario">
+        </div>
+        <div class="form-group">
+            <label>Contraseña:</label>
+            <input type="password" id="password" value="admin123" placeholder="Ingrese su contraseña">
+        </div>
+        <button class="btn-login" onclick="login()">Iniciar Sesión</button>
+        <div id="loginError" class="error" style="display: none; margin-top: 15px;"></div>
+    </div>
+
+    <!-- Dashboard (initially hidden until logged in) -->
+    <div id="dashboardContainer" class="dashboard" style="display: none;">
+        <div class="dashboard-header">
+            <h1>📊 Dashboard de Gestión Ganadera</h1>
+            <div>
+                <button class="btn-refresh" onclick="loadStats(true)" id="btnRefresh">
+                    🔄 Actualizar
+                </button>
+                <button class="btn-refresh" onclick="logout()" style="background: #ef4444; margin-left: 10px;">
+                    🚪 Salir
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="loading">
+            <div class="loading-spinner"></div>
+            <p>Cargando estadísticas...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="error" style="display: none;">
+            <h3>❌ Error al cargar las estadísticas</h3>
+            <p id="errorMessage"></p>
+            <button class="btn-refresh" onclick="loadStats(true)" style="margin-top: 10px;">
+                Reintentar
+            </button>
+        </div>
+
+        <!-- Stats Content -->
+        <div id="statsContent" style="display: none;">
+            <!-- Usuarios -->
+            <section class="stats-section">
+                <h2>👥 Usuarios</h2>
+                <div class="stats-grid" id="usuariosGrid"></div>
+            </section>
+
+            <!-- Animales -->
+            <section class="stats-section">
+                <h2>🐄 Animales</h2>
+                <div class="stats-grid" id="animalesGrid"></div>
+            </section>
+
+            <!-- Tratamientos -->
+            <section class="stats-section">
+                <h2>💊 Tratamientos</h2>
+                <div class="stats-grid" id="tratamientosGrid"></div>
+            </section>
+
+            <!-- Alertas y Tareas -->
+            <section class="stats-section">
+                <h2>🚨 Alertas y Tareas</h2>
+                <div class="stats-grid" id="alertasGrid"></div>
+                <div id="alertBreakdown"></div>
+            </section>
+
+            <!-- Vacunas y Controles -->
+            <section class="stats-section">
+                <h2>💉 Vacunas y Controles</h2>
+                <div class="stats-grid" id="vacunasGrid"></div>
+            </section>
+
+            <!-- Catálogos -->
+            <section class="stats-section">
+                <h2>📚 Catálogos</h2>
+                <div class="stats-grid-small" id="catalogosGrid"></div>
+            </section>
+
+            <!-- Relaciones -->
+            <section class="stats-section">
+                <h2>🔗 Relaciones</h2>
+                <div class="stats-grid" id="relacionesGrid"></div>
+            </section>
+
+            <!-- Mejoras Genéticas -->
+            <section class="stats-section">
+                <h2>🧬 Mejoras y Tratamientos Especializados</h2>
+                <div class="stats-grid" id="mejorasGrid"></div>
+            </section>
+        </div>
+
+        <!-- Footer -->
+        <div class="dashboard-footer">
+            <small id="footerInfo"></small>
+        </div>
+    </div>
+
+    <script>
+        // Configuración
+        const API_BASE_URL = 'http://localhost:5000/api/v1';
+
+        // Estado global
+        let authToken = localStorage.getItem('token');
+        let statsCache = null;
+        let lastLoadTime = null;
+        const CACHE_TTL = 120000; // 2 minutos
+
+        // Verificar si hay token al cargar la página
+        window.onload = function() {
+            if (authToken) {
+                showDashboard();
+                loadStats();
+            } else {
+                showLogin();
+            }
+        };
+
+        // Funciones de autenticación
+        function showLogin() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('dashboardContainer').style.display = 'none';
+        }
+
+        function showDashboard() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('dashboardContainer').style.display = 'block';
+        }
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('loginError');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    authToken = result.data.access_token || result.access_token;
+                    localStorage.setItem('token', authToken);
+                    showDashboard();
+                    loadStats();
+                } else {
+                    errorDiv.textContent = result.message || 'Error al iniciar sesión';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Error de conexión: ' + error.message;
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            authToken = null;
+            statsCache = null;
+            showLogin();
+        }
+
+        // Funciones de carga de estadísticas
+        async function loadStats(forceRefresh = false) {
+            // Verificar caché
+            if (!forceRefresh && statsCache && lastLoadTime) {
+                const now = Date.now();
+                if ((now - lastLoadTime) < CACHE_TTL) {
+                    console.log('📦 Usando estadísticas del caché');
+                    renderStats(statsCache);
+                    return;
+                }
+            }
+
+            // Mostrar loading
+            document.getElementById('loadingState').style.display = 'block';
+            document.getElementById('errorState').style.display = 'none';
+            document.getElementById('statsContent').style.display = 'none';
+            document.getElementById('btnRefresh').disabled = true;
+
+            try {
+                console.log('🔄 Cargando estadísticas del servidor...');
+
+                const response = await fetch(`${API_BASE_URL}/analytics/dashboard/complete`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        logout();
+                        throw new Error('Sesión expirada. Por favor, inicie sesión nuevamente.');
+                    }
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    statsCache = result.data;
+                    lastLoadTime = Date.now();
+                    console.log('✅ Estadísticas cargadas exitosamente');
+                    renderStats(result.data);
+                } else {
+                    throw new Error(result.message || 'Error desconocido');
+                }
+            } catch (error) {
+                console.error('❌ Error:', error);
+                showError(error.message);
+            } finally {
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('btnRefresh').disabled = false;
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorState').style.display = 'block';
+            document.getElementById('statsContent').style.display = 'none';
+        }
+
+        function renderStats(stats) {
+            document.getElementById('statsContent').style.display = 'block';
+            document.getElementById('errorState').style.display = 'none';
+
+            // Usuarios
+            document.getElementById('usuariosGrid').innerHTML = `
+                ${createStatCard('Usuarios registrados', stats.usuarios_registrados, '👤')}
+                ${createStatCard('Usuarios activos', stats.usuarios_activos, '✅')}
+            `;
+
+            // Animales
+            document.getElementById('animalesGrid').innerHTML = `
+                ${createStatCard('Animales registrados', stats.animales_registrados, '📋')}
+                ${createStatCard('Animales activos', stats.animales_activos, '💚')}
+            `;
+
+            // Tratamientos
+            document.getElementById('tratamientosGrid').innerHTML = `
+                ${createStatCard('Tratamientos totales', stats.tratamientos_totales, '📊')}
+                ${createStatCard('Tratamientos activos', stats.tratamientos_activos, '🏥')}
+            `;
+
+            // Alertas y Tareas
+            document.getElementById('alertasGrid').innerHTML = `
+                ${createStatCard('Tareas pendientes', stats.tareas_pendientes, '📝', 'warning')}
+                ${createStatCard('Alertas del sistema', stats.alertas_sistema, '⚠️', 'danger')}
+            `;
+
+            // Desglose de alertas
+            if (stats.alertas_sistema.desglose) {
+                document.getElementById('alertBreakdown').innerHTML = `
+                    <div class="alert-breakdown">
+                        <h3>📋 Desglose de alertas:</h3>
+                        <ul>
+                            <li>🔍 Animales sin control: ${stats.alertas_sistema.desglose.animales_sin_control}</li>
+                            <li>💉 Animales sin vacunación: ${stats.alertas_sistema.desglose.animales_sin_vacunacion}</li>
+                            <li>🚨 Estado de salud crítico: ${stats.alertas_sistema.desglose.estado_salud_critico}</li>
+                        </ul>
+                    </div>
+                `;
+            }
+
+            // Vacunas y Controles
+            document.getElementById('vacunasGrid').innerHTML = `
+                ${createStatCard('Vacunas aplicadas', stats.vacunas_aplicadas, '💉')}
+                ${createStatCard('Controles realizados', stats.controles_realizados, '📋')}
+                ${createStatCard('Campos registrados', stats.campos_registrados, '📍')}
+            `;
+
+            // Catálogos
+            document.getElementById('catalogosGrid').innerHTML = `
+                ${createStatCard('Vacunas', stats.catalogo_vacunas, '💉', '', true)}
+                ${createStatCard('Medicamentos', stats.catalogo_medicamentos, '💊', '', true)}
+                ${createStatCard('Enfermedades', stats.catalogo_enfermedades, '🦠', '', true)}
+                ${createStatCard('Especies', stats.catalogo_especies, '🐾', '', true)}
+                ${createStatCard('Razas', stats.catalogo_razas, '🧬', '', true)}
+                ${createStatCard('Tipos de alimento', stats.catalogo_tipos_alimento, '🌾', '', true)}
+            `;
+
+            // Relaciones
+            document.getElementById('relacionesGrid').innerHTML = `
+                ${createStatCard('Animales por campo', stats.animales_por_campo, '📍')}
+                ${createStatCard('Animales por enfermedad', stats.animales_por_enfermedad, '🏥')}
+            `;
+
+            // Mejoras Genéticas
+            document.getElementById('mejorasGrid').innerHTML = `
+                ${createStatCard('Mejoras genéticas', stats.mejoras_geneticas, '🧬')}
+                ${createStatCard('Tratamientos con medicamentos', stats.tratamientos_con_medicamentos, '💊')}
+                ${createStatCard('Tratamientos con vacunas', stats.tratamientos_con_vacunas, '💉')}
+            `;
+
+            // Footer
+            document.getElementById('footerInfo').innerHTML = `
+                Última actualización: ${new Date(stats.metadata.generado_en).toLocaleString()} |
+                Versión: ${stats.metadata.version} |
+                Caché: ${stats.metadata.cache_ttl}s
+            `;
+        }
+
+        function createStatCard(title, stat, icon, variant = '', small = false) {
+            const value = stat.valor || 0;
+            const change = stat.cambio_porcentual;
+            const description = stat.descripcion || '';
+
+            let changeHtml = '';
+            if (change !== undefined) {
+                const changeClass = change >= 0 ? 'positive' : 'negative';
+                const arrow = change >= 0 ? '↑' : '↓';
+                changeHtml = `<div class="stat-change ${changeClass}">${arrow} ${Math.abs(change)}%</div>`;
+            }
+
+            return `
+                <div class="stat-card ${variant} ${small ? 'stat-card-small' : ''}">
+                    <div class="stat-card-header">
+                        <span class="stat-icon">${icon}</span>
+                        <h3 class="stat-title">${title}</h3>
+                    </div>
+                    <div class="stat-card-body">
+                        <div class="stat-value">${value}</div>
+                        ${changeHtml}
+                    </div>
+                    ${description ? `<div class="stat-description">${description}</div>` : ''}
+                </div>
+            `;
+        }
+
+        // Actualizar cada 2 minutos
+        setInterval(() => {
+            if (authToken && document.getElementById('dashboardContainer').style.display !== 'none') {
+                loadStats(true);
+            }
+        }, 120000);
+    </script>
+</body>
+</html>
