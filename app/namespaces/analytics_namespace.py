@@ -206,6 +206,7 @@ class CompleteDashboardStats(Resource):
 
             current_date = datetime.now(timezone.utc)
             thirty_days_ago = current_date - timedelta(days=30)
+            sixty_days_ago = current_date - timedelta(days=60)
             seven_days_ago = current_date - timedelta(days=7)
 
             # ============================================
@@ -213,6 +214,17 @@ class CompleteDashboardStats(Resource):
             # ============================================
             # Total de usuarios registrados
             total_users = db.session.query(func.count(User.id)).scalar() or 0
+
+            # Usuarios del período anterior (30-60 días atrás)
+            total_users_previous = db.session.query(func.count(User.id)).filter(
+                User.created_at < thirty_days_ago
+            ).scalar() or 0
+
+            # Calcular porcentaje de cambio en usuarios
+            if total_users_previous > 0:
+                users_change_percentage = round(((total_users - total_users_previous) / total_users_previous) * 100, 1)
+            else:
+                users_change_percentage = 0
 
             # Usuarios activos (con sesión en los últimos 30 días o estado activo)
             active_users = db.session.query(func.count(User.id)).filter(
@@ -222,15 +234,38 @@ class CompleteDashboardStats(Resource):
                 )
             ).scalar() or 0
 
-            # Calcular porcentaje de cambio (simulado por ahora, puedes implementar lógica real)
-            users_change_percentage = 12  # Este debería calcularse comparando con período anterior
-            active_users_change_percentage = 8
+            # Usuarios activos del período anterior
+            active_users_previous = db.session.query(func.count(User.id)).filter(
+                or_(
+                    and_(
+                        User.updated_at >= sixty_days_ago,
+                        User.updated_at < thirty_days_ago
+                    ),
+                )
+            ).scalar() or 0
+
+            # Calcular porcentaje de cambio en usuarios activos
+            if active_users_previous > 0:
+                active_users_change_percentage = round(((active_users - active_users_previous) / active_users_previous) * 100, 1)
+            else:
+                active_users_change_percentage = 0
 
             # ============================================
             # SECCIÓN 2: ANIMALES
             # ============================================
             # Total de animales registrados
             total_animals = db.session.query(func.count(Animals.id)).scalar() or 0
+
+            # Animales del período anterior
+            total_animals_previous = db.session.query(func.count(Animals.id)).filter(
+                Animals.created_at < thirty_days_ago
+            ).scalar() or 0
+
+            # Calcular porcentaje de cambio en animales
+            if total_animals_previous > 0:
+                animals_change_percentage = round(((total_animals - total_animals_previous) / total_animals_previous) * 100, 1)
+            else:
+                animals_change_percentage = 0
 
             # Animales activos/vivos
             active_animals = db.session.query(func.count(Animals.id)).filter(
@@ -242,13 +277,22 @@ class CompleteDashboardStats(Resource):
                 Animals.created_at >= thirty_days_ago
             ).scalar() or 0
 
-            animals_change_percentage = 0  # Puedes calcular basado en recent_animals
-
             # ============================================
             # SECCIÓN 3: TRATAMIENTOS
             # ============================================
             # Total de tratamientos históricos
             total_treatments = db.session.query(func.count(Treatments.id)).scalar() or 0
+
+            # Tratamientos del período anterior
+            total_treatments_previous = db.session.query(func.count(Treatments.id)).filter(
+                Treatments.created_at < thirty_days_ago
+            ).scalar() or 0
+
+            # Calcular porcentaje de cambio en tratamientos
+            if total_treatments_previous > 0:
+                treatments_change_percentage = round(((total_treatments - total_treatments_previous) / total_treatments_previous) * 100, 1)
+            else:
+                treatments_change_percentage = 0
 
             # Tratamientos activos (en curso - últimos 30 días)
             active_treatments = db.session.query(func.count(Treatments.id)).filter(
@@ -260,20 +304,27 @@ class CompleteDashboardStats(Resource):
                 Treatments.created_at >= seven_days_ago
             ).scalar() or 0
 
-            treatments_change_percentage = 0
-
             # ============================================
             # SECCIÓN 4: VACUNAS
             # ============================================
             # Total de vacunaciones aplicadas
             total_vaccinations = db.session.query(func.count(Vaccinations.id)).scalar() or 0
 
+            # Vacunaciones del período anterior
+            total_vaccinations_previous = db.session.query(func.count(Vaccinations.id)).filter(
+                Vaccinations.created_at < thirty_days_ago
+            ).scalar() or 0
+
+            # Calcular porcentaje de cambio en vacunaciones
+            if total_vaccinations_previous > 0:
+                vaccinations_change_percentage = round(((total_vaccinations - total_vaccinations_previous) / total_vaccinations_previous) * 100, 1)
+            else:
+                vaccinations_change_percentage = 0
+
             # Vacunaciones recientes
             recent_vaccinations = db.session.query(func.count(Vaccinations.id)).filter(
                 Vaccinations.vaccination_date >= seven_days_ago
             ).scalar() or 0
-
-            vaccinations_change_percentage = 0
 
             # ============================================
             # SECCIÓN 5: CONTROLES
@@ -281,18 +332,37 @@ class CompleteDashboardStats(Resource):
             # Total de controles de salud realizados
             total_controls = db.session.query(func.count(Control.id)).scalar() or 0
 
+            # Controles del período anterior
+            total_controls_previous = db.session.query(func.count(Control.id)).filter(
+                Control.created_at < thirty_days_ago
+            ).scalar() or 0
+
+            # Calcular porcentaje de cambio en controles
+            if total_controls_previous > 0:
+                controls_change_percentage = round(((total_controls - total_controls_previous) / total_controls_previous) * 100, 1)
+            else:
+                controls_change_percentage = 0
+
             # Controles recientes
             recent_controls = db.session.query(func.count(Control.id)).filter(
                 Control.checkup_date >= seven_days_ago
             ).scalar() or 0
 
-            controls_change_percentage = 0
-
             # ============================================
             # SECCIÓN 6: CAMPOS/LOTES
             # ============================================
             total_fields = db.session.query(func.count(Fields.id)).scalar() or 0
-            fields_change_percentage = 0
+
+            # Campos del período anterior
+            total_fields_previous = db.session.query(func.count(Fields.id)).filter(
+                Fields.created_at < thirty_days_ago
+            ).scalar() or 0
+
+            # Calcular porcentaje de cambio en campos
+            if total_fields_previous > 0:
+                fields_change_percentage = round(((total_fields - total_fields_previous) / total_fields_previous) * 100, 1)
+            else:
+                fields_change_percentage = 0
 
             # ============================================
             # SECCIÓN 7: CATÁLOGOS
@@ -374,15 +444,216 @@ class CompleteDashboardStats(Resource):
 
             # Total de alertas del sistema
             total_alerts = animals_without_control + animals_without_vaccination + animals_critical_health
-            alerts_change_percentage = 3
 
-            # Tareas pendientes (puedes definir tu propia lógica)
-            # Por ahora, consideramos tareas pendientes como:
+            # Calcular alertas del período anterior para obtener el cambio porcentual
+            # Animales sin control del período anterior (30-60 días atrás)
+            animals_without_control_prev = db.session.query(func.count(Animals.id)).filter(
+                Animals.status == AnimalStatus.Vivo,
+                ~Animals.id.in_(
+                    db.session.query(Control.animal_id).filter(
+                        and_(
+                            Control.checkup_date >= sixty_days_ago,
+                            Control.checkup_date < thirty_days_ago
+                        )
+                    )
+                )
+            ).scalar() or 0
+
+            # Animales sin vacunación del período anterior
+            animals_without_vaccination_prev = db.session.query(func.count(Animals.id)).filter(
+                Animals.status == AnimalStatus.Vivo,
+                ~Animals.id.in_(
+                    db.session.query(Vaccinations.animal_id).filter(
+                        and_(
+                            Vaccinations.vaccination_date >= current_date - timedelta(days=210),  # 180 + 30 días
+                            Vaccinations.vaccination_date < six_months_ago
+                        )
+                    )
+                )
+            ).scalar() or 0
+
+            # Animales con estado crítico del período anterior
+            animals_critical_health_prev = db.session.query(
+                func.count(func.distinct(Control.animal_id))
+            ).join(Animals).filter(
+                Animals.status == AnimalStatus.Vivo,
+                Control.health_status.in_([HealthStatus.Malo, HealthStatus.Regular]),
+                and_(
+                    Control.checkup_date >= sixty_days_ago,
+                    Control.checkup_date < thirty_days_ago
+                )
+            ).scalar() or 0
+
+            total_alerts_previous = animals_without_control_prev + animals_without_vaccination_prev + animals_critical_health_prev
+
+            # Calcular porcentaje de cambio en alertas
+            if total_alerts_previous > 0:
+                alerts_change_percentage = round(((total_alerts - total_alerts_previous) / total_alerts_previous) * 100, 1)
+            else:
+                alerts_change_percentage = 0
+
+            # Tareas pendientes
+            # Consideramos tareas pendientes como:
             # - Animales que necesitan control
             # - Animales que necesitan vacunación
             # - Tratamientos activos
             pending_tasks = animals_without_control + animals_without_vaccination + active_treatments
-            tasks_change_percentage = 5
+
+            # Tratamientos activos del período anterior (30-60 días atrás)
+            active_treatments_previous = db.session.query(func.count(Treatments.id)).filter(
+                and_(
+                    Treatments.treatment_date >= sixty_days_ago,
+                    Treatments.treatment_date < thirty_days_ago
+                )
+            ).scalar() or 0
+
+            pending_tasks_previous = animals_without_control_prev + animals_without_vaccination_prev + active_treatments_previous
+
+            # Calcular porcentaje de cambio en tareas pendientes
+            if pending_tasks_previous > 0:
+                tasks_change_percentage = round(((pending_tasks - pending_tasks_previous) / pending_tasks_previous) * 100, 1)
+            else:
+                tasks_change_percentage = 0
+
+            # ============================================
+            # SECCIÓN 12: ESTADÍSTICAS ADICIONALES CALCULADAS
+            # ============================================
+
+            # Distribución de animales por sexo
+            animals_by_sex = db.session.query(
+                Animals.sex,
+                func.count(Animals.id).label('count')
+            ).filter(
+                Animals.status == AnimalStatus.Vivo
+            ).group_by(Animals.sex).all()
+
+            sex_distribution = {
+                'machos': next((count for sex, count in animals_by_sex if sex == Sex.Macho), 0),
+                'hembras': next((count for sex, count in animals_by_sex if sex == Sex.Hembra), 0)
+            }
+
+            # Distribución de animales por raza (top 5)
+            animals_by_breed = db.session.query(
+                Breeds.name,
+                func.count(Animals.id).label('count')
+            ).join(Animals).filter(
+                Animals.status == AnimalStatus.Vivo
+            ).group_by(Breeds.name).order_by(
+                desc(func.count(Animals.id))
+            ).limit(5).all()
+
+            breed_distribution = [
+                {'raza': breed, 'cantidad': count}
+                for breed, count in animals_by_breed
+            ]
+
+            # Distribución de animales por estado
+            animals_by_status = db.session.query(
+                Animals.status,
+                func.count(Animals.id).label('count')
+            ).group_by(Animals.status).all()
+
+            status_distribution = {
+                'vivos': next((count for status, count in animals_by_status if status == AnimalStatus.Vivo), 0),
+                'vendidos': next((count for status, count in animals_by_status if status == AnimalStatus.Vendido), 0),
+                'muertos': next((count for status, count in animals_by_status if status == AnimalStatus.Muerto), 0)
+            }
+
+            # Peso promedio de animales activos
+            avg_weight = db.session.query(
+                func.avg(Animals.weight)
+            ).filter(
+                Animals.status == AnimalStatus.Vivo
+            ).scalar() or 0
+
+            if isinstance(avg_weight, decimal.Decimal):
+                avg_weight = float(avg_weight)
+
+            # Distribución de estado de salud (últimos controles)
+            # Obtener el último control de cada animal
+            latest_controls = db.session.query(
+                Control.animal_id,
+                Control.health_status,
+                func.max(Control.checkup_date).label('last_checkup')
+            ).join(Animals).filter(
+                Animals.status == AnimalStatus.Vivo
+            ).group_by(
+                Control.animal_id,
+                Control.health_status
+            ).subquery()
+
+            health_distribution = db.session.query(
+                latest_controls.c.health_status,
+                func.count(latest_controls.c.animal_id).label('count')
+            ).group_by(latest_controls.c.health_status).all()
+
+            health_status_stats = {
+                'excelente': next((count for status, count in health_distribution if status == HealthStatus.Excelente), 0),
+                'bueno': next((count for status, count in health_distribution if status == HealthStatus.Bueno), 0),
+                'sano': next((count for status, count in health_distribution if status == HealthStatus.Sano), 0),
+                'regular': next((count for status, count in health_distribution if status == HealthStatus.Regular), 0),
+                'malo': next((count for status, count in health_distribution if status == HealthStatus.Malo), 0)
+            }
+
+            # Grupos de edad de animales
+            # Calcular edad en meses para cada animal vivo
+            current_date_date = current_date.date() if hasattr(current_date, 'date') else current_date
+
+            age_groups = {
+                'terneros': 0,      # 0-12 meses
+                'jovenes': 0,       # 12-24 meses
+                'adultos': 0,       # 24-60 meses
+                'maduros': 0        # 60+ meses
+            }
+
+            animals_with_birth = db.session.query(
+                Animals.birth_date
+            ).filter(
+                Animals.status == AnimalStatus.Vivo,
+                Animals.birth_date.isnot(None)
+            ).all()
+
+            for animal in animals_with_birth:
+                if animal.birth_date:
+                    age_days = (current_date_date - animal.birth_date).days
+                    age_months = age_days / 30.44
+
+                    if age_months < 12:
+                        age_groups['terneros'] += 1
+                    elif age_months < 24:
+                        age_groups['jovenes'] += 1
+                    elif age_months < 60:
+                        age_groups['adultos'] += 1
+                    else:
+                        age_groups['maduros'] += 1
+
+            # Tasa de mortalidad (últimos 30 días)
+            recent_deaths = db.session.query(func.count(Animals.id)).filter(
+                Animals.status == AnimalStatus.Muerto,
+                Animals.updated_at >= thirty_days_ago
+            ).scalar() or 0
+
+            # Tasa de ventas (últimos 30 días)
+            recent_sales = db.session.query(func.count(Animals.id)).filter(
+                Animals.status == AnimalStatus.Vendido,
+                Animals.updated_at >= thirty_days_ago
+            ).scalar() or 0
+
+            # Promedio de tratamientos por animal (últimos 30 días)
+            if active_animals > 0:
+                avg_treatments_per_animal = round(active_treatments / active_animals, 2)
+            else:
+                avg_treatments_per_animal = 0
+
+            # Promedio de controles por animal (últimos 30 días)
+            recent_controls_count = db.session.query(func.count(Control.id)).filter(
+                Control.checkup_date >= thirty_days_ago
+            ).scalar() or 0
+
+            if active_animals > 0:
+                avg_controls_per_animal = round(recent_controls_count / active_animals, 2)
+            else:
+                avg_controls_per_animal = 0
 
             # ============================================
             # CONSTRUIR RESPUESTA COMPLETA
@@ -510,12 +781,27 @@ class CompleteDashboardStats(Resource):
                     'descripcion': 'Registros de tratamientos con vacunas.'
                 },
 
+                # ============================================
+                # ESTADÍSTICAS ADICIONALES CALCULADAS
+                # ============================================
+                'distribucion_sexo': sex_distribution,
+                'distribucion_razas_top5': breed_distribution,
+                'distribucion_estado': status_distribution,
+                'peso_promedio_kg': round(avg_weight, 2),
+                'distribucion_salud': health_status_stats,
+                'grupos_edad': age_groups,
+                'muertes_recientes_30dias': recent_deaths,
+                'ventas_recientes_30dias': recent_sales,
+                'promedio_tratamientos_por_animal': avg_treatments_per_animal,
+                'promedio_controles_por_animal': avg_controls_per_animal,
+
                 # Metadata
                 'metadata': {
                     'generado_en': current_date.isoformat(),
-                    'version': '2.0',
+                    'version': '2.1',
                     'optimizado': True,
-                    'cache_ttl': 120  # segundos
+                    'cache_ttl': 120,  # segundos
+                    'estadisticas_totales': 33  # 23 originales + 10 adicionales
                 }
             }
 
