@@ -1,52 +1,29 @@
-###############
-# Dockerfile optimizado para Flask + Gunicorn
-# - Instala wget para que el HEALTHCHECK funcione
-# - Usa build deps temporales y las elimina
-# - Usa usuario no root
-# - Compatible con Alpine Linux
-###############
+# Imagen base ligera
+FROM python:3.11-slim
 
-FROM python:3.12-alpine AS app
-
-# Variables de entorno
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PORT=8081
+ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# ✅ Dependencias de runtime: incluye WGET para el healthcheck
-RUN apk add --no-cache libffi openssl wget
+# Instala utilidades mínimas
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+ && rm -rf /var/lib/apt/lists/*
 
-# Dependencias de compilación (temporales)
-RUN apk add --no-cache --virtual .build-deps \
-    build-base \
-    linux-headers \
-    musl-dev \
-    python3-dev \
-    libffi-dev \
-    openssl-dev \
-    cargo
+# Copia dependencias
+COPY requirements.txt .
 
-# Instalar dependencias de Python
-COPY requirements.txt ./
-RUN pip install --upgrade pip && \
-    pip install -r requirements.txt && \
-    apk del .build-deps  # ← Elimina build deps, pero wget se queda
+# Instala dependencias Python
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar código de la app
+# Copia el código fuente
 COPY . .
 
-# Crear usuario no root
-RUN addgroup -S app && adduser -S app -G app && \
-    chown -R app:app /app
-USER app
-
+# Puerto de aplicación
 EXPOSE 8081
 
-# ✅ HEALTHCHECK ahora funciona porque wget está instalado
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD wget -q -O /dev/null http://127.0.0.1:${PORT}/health || exit 1
+# Healthcheck hacia la ruta versionada
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:8081/api/v1/health || exit 1
 
-# Iniciar con Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8081", "--workers", "4", "--forwarded-allow-ips=*", "wsgi:app"]
+# Comando por defecto
+CMD ["gunicorn", "--workers", "4", "--bind", "0.0.0.0:8081", "wsgi:app"]
