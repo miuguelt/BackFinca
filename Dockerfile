@@ -1,15 +1,14 @@
 ###############
 # Dockerfile optimizado para Flask + Gunicorn
-# - Elimina CMD duplicado
-# - Instala solo dependencias necesarias en Alpine
-# - Usa build deps temporales para compilar cryptography/psutil y luego las elimina
+# - Instala wget para que el HEALTHCHECK funcione
+# - Usa build deps temporales y las elimina
 # - Usa usuario no root
-# - Añade healthcheck básico (¡ahora con wget instalado!)
+# - Compatible con Alpine Linux
 ###############
 
 FROM python:3.12-alpine AS app
 
-# Variables de entorno Python
+# Variables de entorno
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -17,10 +16,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Dependencias de runtime: openssl, libffi y wget (¡necesario para el healthcheck!)
+# ✅ Dependencias de runtime: incluye WGET para el healthcheck
 RUN apk add --no-cache libffi openssl wget
 
-# Dependencias de build temporales para compilar cryptography / psutil
+# Dependencias de compilación (temporales)
 RUN apk add --no-cache --virtual .build-deps \
     build-base \
     linux-headers \
@@ -30,27 +29,24 @@ RUN apk add --no-cache --virtual .build-deps \
     openssl-dev \
     cargo
 
-# Copiar solo requirements primero para aprovechar la caché de capas
+# Instalar dependencias de Python
 COPY requirements.txt ./
-
-# Instalar dependencias de Python y limpiar build deps
 RUN pip install --upgrade pip && \
     pip install -r requirements.txt && \
-    apk del .build-deps
+    apk del .build-deps  # ← Elimina build deps, pero wget se queda
 
-# Copiar el resto del código de la aplicación
+# Copiar código de la app
 COPY . .
 
-# Crear usuario no root y asignar permisos
+# Crear usuario no root
 RUN addgroup -S app && adduser -S app -G app && \
     chown -R app:app /app
-
 USER app
 
 EXPOSE 8081
 
-# Healthcheck: ahora wget está disponible
+# ✅ HEALTHCHECK ahora funciona porque wget está instalado
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD wget -q -O /dev/null http://127.0.0.1:${PORT}/health || exit 1
 
-# Iniciar la app con Gunicorn
+# Iniciar con Gunicorn
 CMD ["gunicorn", "--bind", "0.0.0.0:8081", "--workers", "4", "--forwarded-allow-ips=*", "wsgi:app"]
