@@ -1,6 +1,8 @@
 from app import db
 import enum
 from app.models.base_model import BaseModel, ValidationError
+from sqlalchemy.orm import column_property
+from sqlalchemy import select, func
 
 class LandStatus(enum.Enum):
     """Estados posibles para los campos/potreros"""
@@ -40,7 +42,7 @@ class Fields(BaseModel):
     food_type_id = db.Column(db.Integer, db.ForeignKey('food_types.id'), nullable=True)
 
     # Configuración específica para namespaces
-    _namespace_fields = ['id', 'name', 'ubication', 'capacity', 'state', 'handlings', 'gauges', 'area', 'food_type_id', 'created_at']
+    _namespace_fields = ['id', 'name', 'ubication', 'capacity', 'state', 'handlings', 'gauges', 'area', 'food_type_id', 'animal_count', 'created_at']
     _namespace_relations = {
         'food_types': {'fields': ['id', 'name', 'description'], 'depth': 1},
         'animal_fields': {'fields': ['id', 'animal_id'], 'depth': 1}
@@ -57,6 +59,17 @@ class Fields(BaseModel):
     # Relaciones optimizadas
     animal_fields = db.relationship('AnimalFields', back_populates='field', lazy='dynamic')
     food_types = db.relationship('FoodTypes', back_populates='fields', lazy='selectin')
+
+    # Propiedad calculada para contar animales actualmente asignados (sin removal_date)
+    # Usa una subquery correlacionada para máximo rendimiento (evita N+1 queries)
+    animal_count = column_property(
+        select(func.count('*'))
+        .select_from(db.table('animal_fields'))
+        .where(db.column('field_id') == id)
+        .where(db.column('removal_date').is_(None))
+        .correlate_except(db.table('animal_fields'))
+        .scalar_subquery()
+    )
 
     def __repr__(self):
         return f'<Field {self.id}: {self.name}>'
