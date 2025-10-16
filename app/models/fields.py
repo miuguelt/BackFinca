@@ -58,10 +58,13 @@ class Fields(BaseModel):
     animal_fields = db.relationship('AnimalFields', back_populates='field', lazy='dynamic')
     food_types = db.relationship('FoodTypes', back_populates='fields', lazy='selectin')
 
-    def to_namespace_dict(self, include_relations=False):
-        """Override para agregar cantidad de animales asignados al campo"""
-        # Obtener el diccionario base del método padre
-        data = super().to_namespace_dict(include_relations=include_relations)
+    def to_namespace_dict(self, include_relations=False, depth=1, fields=None):
+        """Override para agregar cantidad de animales asignados al campo.
+
+        Acepta y propaga "depth" y "fields" para mantener compatibilidad con BaseModel.
+        """
+        # Obtener el diccionario base del método padre respetando profundidad y selección de campos
+        data = super().to_namespace_dict(include_relations=include_relations, depth=depth, fields=fields)
 
         # Agregar conteo de animales actualmente asignados a este campo
         # Usa la relación lazy='dynamic' que ya está optimizada

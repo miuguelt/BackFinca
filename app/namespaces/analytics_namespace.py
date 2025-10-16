@@ -1672,18 +1672,26 @@ class ProductionStatistics(Resource):
             
             start_date = datetime.now() - timedelta(days=period_days.get(period, 365))
             
-            # Tendencias de peso (basado en controles)
-            weight_trends = db.session.query(
-                extract('year', Control.checkup_date).label('year'),
-                extract('month', Control.checkup_date).label('month'),
-                func.avg(Animals.weight).label('avg_weight'),
-                func.count(Control.id).label('count')
-            ).filter(
-                Control.checkup_date >= start_date
-            ).group_by(
-                extract('year', Control.checkup_date),
-                extract('month', Control.checkup_date)
-            ).order_by('year', 'month').all()
+            # Tendencias de peso (basado en controles) con join correcto para evitar producto cartesiano
+            weight_trends = (
+                db.session.query(
+                    extract('year', Control.checkup_date).label('year'),
+                    extract('month', Control.checkup_date).label('month'),
+                    func.avg(Control.weight).label('avg_weight'),
+                    func.count(Control.id).label('count')
+                )
+                .join(Animals, Animals.id == Control.animal_id)
+                .filter(
+                    Control.checkup_date >= start_date,
+                    Animals.status == AnimalStatus.Vivo
+                )
+                .group_by(
+                    extract('year', Control.checkup_date),
+                    extract('month', Control.checkup_date)
+                )
+                .order_by('year', 'month')
+                .all()
+            )
             
             # Crecimiento por animal (comparar primer y último control)
             growth_analysis = db.session.query(
