@@ -1,8 +1,6 @@
 from app import db
 import enum
 from app.models.base_model import BaseModel, ValidationError
-from sqlalchemy.orm import column_property
-from sqlalchemy import select, func
 
 class LandStatus(enum.Enum):
     """Estados posibles para los campos/potreros"""
@@ -60,16 +58,18 @@ class Fields(BaseModel):
     animal_fields = db.relationship('AnimalFields', back_populates='field', lazy='dynamic')
     food_types = db.relationship('FoodTypes', back_populates='fields', lazy='selectin')
 
-    # Propiedad calculada para contar animales actualmente asignados (sin removal_date)
-    # Usa una subquery correlacionada para máximo rendimiento (evita N+1 queries)
-    animal_count = column_property(
-        select(func.count('*'))
-        .select_from(db.table('animal_fields'))
-        .where(db.column('field_id') == id)
-        .where(db.column('removal_date').is_(None))
-        .correlate_except(db.table('animal_fields'))
-        .scalar_subquery()
-    )
+    def to_namespace_dict(self, include_relations=False):
+        """Override para agregar cantidad de animales asignados al campo"""
+        # Obtener el diccionario base del método padre
+        data = super().to_namespace_dict(include_relations=include_relations)
+
+        # Agregar conteo de animales actualmente asignados a este campo
+        # Usa la relación lazy='dynamic' que ya está optimizada
+        animal_count = self.animal_fields.filter_by(removal_date=None).count()
+
+        data['animal_count'] = animal_count
+
+        return data
 
     def __repr__(self):
         return f'<Field {self.id}: {self.name}>'
