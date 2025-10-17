@@ -53,7 +53,8 @@ class Vaccines(BaseModel):
     diseases = db.relationship('Diseases', back_populates='vaccines', lazy='selectin')
     treatments = db.relationship('TreatmentVaccines', back_populates='vaccines', lazy='dynamic')
     vaccinations = db.relationship('Vaccinations', back_populates='vaccines', lazy='dynamic')
-    route_administration_rel = db.relationship('RouteAdministration', back_populates='vaccines', lazy='select')
+    # OPTIMIZED: Changed from lazy='select' to lazy='selectin' to prevent N+1 queries
+    route_administration_rel = db.relationship('RouteAdministration', back_populates='vaccines', lazy='selectin')
 
     def __repr__(self):
         return f'<Vaccine {self.id}: {self.name}>'

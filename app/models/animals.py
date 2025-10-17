@@ -79,8 +79,9 @@ class Animals(BaseModel):
 
     # Relaciones optimizadas
     breed = db.relationship('Breeds', back_populates='animals', lazy='selectin')
-    father = db.relationship('Animals', remote_side=[id], foreign_keys=[idFather], lazy='select')
-    mother = db.relationship('Animals', remote_side=[id], foreign_keys=[idMother], lazy='select')
+    # OPTIMIZED: Changed from lazy='select' to lazy='joined' to prevent N+1 queries in genealogy
+    father = db.relationship('Animals', remote_side=[id], foreign_keys=[idFather], lazy='joined')
+    mother = db.relationship('Animals', remote_side=[id], foreign_keys=[idMother], lazy='joined')
 
     # Relaciones con lazy loading optimizado y cascade delete
     treatments = db.relationship('Treatments', back_populates='animals', lazy='dynamic', cascade='all, delete-orphan')

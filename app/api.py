@@ -86,6 +86,8 @@ def register_api(app, limiter=None):
     from .namespaces.animal_fields_namespace import animal_fields_ns
     from .namespaces.treatment_medications_namespace import treatment_medications_ns
     from .namespaces.treatment_vaccines_namespace import treatment_vaccines_ns
+    from .namespaces.user_preferences_namespace import prefs_ns
+    from .namespaces.navigation_namespace import nav_ns
 
     # Aplicar rate limits específicos a endpoints de autenticación (solo si hay limiter)
     try:
@@ -118,6 +120,8 @@ def register_api(app, limiter=None):
     api.add_namespace(animal_fields_ns)
     api.add_namespace(treatment_medications_ns)
     api.add_namespace(treatment_vaccines_ns)
+    api.add_namespace(prefs_ns)
+    api.add_namespace(nav_ns)
 
     # Endpoint de health check público y documentado en la guía: /api/v1/health
     @api_bp.route('/health', methods=['GET', 'OPTIONS'])

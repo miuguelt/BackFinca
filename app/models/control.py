@@ -53,8 +53,8 @@ class Control(BaseModel):
     _unique_fields = []
     _enum_fields = {'health_status': HealthStatus}
 
-    # Relación optimizada
-    animals = db.relationship('Animals', back_populates='controls', lazy='select')
+    # Relación optimizada - FIXED: Changed from lazy='select' to lazy='selectin' to prevent N+1 queries
+    animals = db.relationship('Animals', back_populates='controls', lazy='selectin')
 
     @classmethod
     def _validate_and_normalize(cls, data, is_update=False, instance_id=None):

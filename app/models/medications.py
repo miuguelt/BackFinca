@@ -29,7 +29,8 @@ class Medications(BaseModel):
 
     # Relaciones optimizadas
     treatments = db.relationship('TreatmentMedications', back_populates='medications', lazy='dynamic')
-    route_administration_rel = db.relationship('RouteAdministration', back_populates='medications', lazy='select')
+    # OPTIMIZED: Changed from lazy='select' to lazy='selectin' to prevent N+1 queries
+    route_administration_rel = db.relationship('RouteAdministration', back_populates='medications', lazy='selectin')
     
     @classmethod
     def _validate_namespace_data(cls, data):
