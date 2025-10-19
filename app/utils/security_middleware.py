@@ -41,16 +41,23 @@ def init_security_middlewares(app):
             '/api/v1/swaggerui',
             '/api/v1/swaggerui/',
             '/api/v1/swaggerui/o2c.html',
+            # Permitir archivos estáticos (imágenes, CSS, JS) sin JWT
+            '/static',
+            # Permitir imágenes públicas sin JWT
+            '/public',
         }
-        # Permitir rutas públicas sin JWT
-        if path in public_paths:
-            return
         # Permitir recursos estáticos de Swagger UI y documentación sin JWT (wildcards)
         if (
             path.startswith('/api/v1/swaggerui/')
             or path.startswith('/swaggerui/')
             or raw_path.startswith('/api/v1/docs/')  # cubrir /api/v1/docs/*
+            or path.startswith('/static/')  # permitir todos los archivos estáticos
+            or path.startswith('/public/')  # permitir imágenes públicas y endpoints públicos
         ):
+            return
+            
+        # Permitir rutas públicas sin JWT
+        if path in public_paths:
             return
         try:
             verify_jwt_in_request()

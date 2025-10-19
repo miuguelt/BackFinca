@@ -155,6 +155,14 @@ class Config:
     JSONIFY_MIMETYPE = 'application/json; charset=utf-8'
 
     # -----------------------
+    # Uploads de Archivos
+    # -----------------------
+    UPLOAD_FOLDER = 'static/uploads'
+    MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB
+    ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'webp', 'gif'}
+    MAX_IMAGES_PER_ANIMAL = 20
+
+    # -----------------------
     # Rate Limiting
     # -----------------------
     RATE_LIMIT_STORAGE_URI = os.getenv('RATE_LIMIT_STORAGE_URI', REDIS_URL)
@@ -238,7 +246,7 @@ class ProductionConfig(Config):
     JWT_COOKIE_SECURE = True  # Cookies seguras para producción
     JWT_COOKIE_SAMESITE = 'None'  # Ajustar según necesidad
     JWT_COOKIE_DOMAIN = '.isladigital.xyz'  # Configurar dominio si aplica
-    JWT_TOKEN_LOCATION = ['cookies']  # Usar solo cookies para JWT
+    JWT_TOKEN_LOCATION = ['cookies', 'headers']  # Usar cookies y headers para JWT
     JWT_COOKIE_CSRF_PROTECT = True  # Proteger cookies JWT con CSRF (recomendado en producción)
 
     # CORS - Solo desde variable de entorno

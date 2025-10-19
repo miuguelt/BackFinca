@@ -18,6 +18,7 @@ from .control import Control
 from .foodTypes import FoodTypes as FoodType
 from .geneticImprovements import GeneticImprovements as GeneticImprovement
 from .route_administration import RouteAdministration
+from .animal_images import AnimalImages as AnimalImage
 
 __all__ = [
     'BaseModel',
@@ -39,4 +40,5 @@ __all__ = [
     'FoodType',
     'GeneticImprovement',
     'RouteAdministration',
+    'AnimalImage',
 ]

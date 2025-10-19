@@ -68,7 +68,8 @@ class Animals(BaseModel):
         'treatments': {'fields': ['id', 'treatment_date', 'medication_id'], 'depth': 1},
         'vaccinations': {'fields': ['id', 'vaccination_date', 'vaccine_id'], 'depth': 1},
         'diseases': {'fields': ['id', 'disease_id', 'diagnosis_date'], 'depth': 1},
-        'controls': {'fields': ['id', 'checkup_date', 'weight', 'height'], 'depth': 1}
+        'controls': {'fields': ['id', 'checkup_date', 'weight', 'height'], 'depth': 1},
+        'images': {'fields': ['id', 'filename', 'filepath', 'is_primary'], 'depth': 1}
     }
     _searchable_fields = ['record']
     _filterable_fields = ['sex', 'status', 'breeds_id', 'birth_date', 'weight', 'created_at', 'idFather', 'idMother']
@@ -87,10 +88,11 @@ class Animals(BaseModel):
     treatments = db.relationship('Treatments', back_populates='animals', lazy='dynamic', cascade='all, delete-orphan')
     vaccinations = db.relationship('Vaccinations', back_populates='animals', lazy='dynamic', cascade='all, delete-orphan')
     diseases = db.relationship('AnimalDiseases', back_populates='animal', lazy='dynamic', cascade='all, delete-orphan')
-    controls = db.relationship('Control', back_populates='animals', lazy='dynamic', 
+    controls = db.relationship('Control', back_populates='animals', lazy='dynamic',
                               order_by='desc(Control.checkup_date)', cascade='all, delete-orphan')
     genetic_improvements = db.relationship('GeneticImprovements', back_populates='animals', lazy='dynamic', cascade='all, delete-orphan')
     animal_fields = db.relationship('AnimalFields', back_populates='animal', lazy='dynamic', cascade='all, delete-orphan')
+    images = db.relationship('AnimalImages', back_populates='animal', lazy='dynamic', cascade='all, delete-orphan')
 
     @classmethod
     def _validate_and_normalize(cls, data, is_update=False, instance_id=None):

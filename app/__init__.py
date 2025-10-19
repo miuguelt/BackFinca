@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, current_app, json, redirect
+from flask import Flask, request, jsonify, current_app, json, redirect, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
@@ -134,7 +134,7 @@ def create_app(config_name='development'):
 
     @app.after_request
     def attach_access_token_to_json(response):
-        """Inyecta access_token en el cuerpo JSON de TODAS las respuestas si está presente en Authorization o cookie HttpOnly.
+        """Inyecta access_token en el cuerpo JSON de respuestas específicas si está presente en Authorization o cookie HttpOnly.
         Esto permite que el frontend lo persista en localStorage y el interceptor lo envíe en Authorization.
         """
         try:
@@ -167,6 +167,13 @@ def create_app(config_name='development'):
                 return response
 
             if isinstance(payload, dict):
+                # No inyectar token en respuestas que ya tienen estructura de APIResponse
+                # con campos específicos como 'success', 'data', 'message', 'error'
+                if 'success' in payload and ('data' in payload or 'error' in payload):
+                    # Es una respuesta de APIResponse, no inyectar token para evitar conflictos
+                    return response
+                
+                # Inyectar token solo en respuestas que no son de APIResponse
                 payload['access_token'] = token
                 response.set_data(json.dumps(payload))
                 response.headers['Content-Type'] = 'application/json; charset=utf-8'
@@ -316,6 +323,81 @@ def create_app(config_name='development'):
     def swagger_redirect():
         """Redirigir al JSON de Swagger versionado"""
         return redirect('/api/v1/swagger.json', code=302)
+
+    # Ruta para servir archivos estáticos (imágenes subidas)
+    @app.route('/static/<path:filename>')
+    def serve_static(filename):
+        """Servir archivos estáticos (imágenes, etc.)"""
+        static_folder = os.path.join(app.root_path, '..', 'static')
+        return send_from_directory(static_folder, filename)
+    
+    # Ruta pública específica para imágenes de animales (sin autenticación)
+    @app.route('/public/images/<path:filename>')
+    def serve_public_images(filename):
+        """Servir imágenes de animales públicamente sin autenticación"""
+        images_folder = os.path.join(app.root_path, '..', 'static', 'uploads')
+        return send_from_directory(images_folder, filename)
+
+    # Endpoint público para obtener URLs de imágenes de un animal
+    @app.route('/public/animal-images/<int:animal_id>', methods=['GET'])
+    def get_public_animal_images(animal_id):
+        """Obtener URLs públicas de imágenes de un animal sin autenticación"""
+        try:
+            from app.models.animals import Animals
+            from app.models.animal_images import AnimalImages
+            
+            # Verificar que el animal existe
+            animal = Animals.query.get(animal_id)
+            if not animal:
+                return jsonify({
+                    'success': False,
+                    'message': f'Animal con ID {animal_id} no encontrado'
+                }), 404
+            
+            # Obtener imágenes ordenadas (primero la principal, luego por fecha)
+            images = AnimalImages.query.filter_by(animal_id=animal_id)\
+                .order_by(AnimalImages.is_primary.desc(), AnimalImages.created_at.desc())\
+                .all()
+            
+            # Serializar con URLs públicas
+            images_data = []
+            for image in images:
+                # Generar URL dinámica usando el host actual
+                scheme = 'https' if request.is_secure else 'http'
+                base_url = f"{scheme}://{request.host}"
+                
+                # Extraer la ruta relativa del filepath (quitar 'static/uploads/')
+                relative_path = image.filepath
+                if relative_path.startswith('static/uploads/'):
+                    relative_path = relative_path[len('static/uploads/'):]
+                
+                # Generar URL usando el endpoint público
+                image_url = f"{base_url}/public/images/{relative_path}"
+                
+                images_data.append({
+                    'id': image.id,
+                    'filename': image.filename,
+                    'filepath': image.filepath,
+                    'url': image_url,
+                    'is_primary': image.is_primary,
+                    'created_at': image.created_at.isoformat() if image.created_at else None
+                })
+            
+            return jsonify({
+                'success': True,
+                'data': {
+                    'animal_id': animal_id,
+                    'total': len(images_data),
+                    'images': images_data
+                },
+                'message': f'{len(images_data)} imagen(es) encontrada(s)'
+            }), 200
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': f'Error al obtener imágenes: {str(e)}'
+            }), 500
 
     # Ruta raíz pública
     @app.route('/', methods=['GET', 'OPTIONS'])
