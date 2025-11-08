@@ -31,8 +31,8 @@ services:
       - BACKEND_HOST=${BACKEND_HOST}
       - BACKEND_PORT=${BACKEND_PORT}
       - BACKEND_PROTOCOL=${BACKEND_PROTOCOL}
-    env_file:
-      - .env
+    volumes:
+      - '/mifinca/static:/app/static'
     networks:
       - app-network
 networks:
