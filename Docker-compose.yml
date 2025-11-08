@@ -34,7 +34,10 @@ services:
     volumes:
       - '/mifinca/static:/app/static'
     networks:
-      - app-network
+      - coolify
+      - redbd
 networks:
-  app-network:
-    driver: bridge
+  coolify:
+    external: true
+  redbd:
+    external: true
