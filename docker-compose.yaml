@@ -44,8 +44,6 @@ services:
       FRONTEND_URL: ${FRONTEND_URL}
       BACKEND_URL: ${BACKEND_URL}
 
-      PUBLIC_USER_CREATION_ENABLED: ${PUBLIC_USER_CREATION_ENABLED:-true}
-
     # Carpeta persistente para archivos estáticos
     volumes:
       - /mifinca/static:/app/static

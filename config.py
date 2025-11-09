@@ -247,7 +247,10 @@ class ProductionConfig(Config):
     # JWT_COOKIE_SECURE debe ser True para HTTPS
     JWT_COOKIE_SECURE = True  # Cookies seguras para producción
     JWT_COOKIE_SAMESITE = 'None'  # Ajustar según necesidad
-    JWT_COOKIE_DOMAIN = '.isladigital.xyz'  # Configurar dominio si aplica
+    # Importante: no forzar un dominio fijo. Debe venir del entorno
+    # para coincidir con el dominio real desplegado (p. ej. .enlinea.sbs).
+    # Si no se define, wsgi.py abortará el arranque en producción.
+    JWT_COOKIE_DOMAIN = os.getenv('JWT_COOKIE_DOMAIN')
     JWT_TOKEN_LOCATION = ['cookies', 'headers']  # Usar cookies y headers para JWT
     JWT_COOKIE_CSRF_PROTECT = True  # Proteger cookies JWT con CSRF (recomendado en producción)
 
