@@ -7,32 +7,31 @@ services:
     ports:
       - '3000:8081'
     environment:
-      - DB_HOST=${DB_HOST}
-      - DB_NAME=${DB_NAME}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_PORT=${DB_PORT}
-      - DB_USER=${DB_USER}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - JWT_COOKIE_DOMAIN=${JWT_COOKIE_DOMAIN}
-      - FLASK_ENV=${FLASK_ENV}
-      - USE_HTTPS=${USE_HTTPS}
-      - SSL_CERT_FILE=${SSL_CERT_FILE}
-      - SSL_KEY_FILE=${SSL_KEY_FILE}
-      - PORT=${PORT}
-      - API_BASE_URL=${API_BASE_URL}
-      - API_HOST=${API_HOST}
-      - API_PORT=${API_PORT}
-      - API_PROTOCOL=${API_PROTOCOL}
-      - FRONTEND_URL=${FRONTEND_URL}
-      - FRONTEND_HOST=${FRONTEND_HOST}
-      - FRONTEND_PORT=${FRONTEND_PORT}
-      - FRONTEND_PROTOCOL=${FRONTEND_PROTOCOL}
-      - BACKEND_URL=${BACKEND_URL}
-      - BACKEND_HOST=${BACKEND_HOST}
-      - BACKEND_PORT=${BACKEND_PORT}
-      - BACKEND_PROTOCOL=${BACKEND_PROTOCOL}
+      FLASK_ENV: production
+      PORT: 8081
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      SQLALCHEMY_DATABASE_URI: ${SQLALCHEMY_DATABASE_URI:-}
+      REDIS_URL: ${REDIS_URL}
+      CACHE_REDIS_URL: ${REDIS_URL}
+      RATE_LIMIT_STORAGE_URI: ${REDIS_URL}
+      RATE_LIMIT_ENABLED: true
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_COOKIE_DOMAIN: ${JWT_COOKIE_DOMAIN}
+      JWT_COOKIE_SECURE: 'true'
+      JWT_COOKIE_SAMESITE: 'None'
+      JWT_COOKIE_CSRF_PROTECT: 'true'
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      API_BASE_URL: ${API_BASE_URL}
+      API_BASE_URL_NO_VERSION: ${API_BASE_URL_NO_VERSION}
+      FRONTEND_URL: ${FRONTEND_URL}
+      BACKEND_URL: ${BACKEND_URL}
+      PUBLIC_USER_CREATION_ENABLED: True
     volumes:
-      - '/mifinca/static:/app/static'
+      - /mifinca/static:/app/static
     networks:
       - coolify
       - redbd
