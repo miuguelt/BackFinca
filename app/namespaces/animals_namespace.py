@@ -7,10 +7,12 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 
 # Asumir que animal_model está definido en modelos o utils
 from app.models.animals import Animals
+from app.models.animal_images import AnimalImages
 from app.utils.response_handler import APIResponse
 from app.utils.namespace_helpers import create_optimized_namespace, _cache_clear
 from app.utils.tree_builder import build_ancestor_tree, build_descendant_tree, invalidate_animal_tree_cache_for
 from app.utils.integrity_checker import OptimizedIntegrityChecker
+from app.utils.file_storage import delete_animal_image, delete_animal_directory
 
 # Helper para mapear campos del frontend al backend
 def map_frontend_filters(filters):
@@ -197,7 +199,7 @@ class AnimalDependencies(Resource):
             animal = Animals.query.get(animal_id)
             if not animal:
                 return APIResponse.error(message=f'Animal con ID {animal_id} no encontrado', status_code=404)
-            
+
             # Usar el integrity checker ultra-optimizado con EXISTS
             warnings = OptimizedIntegrityChecker.check_integrity_fast(Animals, animal_id)
             
@@ -267,6 +269,17 @@ class AnimalDeleteWithCheck(Resource):
             if not animal:
                 return APIResponse.error(message=f'Animal con ID {animal_id} no encontrado', status_code=404)
             
+            # Capturar rutas de archivos asociadas antes de eliminar
+            image_filepaths = []
+            try:
+                image_filepaths = [
+                    row.filepath
+                    for row in AnimalImages.query.with_entities(AnimalImages.filepath).filter_by(animal_id=animal_id).all()
+                    if row.filepath
+                ]
+            except Exception:
+                image_filepaths = []
+            
             # Verificación ultra-rápida de dependencias
             warnings = OptimizedIntegrityChecker.check_integrity_fast(Animals, animal_id)
             
@@ -317,12 +330,24 @@ class AnimalDeleteWithCheck(Resource):
                     del OptimizedIntegrityChecker._cache[cache_key]
                 if cache_key in OptimizedIntegrityChecker._cache_timestamps:
                     del OptimizedIntegrityChecker._cache_timestamps[cache_key]
+
+                # Eliminar archivos físicos y directorio del animal
+                files_removed = 0
+                folder_deleted = delete_animal_directory(animal_id)
+                if folder_deleted:
+                    files_removed = len(image_filepaths)
+                else:
+                    for filepath in image_filepaths:
+                        if delete_animal_image(filepath):
+                            files_removed += 1
                 
                 return APIResponse.success(
                     data={
                         'id': animal_id,
                         'deleted': True,
                         'cascadeDeleted': total_dependencies,
+                        'filesDeleted': files_removed,
+                        'folderDeleted': folder_deleted,
                         'message': f'Animal eliminado exitosamente con {total_dependencies} dependencia(s) en cascade.'
                     },
                     message='Animal eliminado exitosamente'

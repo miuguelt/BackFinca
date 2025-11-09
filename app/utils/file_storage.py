@@ -1,4 +1,5 @@
 import os
+import shutil
 import uuid
 from datetime import datetime
 from werkzeug.utils import secure_filename
@@ -162,6 +163,56 @@ def delete_animal_image(filepath):
 
     except Exception as e:
         logger.error(f"Error eliminando archivo {filepath}: {str(e)}")
+        return False
+
+
+def _cleanup_empty_parents(start_path, stop_at):
+    """
+    Elimina directorios vacíos ascendiendo hasta stop_at (exclusivo).
+    """
+    stop_at = os.path.normpath(stop_at)
+    current = os.path.dirname(os.path.normpath(start_path))
+
+    while current and current.startswith(stop_at) and current != stop_at:
+        try:
+            if os.path.isdir(current) and not os.listdir(current):
+                os.rmdir(current)
+                current = os.path.dirname(current)
+            else:
+                break
+        except OSError:
+            break
+
+
+def delete_animal_directory(animal_id):
+    """
+    Elimina todo el directorio de uploads asociado a un animal.
+    """
+    try:
+        upload_folder = current_app.config.get('UPLOAD_FOLDER', 'static/uploads')
+        relative_path = os.path.join(upload_folder, 'animals', str(animal_id))
+        base_path = os.path.normpath(os.path.join(current_app.root_path, '..'))
+        full_path = os.path.normpath(os.path.join(base_path, relative_path))
+        uploads_root = os.path.normpath(os.path.join(base_path, upload_folder))
+
+        if not full_path.startswith(uploads_root):
+            logger.warning(
+                "Intento de eliminar directorio fuera de uploads (animal_id=%s, path=%s)",
+                animal_id,
+                full_path,
+            )
+            return False
+
+        if os.path.isdir(full_path):
+            shutil.rmtree(full_path)
+            logger.info("Directorio de animal %s eliminado: %s", animal_id, full_path)
+            _cleanup_empty_parents(full_path, uploads_root)
+            return True
+
+        logger.debug("Directorio de animal %s no existe (%s)", animal_id, full_path)
+        return False
+    except Exception as e:
+        logger.error(f"Error eliminando directorio del animal {animal_id}: {str(e)}")
         return False
 
 
