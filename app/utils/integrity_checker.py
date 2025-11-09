@@ -428,6 +428,20 @@ class OptimizedIntegrityChecker:
             # Usar el nombre de columna FK correcto de la relación en lugar de asumir el patrón
             fk_field = rel['foreign_keys'][0] if rel['foreign_keys'] else f"{parent_table}_id"
             
+            # Validar que la columna exista realmente en la tabla de destino.
+            # Cuando la relación es MANY-TO-ONE (ej: animal -> breed), no hay
+            # una columna en la tabla de destino que apunte al registro actual,
+            # por lo que debemos omitirla para evitar errores SQL.
+            table_metadata = db.metadata.tables.get(table_name)
+            column_name = fk_field.split('.')[-1].strip()
+            if not table_metadata or column_name not in table_metadata.columns:
+                logger.debug(
+                    "Omitiendo verificación directa para %s.%s: columna inexistente en tabla destino",
+                    table_name,
+                    fk_field
+                )
+                continue
+            
             # Subquery para cada tabla con EXISTS optimizado
             subquery = f"""
                 SELECT
