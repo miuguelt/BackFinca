@@ -12,7 +12,7 @@ run.py
 __pycache__/
 *.py[cod]
 *$py.class
-
+.env.example
 # C extensions
 *.so
 
