@@ -133,8 +133,10 @@ class Config:
     JWT_HEADER_NAME = 'Authorization'
     JWT_HEADER_TYPE = 'Bearer'
     JWT_COOKIE_HTTPONLY = True
-    JWT_ACCESS_COOKIE_NAME = 'access_token_cookie'
-    JWT_REFRESH_COOKIE_NAME = 'refresh_token_cookie'
+    JWT_ACCESS_COOKIE_NAME = os.getenv('JWT_ACCESS_COOKIE_NAME', 'access_token_cookie')
+    JWT_REFRESH_COOKIE_NAME = os.getenv('JWT_REFRESH_COOKIE_NAME', 'refresh_token_cookie')
+    JWT_ACCESS_CSRF_COOKIE_NAME = os.getenv('JWT_ACCESS_CSRF_COOKIE_NAME', 'csrf_access_token')
+    JWT_REFRESH_CSRF_COOKIE_NAME = os.getenv('JWT_REFRESH_CSRF_COOKIE_NAME', 'csrf_refresh_token')
     JWT_COOKIE_SAMESITE = 'None'
     JWT_COOKIE_CSRF_PROTECT = False
 

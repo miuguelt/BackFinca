@@ -27,6 +27,11 @@ def register_api(app, limiter=None):
     # Crear el blueprint para la API
     api_bp = Blueprint('api', __name__, url_prefix='/api/v1')
 
+    access_cookie_name = app.config.get('JWT_ACCESS_COOKIE_NAME', 'access_token_cookie')
+    refresh_cookie_name = app.config.get('JWT_REFRESH_COOKIE_NAME', 'refresh_token_cookie')
+    csrf_access_cookie_name = app.config.get('JWT_ACCESS_CSRF_COOKIE_NAME', 'csrf_access_token')
+    csrf_refresh_cookie_name = app.config.get('JWT_REFRESH_CSRF_COOKIE_NAME', 'csrf_refresh_token')
+
     # Configurar Flask-RESTX con optimizaciones JSON y documentación
     api = Api(
         api_bp,
@@ -49,7 +54,7 @@ def register_api(app, limiter=None):
             'Cookie': {
                 'type': 'apiKey',
                 'in': 'cookie',
-                'name': 'access_token_cookie',
+                'name': access_cookie_name,
                 'description': 'JWT token en cookie (autenticación automática)'
             }
         },
@@ -62,7 +67,17 @@ def register_api(app, limiter=None):
     # UI de documentación personalizada con enlace visible a la guía
     @api.documentation
     def custom_swagger_ui():
-        return render_template('swagger_ui_custom.html', title=api.title, specs_url=api.specs_url)
+        return render_template(
+            'swagger_ui_custom.html',
+            title=api.title,
+            specs_url=api.specs_url,
+            cookie_config={
+                'access': access_cookie_name,
+                'refresh': refresh_cookie_name,
+                'csrf_access': csrf_access_cookie_name,
+                'csrf_refresh': csrf_refresh_cookie_name,
+            },
+        )
 
     # Namespaces
     from .namespaces.auth_namespace import auth_ns, set_limiter as set_auth_limiter

@@ -1,4 +1,4 @@
-from flask import jsonify, request
+from flask import jsonify, request, current_app
 from datetime import datetime, timezone
 import logging
 from typing import Any, Dict, List, Optional, Union
@@ -20,7 +20,9 @@ def _current_access_token() -> Optional[str]:
             return auth.split(' ', 1)[1].strip()
         # Fallback: cookie HttpOnly usada por Flask-JWT-Extended
         if request and request.cookies:
-            cookie_token = request.cookies.get('access_token_cookie')
+            cookie_name = (current_app.config.get('JWT_ACCESS_COOKIE_NAME', 'access_token_cookie')
+                           if current_app else 'access_token_cookie')
+            cookie_token = request.cookies.get(cookie_name)
             if cookie_token:
                 return cookie_token
     except Exception:

@@ -151,7 +151,8 @@ def create_app(config_name='development'):
                 if isinstance(auth, str) and auth.lower().startswith('bearer '):
                     token = auth.split(' ', 1)[1].strip()
                 if not token:
-                    token = request.cookies.get('access_token_cookie')
+                    cookie_name = current_app.config.get('JWT_ACCESS_COOKIE_NAME', 'access_token_cookie')
+                    token = request.cookies.get(cookie_name)
             except Exception:
                 token = None
 

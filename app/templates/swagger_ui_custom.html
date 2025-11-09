@@ -44,8 +44,15 @@
 
   <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js" defer></script>
   <script>
+    window.JWT_COOKIE_CONFIG = {{ cookie_config|tojson|safe }};
     window.onload = () => {
       const specUrl = document.body.getAttribute('data-specs-url');
+      const COOKIE_CONFIG = Object.assign({
+        access: 'access_token_cookie',
+        refresh: 'refresh_token_cookie',
+        csrf_access: 'csrf_access_token',
+        csrf_refresh: 'csrf_refresh_token',
+      }, window.JWT_COOKIE_CONFIG || {});
 
       // Toggle de depuración desde querystring ?debug=1|true o localStorage('swaggerDebug')
       const urlParamDebug = new URLSearchParams(window.location.search).get('debug');
@@ -108,8 +115,8 @@
       };
 
       const computeBadges = () => {
-        const jwt = !!getCookie('access_token_cookie');
-        const csrf = !!(getCookie('csrf_access_token') || getCookie('csrf_refresh_token'));
+        const jwt = !!getCookie(COOKIE_CONFIG.access);
+        const csrf = !!(getCookie(COOKIE_CONFIG.csrf_access) || getCookie(COOKIE_CONFIG.csrf_refresh));
         let bearer = false;
         try {
           const sys = window.ui && window.ui.getSystem ? window.ui.getSystem() : undefined;
@@ -161,10 +168,10 @@
 
             req.credentials = 'include';
 
-            const csrfAccess = getCookie('csrf_access_token');
-            const csrfRefresh = getCookie('csrf_refresh_token');
-            const accessCookie = getCookie('access_token_cookie');
-            const refreshCookie = getCookie('refresh_token_cookie');
+            const csrfAccess = getCookie(COOKIE_CONFIG.csrf_access);
+            const csrfRefresh = getCookie(COOKIE_CONFIG.csrf_refresh);
+            const accessCookie = getCookie(COOKIE_CONFIG.access);
+            const refreshCookie = getCookie(COOKIE_CONFIG.refresh);
 
             let csrf = null;
             // Elegir token CSRF según endpoint (robusto ante variaciones de ruta)
@@ -205,10 +212,10 @@
               console.log('path', path);
               console.log('isRefreshEndpoint', isRefreshEndpoint);
               console.log('cookies', {
-                access_token_cookie: accessCookie,
-                refresh_token_cookie: refreshCookie,
-                csrf_access_token: csrfAccess,
-                csrf_refresh_token: csrfRefresh,
+                access_cookie: accessCookie,
+                refresh_cookie: refreshCookie,
+                csrf_access_cookie: csrfAccess,
+                csrf_refresh_cookie: csrfRefresh,
               });
               console.log('selectedCsrf', csrf);
               console.log('removedAuthHeaderForRefresh', isRefreshEndpoint);
