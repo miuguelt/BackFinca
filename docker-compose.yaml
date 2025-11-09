@@ -6,6 +6,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - '3000:8081'
+    depends_on:
+      redis:
+        condition: service_healthy
     environment:
       FLASK_ENV: production
       PORT: 8081
@@ -33,10 +36,16 @@ services:
     volumes:
       - /mifinca/static:/app/static
     networks:
-      - coolify
-      - redbd
+      coolify:
+        aliases:
+          - finca
+      redbd:
+        aliases:
+          - finca
 networks:
   coolify:
     external: true
   redbd:
     external: true
+volumes:
+  redis_data:
