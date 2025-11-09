@@ -2,7 +2,7 @@ services:
   app:
     image: 'python:3.12-alpine'
     build:
-      context: 'https://github.com/miuguelt/fincaVillaLuz-main.git#main'
+      context: ./ #'https://github.com/miuguelt/fincaVillaLuz-main.git#main'
       dockerfile: Dockerfile
     ports:
       - '3000:8081'
