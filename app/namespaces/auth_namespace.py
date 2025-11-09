@@ -1,10 +1,11 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request, jsonify, current_app
 from flask_jwt_extended import (
-    create_access_token, create_refresh_token, jwt_required, 
+    create_access_token, create_refresh_token, 
     get_jwt_identity, get_jwt, set_access_cookies, 
-    set_refresh_cookies, unset_jwt_cookies
+    set_refresh_cookies, unset_jwt_cookies, verify_jwt_in_request
 )
+from flask_jwt_extended.exceptions import CSRFError, JWTExtendedException
 from app.models.user import User
 from app.utils.response_handler import APIResponse
 from app.utils.security_logger import (
@@ -190,12 +191,33 @@ class LoginResource(Resource):
 
 @auth_ns.route('/refresh')
 class RefreshTokenResource(Resource):
-    @auth_ns.doc('refresh_token')
-    @jwt_required(refresh=True)
-    def post(self):
-        """Renovar access token usando refresh token."""
+    @staticmethod
+    def _perform_refresh():
+        """Lógica compartida para POST/GET con manejo explícito de errores JWT/CSRF."""
         try:
+            verify_jwt_in_request(refresh=True)
             current_user_id = get_jwt_identity()
+        except CSRFError as e:
+            logger.warning('CSRF error during refresh: %s', e)
+            return APIResponse.error(
+                'CSRF token inválido o ausente',
+                status_code=401,
+                error_code='CSRF_ERROR',
+                details={'error': str(e)}
+            )
+        except JWTExtendedException as e:
+            logger.warning('JWT error during refresh: %s', e)
+            return APIResponse.error(
+                'Token faltante o inválido',
+                status_code=401,
+                error_code='JWT_ERROR',
+                details={'error': str(e)}
+            )
+        except Exception as e:
+            logger.error('Unexpected error validating refresh token: %s', e, exc_info=True)
+            return APIResponse.error('Error al validar token', status_code=500, details={'error': str(e)})
+        
+        try:
             # Convertir a int si es posible (tokens usan identity string)
             try:
                 user_id_int = int(current_user_id)
@@ -234,6 +256,16 @@ class RefreshTokenResource(Resource):
         except Exception as e:
             logger.error(f'Error en refresh token: {e}', exc_info=True)
             return APIResponse.error('Error al renovar token', status_code=500, details={'error': str(e)})
+
+    @auth_ns.doc('refresh_token')
+    def post(self):
+        """Renovar access token usando refresh token (POST)."""
+        return self._perform_refresh()
+
+    @auth_ns.doc('refresh_token_get')
+    def get(self):
+        """Renovar access token usando refresh token (GET para compatibilidad con clientes)."""
+        return self._perform_refresh()
 
 # --- Rutas de Autenticación ---
 
