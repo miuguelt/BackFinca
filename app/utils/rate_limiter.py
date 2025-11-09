@@ -74,20 +74,19 @@ def init_rate_limiter(app):
         app.config['RATE_LIMIT_STORAGE_URI'] = storage_uri
     
     try:
-        # Importar el storage de Redis solo cuando se necesita
-        from flask_limiter.util import get_redis_storage
+        # Validar que Redis está disponible antes de usarlo como storage
         from redis import Redis
         
-        # Crear conexión Redis específica para rate limiting
         redis_client = Redis.from_url(storage_uri)
-        storage = get_redis_storage(redis_client)
+        # PING anticipado para detectar credenciales o conectividad inválida
+        redis_client.ping()
         
         limiter = Limiter(
             app=app,
             key_func=get_remote_address_with_forwarded,
             default_limits=["10000 per day", "1000 per hour"],
             on_breach=rate_limit_handler,
-            storage=storage,
+            storage_uri=storage_uri,
             headers_enabled=True,
         )
         app.logger.info(f"Rate limiter inicializado con storage Redis: {storage_uri}")
