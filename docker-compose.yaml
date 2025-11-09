@@ -38,6 +38,7 @@ services:
 
 
       # API y comunicación
+      CORS_ORIGINS: ${CORS_ORIGINS}
       API_BASE_URL: ${API_BASE_URL}
       API_BASE_URL_NO_VERSION: ${API_BASE_URL_NO_VERSION}
       FRONTEND_URL: ${FRONTEND_URL}
