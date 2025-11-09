@@ -1,7 +1,7 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request, jsonify, current_app
 from flask_jwt_extended import (
-    create_access_token, create_refresh_token, 
+    create_access_token, create_refresh_token, jwt_required,
     get_jwt_identity, get_jwt, set_access_cookies, 
     set_refresh_cookies, unset_jwt_cookies, verify_jwt_in_request
 )
