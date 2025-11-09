@@ -13,7 +13,6 @@ services:
       - '8081:8081'
 
     environment:
-      FLASK_ENV: ${FLASK_ENV:-production}
       PORT: 8081
 
       # Base de datos
