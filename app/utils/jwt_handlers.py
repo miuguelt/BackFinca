@@ -23,9 +23,18 @@ def configure_jwt_handlers(jwt):
         details = {
             'expired_at_utc': exp_utc.isoformat(),
             'current_time_utc': now_utc.isoformat(),
-            'seconds_expired': seconds_ago
+            'seconds_expired': seconds_ago,
+            # Instrucciones estandarizadas para el cliente
+            'client_action': 'CLEAR_AUTH_AND_RELOGIN',
+            'should_clear_auth': True,
+            'logout_url': '/api/v1/auth/logout'
         }
-        return APIResponse.error("Token expirado", status_code=401, error_code="TOKEN_EXPIRED", details=details)
+        return APIResponse.error(
+            "Token expirado",
+            status_code=401,
+            error_code="TOKEN_EXPIRED",
+            details=details,
+        )
 
     @jwt.invalid_token_loader
     def invalid_token_callback(error):

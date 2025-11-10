@@ -88,6 +88,21 @@ def init_security_middlewares(app):
             #     list(request.cookies.keys()) if request.cookies else []
             # )
             logger.debug('JWT verification failed for path: %s', raw_path)
+            # Expiracin de token: estandarizar respuesta para que el frontend pueda actuar
+            if err_cls == 'ExpiredSignatureError':
+                return APIResponse.error(
+                    'Token expirado',
+                    status_code=401,
+                    error_code='TOKEN_EXPIRED',
+                    details={
+                        'exception_class': err_cls,
+                        'exception': str(e),
+                        'path': raw_path,
+                        'client_action': 'CLEAR_AUTH_AND_RELOGIN',
+                        'should_clear_auth': True,
+                        'logout_url': '/api/v1/auth/logout'
+                    }
+                )
             return APIResponse.error(
                 human_msg,
                 status_code=401,

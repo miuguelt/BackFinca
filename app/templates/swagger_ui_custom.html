@@ -229,6 +229,55 @@
           } catch (e) { /* noop */ }
           scheduleStatusUpdate();
           return req;
+        },
+        responseInterceptor: async (res) => {
+          try {
+            // Only handle 401 likely caused by expired token
+            if (res && res.status === 401) {
+              let payload = null;
+              try {
+                const cloned = res.clone ? res.clone() : res;
+                payload = await cloned.json();
+              } catch (_) { /* ignore non-JSON */ }
+
+              const err = payload && payload.error ? payload.error : {};
+              const code = err.code;
+              const details = (err && err.details) || {};
+              const isExpired = (
+                code === 'TOKEN_EXPIRED' ||
+                details.exception_class === 'ExpiredSignatureError' ||
+                (err.message && err.message.toLowerCase().includes('expirado'))
+              );
+
+              if (isExpired) {
+                // Try to refresh using cookies + CSRF from csrf_refresh_token
+                const csrfRefresh = getCookie(COOKIE_CONFIG.csrf_refresh);
+                try {
+                  const refreshResp = await fetch('/api/v1/auth/refresh', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: csrfRefresh ? { 'X-CSRF-TOKEN': csrfRefresh } : {},
+                  });
+                  if (refreshResp.ok) {
+                    console.info('[SwaggerUI] Access token refreshed from docs.');
+                    scheduleStatusUpdate();
+                    try { alert('Sesion renovada. Reintenta la operacion.'); } catch(_) {}
+                    return res;
+                  }
+                } catch (_) {
+                  // ignore and proceed to logout
+                }
+
+                // Refresh failed: call logout to clear HttpOnly cookies
+                try {
+                  await fetch('/api/v1/auth/logout', { method: 'POST', credentials: 'include' });
+                } catch (_) { /* ignore */ }
+                try { alert('Tu sesion expiro. Inicia sesion nuevamente.'); } catch(_) {}
+                try { window.location.reload(); } catch(_) {}
+              }
+            }
+          } catch (_) { /* ignore */ }
+          return res;
         }
       });
       window.ui = ui;
