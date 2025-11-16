@@ -1057,6 +1057,8 @@ class SystemAlerts(Resource):
                         prev_control,
                         (Control.animal_id == prev_control.c.animal_id) &
                         (Control.checkup_date > prev_control.c.prev_date)
+                    ).join(
+                        Animals, Animals.id == Control.animal_id
                     ).filter(
                         Animals.status == AnimalStatus.Vivo,
                         Control.checkup_date >= last_month,
