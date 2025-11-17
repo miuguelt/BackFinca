@@ -53,13 +53,20 @@ class APIResponse:
         Returns:
             Tuple con (response_json, status_code)
         """
+        # Estructura base de éxito
         response = {
             "success": True,
-            "data": data
+            "data": data,
+            "message": message,
         }
 
-        # Solo incluir access_token si se solicita explícitamente (endpoints de auth)
-        if include_token:
+        # Compatibilidad con endpoints de auth:
+        # si los datos incluyen un access_token, refléjalo también en la raíz.
+        if isinstance(data, dict) and "access_token" in data:
+            response["access_token"] = data.get("access_token")
+
+        # Mantener include_token como fallback (por ejemplo, para /auth/me si se usa).
+        if include_token and "access_token" not in response:
             token = _current_access_token()
             if token:
                 response["access_token"] = token

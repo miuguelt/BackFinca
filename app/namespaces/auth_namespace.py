@@ -309,7 +309,11 @@ class CurrentUserResource(Resource):
             if not user.status:
                 return APIResponse.error('Usuario inactivo', status_code=403)
 
-            return APIResponse.success(message='Usuario obtenido exitosamente', data=user.to_namespace_dict())
+            # Envolver en clave 'user' para compatibilidad con el frontend
+            return APIResponse.success(
+                message='Usuario obtenido exitosamente',
+                data={'user': user.to_namespace_dict()}
+            )
 
         except Exception as e:
             logger.error(f"Error obteniendo usuario actual (ID: {get_jwt_identity()}): {e}", exc_info=True)
