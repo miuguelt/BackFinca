@@ -1,7 +1,7 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from sqlalchemy import func, extract, desc, literal, and_, or_
+from sqlalchemy import func, extract, desc, literal, and_
 from datetime import datetime, timedelta, timezone
 import logging
 import decimal
@@ -27,6 +27,29 @@ analytics_ns = Namespace(
 )
 
 logger = logging.getLogger(__name__)
+
+
+def calculate_percentage_change(current_value, previous_value, cap=999.0):
+    """Calcula variaciones porcentuales controlando desbordes por bases muy pequeñas."""
+    current = current_value or 0
+    previous = previous_value or 0
+
+    if previous == 0:
+        return 100.0 if current > 0 else 0.0
+
+    try:
+        change = ((current - previous) / previous) * 100
+    except Exception:
+        return 0.0
+
+    if cap is not None:
+        max_change = float(cap)
+        if change > max_change:
+            change = max_change
+        elif change < -max_change:
+            change = -max_change
+
+    return round(change, 1)
 
 # Modelos de respuesta
 dashboard_model = analytics_ns.model('Dashboard', {
@@ -221,43 +244,36 @@ class CompleteDashboardStats(Resource):
             # Total de usuarios registrados
             total_users = db.session.query(func.count(User.id)).scalar() or 0
 
-            # Usuarios del período anterior (30-60 días atrás)
-            total_users_previous = db.session.query(func.count(User.id)).filter(
+            # Total antes del período actual (estado hace 30 días)
+            total_users_before_period = db.session.query(func.count(User.id)).filter(
+                User.created_at < thirty_days_ago
+            ).scalar() or 0
+
+            # Nuevos usuarios en el período anterior para contexto
+            new_users_previous_period = db.session.query(func.count(User.id)).filter(
                 and_(
                     User.created_at >= sixty_days_ago,
                     User.created_at < thirty_days_ago
                 )
             ).scalar() or 0
 
-            # Calcular porcentaje de cambio en usuarios
-            if total_users_previous > 0:
-                users_change_percentage = round(((total_users - total_users_previous) / total_users_previous) * 100, 1)
-            else:
-                users_change_percentage = 0
+            new_users_current_period = total_users - total_users_before_period
+            users_change_percentage = calculate_percentage_change(total_users, total_users_before_period)
 
-            # Usuarios activos (con sesión en los últimos 30 días o estado activo)
+            # Usuarios activos (actividad real en los últimos 30 días)
             active_users = db.session.query(func.count(User.id)).filter(
-                or_(
-                    User.updated_at >= thirty_days_ago,
-                    User.status == True
-                )
+                User.updated_at >= thirty_days_ago
             ).scalar() or 0
 
-            # Usuarios activos del período anterior
+            # Usuarios activos del período anterior (30-60 días atrás)
             active_users_previous = db.session.query(func.count(User.id)).filter(
-                or_(
-                    and_(
-                        User.updated_at >= sixty_days_ago,
-                        User.updated_at < thirty_days_ago
-                    ),
+                and_(
+                    User.updated_at >= sixty_days_ago,
+                    User.updated_at < thirty_days_ago
                 )
             ).scalar() or 0
 
-            # Calcular porcentaje de cambio en usuarios activos
-            if active_users_previous > 0:
-                active_users_change_percentage = round(((active_users - active_users_previous) / active_users_previous) * 100, 1)
-            else:
-                active_users_change_percentage = 0
+            active_users_change_percentage = calculate_percentage_change(active_users, active_users_previous)
 
             # ============================================
             # SECCIÓN 2: ANIMALES
@@ -265,28 +281,23 @@ class CompleteDashboardStats(Resource):
             # Total de animales registrados
             total_animals = db.session.query(func.count(Animals.id)).scalar() or 0
 
-            # Animales del período anterior
-            total_animals_previous = db.session.query(func.count(Animals.id)).filter(
+            # Total antes del período actual y altas recientes
+            total_animals_before_period = db.session.query(func.count(Animals.id)).filter(
+                Animals.created_at < thirty_days_ago
+            ).scalar() or 0
+            new_animals_previous_period = db.session.query(func.count(Animals.id)).filter(
                 and_(
                     Animals.created_at >= sixty_days_ago,
                     Animals.created_at < thirty_days_ago
                 )
             ).scalar() or 0
 
-            # Calcular porcentaje de cambio en animales
-            if total_animals_previous > 0:
-                animals_change_percentage = round(((total_animals - total_animals_previous) / total_animals_previous) * 100, 1)
-            else:
-                animals_change_percentage = 0
+            recent_animals = total_animals - total_animals_before_period
+            animals_change_percentage = calculate_percentage_change(total_animals, total_animals_before_period)
 
             # Animales activos/vivos
             active_animals = db.session.query(func.count(Animals.id)).filter(
                 Animals.status == AnimalStatus.Vivo
-            ).scalar() or 0
-
-            # Animales registrados recientemente (últimos 30 días)
-            recent_animals = db.session.query(func.count(Animals.id)).filter(
-                Animals.created_at >= thirty_days_ago
             ).scalar() or 0
 
             # ============================================
@@ -295,16 +306,17 @@ class CompleteDashboardStats(Resource):
             # Total de tratamientos históricos
             total_treatments = db.session.query(func.count(Treatments.id)).scalar() or 0
 
-            # Tratamientos del período anterior
-            total_treatments_previous = db.session.query(func.count(Treatments.id)).filter(
+            treatments_before_period = db.session.query(func.count(Treatments.id)).filter(
                 Treatments.created_at < thirty_days_ago
             ).scalar() or 0
-
-            # Calcular porcentaje de cambio en tratamientos
-            if total_treatments_previous > 0:
-                treatments_change_percentage = round(((total_treatments - total_treatments_previous) / total_treatments_previous) * 100, 1)
-            else:
-                treatments_change_percentage = 0
+            treatments_previous_period = db.session.query(func.count(Treatments.id)).filter(
+                and_(
+                    Treatments.created_at >= sixty_days_ago,
+                    Treatments.created_at < thirty_days_ago
+                )
+            ).scalar() or 0
+            treatments_current_period = total_treatments - treatments_before_period
+            treatments_change_percentage = calculate_percentage_change(total_treatments, treatments_before_period)
 
             # Tratamientos activos (en curso - últimos 30 días)
             active_treatments = db.session.query(func.count(Treatments.id)).filter(
@@ -322,19 +334,17 @@ class CompleteDashboardStats(Resource):
             # Total de vacunaciones aplicadas
             total_vaccinations = db.session.query(func.count(Vaccinations.id)).scalar() or 0
 
-            # Vacunaciones del período anterior
-            total_vaccinations_previous = db.session.query(func.count(Vaccinations.id)).filter(
+            vaccinations_before_period = db.session.query(func.count(Vaccinations.id)).filter(
+                Vaccinations.vaccination_date < thirty_days_ago_date
+            ).scalar() or 0
+            vaccinations_previous_period = db.session.query(func.count(Vaccinations.id)).filter(
                 and_(
-                    Vaccinations.created_at >= sixty_days_ago,
-                    Vaccinations.created_at < thirty_days_ago
+                    Vaccinations.vaccination_date >= sixty_days_ago_date,
+                    Vaccinations.vaccination_date < thirty_days_ago_date
                 )
             ).scalar() or 0
-
-            # Calcular porcentaje de cambio en vacunaciones
-            if total_vaccinations_previous > 0:
-                vaccinations_change_percentage = round(((total_vaccinations - total_vaccinations_previous) / total_vaccinations_previous) * 100, 1)
-            else:
-                vaccinations_change_percentage = 0
+            vaccinations_current_period = total_vaccinations - vaccinations_before_period
+            vaccinations_change_percentage = calculate_percentage_change(total_vaccinations, vaccinations_before_period)
 
             # Vacunaciones recientes
             recent_vaccinations = db.session.query(func.count(Vaccinations.id)).filter(
@@ -347,19 +357,17 @@ class CompleteDashboardStats(Resource):
             # Total de controles de salud realizados
             total_controls = db.session.query(func.count(Control.id)).scalar() or 0
 
-            # Controles del período anterior
-            total_controls_previous = db.session.query(func.count(Control.id)).filter(
+            controls_before_period = db.session.query(func.count(Control.id)).filter(
+                Control.checkup_date < thirty_days_ago_date
+            ).scalar() or 0
+            controls_previous_period = db.session.query(func.count(Control.id)).filter(
                 and_(
-                    Control.created_at >= sixty_days_ago,
-                    Control.created_at < thirty_days_ago
+                    Control.checkup_date >= sixty_days_ago_date,
+                    Control.checkup_date < thirty_days_ago_date
                 )
             ).scalar() or 0
-
-            # Calcular porcentaje de cambio en controles
-            if total_controls_previous > 0:
-                controls_change_percentage = round(((total_controls - total_controls_previous) / total_controls_previous) * 100, 1)
-            else:
-                controls_change_percentage = 0
+            controls_current_period = total_controls - controls_before_period
+            controls_change_percentage = calculate_percentage_change(total_controls, controls_before_period)
 
             # Controles recientes
             recent_controls = db.session.query(func.count(Control.id)).filter(
@@ -371,19 +379,17 @@ class CompleteDashboardStats(Resource):
             # ============================================
             total_fields = db.session.query(func.count(Fields.id)).scalar() or 0
 
-            # Campos del período anterior
-            total_fields_previous = db.session.query(func.count(Fields.id)).filter(
+            fields_before_period = db.session.query(func.count(Fields.id)).filter(
+                Fields.created_at < thirty_days_ago
+            ).scalar() or 0
+            fields_previous_period = db.session.query(func.count(Fields.id)).filter(
                 and_(
                     Fields.created_at >= sixty_days_ago,
                     Fields.created_at < thirty_days_ago
                 )
             ).scalar() or 0
-
-            # Calcular porcentaje de cambio en campos
-            if total_fields_previous > 0:
-                fields_change_percentage = round(((total_fields - total_fields_previous) / total_fields_previous) * 100, 1)
-            else:
-                fields_change_percentage = 0
+            fields_current_period = total_fields - fields_before_period
+            fields_change_percentage = calculate_percentage_change(total_fields, fields_before_period)
 
             # ============================================
             # SECCIÓN 7: CATÁLOGOS
@@ -683,19 +689,31 @@ class CompleteDashboardStats(Resource):
                 'usuarios_registrados': {
                     'valor': total_users,
                     'cambio_porcentual': users_change_percentage,
-                    'descripcion': 'Número total de usuarios en el sistema.'
+                    'descripcion': 'Número total de usuarios en el sistema.',
+                    'tendencia': {
+                        'periodo_actual': new_users_current_period,
+                        'periodo_anterior': new_users_previous_period
+                    }
                 },
                 'usuarios_activos': {
                     'valor': active_users,
                     'cambio_porcentual': active_users_change_percentage,
-                    'descripcion': 'Usuarios con actividad reciente o sesión activa.'
+                    'descripcion': 'Usuarios con actividad reciente o sesión activa.',
+                    'tendencia': {
+                        'periodo_actual': active_users,
+                        'periodo_anterior': active_users_previous
+                    }
                 },
 
                 # Animales
                 'animales_registrados': {
                     'valor': total_animals,
                     'cambio_porcentual': animals_change_percentage,
-                    'descripcion': 'Total de animales con ficha en la base de datos.'
+                    'descripcion': 'Total de animales con ficha en la base de datos.',
+                    'tendencia': {
+                        'periodo_actual': recent_animals,
+                        'periodo_anterior': new_animals_previous_period
+                    }
                 },
                 'animales_activos': {
                     'valor': active_animals,
@@ -711,8 +729,12 @@ class CompleteDashboardStats(Resource):
                 },
                 'tratamientos_totales': {
                     'valor': total_treatments,
-                    'cambio_porcentual': 0,
-                    'descripcion': 'Cantidad histórica de tratamientos registrados.'
+                    'cambio_porcentual': treatments_change_percentage,
+                    'descripcion': 'Cantidad histórica de tratamientos registrados.',
+                    'tendencia': {
+                        'periodo_actual': treatments_current_period,
+                        'periodo_anterior': treatments_previous_period
+                    }
                 },
 
                 # Tareas y Alertas
@@ -736,19 +758,31 @@ class CompleteDashboardStats(Resource):
                 'vacunas_aplicadas': {
                     'valor': total_vaccinations,
                     'cambio_porcentual': vaccinations_change_percentage,
-                    'descripcion': 'Vacunaciones registradas en el sistema.'
+                    'descripcion': 'Vacunaciones registradas en el sistema.',
+                    'tendencia': {
+                        'periodo_actual': vaccinations_current_period,
+                        'periodo_anterior': vaccinations_previous_period
+                    }
                 },
                 'controles_realizados': {
                     'valor': total_controls,
                     'cambio_porcentual': controls_change_percentage,
-                    'descripcion': 'Controles de producción/seguimiento ejecutados.'
+                    'descripcion': 'Controles de producción/seguimiento ejecutados.',
+                    'tendencia': {
+                        'periodo_actual': controls_current_period,
+                        'periodo_anterior': controls_previous_period
+                    }
                 },
 
                 # Campos
                 'campos_registrados': {
                     'valor': total_fields,
                     'cambio_porcentual': fields_change_percentage,
-                    'descripcion': 'Número de lotes/campos administrados.'
+                    'descripcion': 'Número de lotes/campos administrados.',
+                    'tendencia': {
+                        'periodo_actual': fields_current_period,
+                        'periodo_anterior': fields_previous_period
+                    }
                 },
 
                 # Catálogos
