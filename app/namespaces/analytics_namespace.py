@@ -51,6 +51,179 @@ def calculate_percentage_change(current_value, previous_value, cap=999.0):
 
     return round(change, 1)
 
+
+def safe_percentage(part, whole, precision=1):
+    """Calcula porcentajes evitando divisiones por cero."""
+    if not whole:
+        return 0.0
+    try:
+        return round((part / whole) * 100, precision)
+    except Exception:
+        return 0.0
+
+
+def percentage_point_delta(current_value, previous_value):
+    """Diferencia en puntos porcentuales o valores directos entre periodos."""
+    current = current_value or 0
+    previous = previous_value or 0
+    return round(current - previous, 1)
+
+
+def build_kpi_cards(context):
+    """Genera las tarjetas KPI utilizadas por el dashboard del frontend."""
+    window_days = context.get('window_days', 30)
+    active_animals = context.get('active_animals') or 0
+    total_animals = context.get('total_animals') or 0
+    cards = []
+
+    def create_card(card_id, title, value, previous, unit, description, icon, extra=None):
+        cards.append({
+            'id': card_id,
+            'titulo': title,
+            'valor': round(value, 2) if isinstance(value, float) else value,
+            'unidad': unit,
+            'cambio': percentage_point_delta(value, previous),
+            'tendencia': {
+                'periodo_actual': round(value, 2),
+                'periodo_anterior': round(previous, 2),
+                'ventana_dias': window_days
+            },
+            'descripcion': description,
+            'icono': icon,
+            'detalle': extra or {}
+        })
+
+    # Índice de salud general (animales con estado Sano/Bueno/Excelente)
+    health_stats = context.get('health_status_stats') or {}
+    healthy_animals = sum(health_stats.get(key, 0) for key in ('excelente', 'bueno', 'sano'))
+    previous_healthy = max(active_animals - (context.get('animals_critical_health_prev') or 0), 0)
+    health_value = safe_percentage(healthy_animals, active_animals)
+    health_previous = safe_percentage(previous_healthy, active_animals)
+    create_card(
+        'health_index',
+        'Índice de salud del hato',
+        health_value,
+        health_previous,
+        '%',
+        'Porcentaje de animales evaluados como Sano/Bueno/Excelente en los últimos controles.',
+        'heart-pulse',
+        {
+            'animales_saludables': healthy_animals,
+            'animales_criticos': context.get('animals_critical_health', 0),
+            'total_activos': active_animals
+        }
+    )
+
+    # Cumplimiento de vacunación (animales vacunados últimos 6 meses)
+    animals_without_vaccination = context.get('animals_without_vaccination') or 0
+    animals_without_vaccination_prev = context.get('animals_without_vaccination_prev') or 0
+    vaccination_value = max(0.0, 100.0 - safe_percentage(animals_without_vaccination, active_animals))
+    vaccination_previous = max(0.0, 100.0 - safe_percentage(animals_without_vaccination_prev, active_animals))
+    create_card(
+        'vaccination_coverage',
+        'Cobertura de vacunación',
+        vaccination_value,
+        vaccination_previous,
+        '%',
+        'Animales con esquemas de vacunación actualizados (≤ 6 meses).',
+        'shield-check',
+        {
+            'pendientes': animals_without_vaccination,
+            'pendientes_prev': animals_without_vaccination_prev
+        }
+    )
+
+    # Cumplimiento de controles (animales con control < 30 días)
+    animals_without_control = context.get('animals_without_control') or 0
+    animals_without_control_prev = context.get('animals_without_control_prev') or 0
+    control_value = max(0.0, 100.0 - safe_percentage(animals_without_control, active_animals))
+    control_previous = max(0.0, 100.0 - safe_percentage(animals_without_control_prev, active_animals))
+    create_card(
+        'control_compliance',
+        'Cumplimiento de controles',
+        control_value,
+        control_previous,
+        '%',
+        'Porcentaje de animales con chequeo veterinario en los últimos 30 días.',
+        'stethoscope',
+        {
+            'sin_control': animals_without_control,
+            'sin_control_prev': animals_without_control_prev
+        }
+    )
+
+    # Mortalidad y ventas (últimos 30 días)
+    recent_deaths = context.get('recent_deaths') or 0
+    recent_deaths_previous = context.get('recent_deaths_previous') or 0
+    mortality_value = safe_percentage(recent_deaths, total_animals)
+    mortality_previous = safe_percentage(recent_deaths_previous, total_animals)
+    create_card(
+        'mortality_rate_30d',
+        'Tasa de mortalidad 30d',
+        mortality_value,
+        mortality_previous,
+        '%',
+        'Bajas registradas en los últimos 30 días sobre el total del hato.',
+        'skull',
+        {
+            'muertes_30d': recent_deaths,
+            'muertes_previas': recent_deaths_previous
+        }
+    )
+
+    recent_sales = context.get('recent_sales') or 0
+    recent_sales_previous = context.get('recent_sales_previous') or 0
+    sales_value = safe_percentage(recent_sales, total_animals)
+    sales_previous = safe_percentage(recent_sales_previous, total_animals)
+    create_card(
+        'sales_rate_30d',
+        'Tasa de ventas 30d',
+        sales_value,
+        sales_previous,
+        '%',
+        'Animales marcados como vendidos durante los últimos 30 días.',
+        'shopping-cart',
+        {
+            'ventas_30d': recent_sales,
+            'ventas_previas': recent_sales_previous
+        }
+    )
+
+    # Intensidad de tratamientos y controles
+    avg_treatments = context.get('avg_treatments_per_animal') or 0
+    avg_treatments_prev = context.get('avg_treatments_per_animal_prev') or 0
+    create_card(
+        'treatments_intensity',
+        'Intensidad de tratamientos',
+        avg_treatments,
+        avg_treatments_prev,
+        'tratamientos/animal',
+        'Promedio de tratamientos iniciados por animal en los últimos 30 días.',
+        'pill',
+        {
+            'tratamientos_activos': context.get('active_treatments', 0),
+            'tratamientos_previos': context.get('active_treatments_previous', 0)
+        }
+    )
+
+    avg_controls = context.get('avg_controls_per_animal') or 0
+    avg_controls_prev = context.get('avg_controls_per_animal_prev') or 0
+    create_card(
+        'controls_frequency',
+        'Frecuencia de controles',
+        avg_controls,
+        avg_controls_prev,
+        'controles/animal',
+        'Controles clínicos realizados por animal en los últimos 30 días.',
+        'clipboard-check',
+        {
+            'controles_30d': context.get('recent_controls_count', 0),
+            'controles_previos': context.get('recent_controls_previous', 0)
+        }
+    )
+
+    return cards
+
 # Modelos de respuesta
 dashboard_model = analytics_ns.model('Dashboard', {
     'total_animals': fields.Integer(description='Total de animales'),
@@ -323,6 +496,14 @@ class CompleteDashboardStats(Resource):
                 Treatments.treatment_date >= thirty_days_ago_date
             ).scalar() or 0
 
+            # Tratamientos activos del período anterior (30-60 días atrás)
+            active_treatments_previous = db.session.query(func.count(Treatments.id)).filter(
+                and_(
+                    Treatments.treatment_date >= sixty_days_ago_date,
+                    Treatments.treatment_date < thirty_days_ago_date
+                )
+            ).scalar() or 0
+
             # Tratamientos recientes
             recent_treatments = db.session.query(func.count(Treatments.id)).filter(
                 Treatments.created_at >= seven_days_ago
@@ -372,6 +553,14 @@ class CompleteDashboardStats(Resource):
             # Controles recientes
             recent_controls = db.session.query(func.count(Control.id)).filter(
                 Control.checkup_date >= seven_days_ago_date
+            ).scalar() or 0
+
+            # Controles del período anterior (30-60 días atrás)
+            recent_controls_previous = db.session.query(func.count(Control.id)).filter(
+                and_(
+                    Control.checkup_date >= sixty_days_ago_date,
+                    Control.checkup_date < thirty_days_ago_date
+                )
             ).scalar() or 0
 
             # ============================================
@@ -525,14 +714,6 @@ class CompleteDashboardStats(Resource):
             # - Tratamientos activos
             pending_tasks = animals_without_control + animals_without_vaccination + active_treatments
 
-            # Tratamientos activos del período anterior (30-60 días atrás)
-            active_treatments_previous = db.session.query(func.count(Treatments.id)).filter(
-                and_(
-                    Treatments.treatment_date >= sixty_days_ago_date,
-                    Treatments.treatment_date < thirty_days_ago_date
-                )
-            ).scalar() or 0
-
             pending_tasks_previous = animals_without_control_prev + animals_without_vaccination_prev + active_treatments_previous
 
             # Calcular porcentaje de cambio en tareas pendientes
@@ -659,17 +840,35 @@ class CompleteDashboardStats(Resource):
                 Animals.updated_at >= thirty_days_ago
             ).scalar() or 0
 
+            recent_deaths_previous = db.session.query(func.count(Animals.id)).filter(
+                Animals.status == AnimalStatus.Muerto,
+                and_(
+                    Animals.updated_at >= sixty_days_ago,
+                    Animals.updated_at < thirty_days_ago
+                )
+            ).scalar() or 0
+
             # Tasa de ventas (últimos 30 días)
             recent_sales = db.session.query(func.count(Animals.id)).filter(
                 Animals.status == AnimalStatus.Vendido,
                 Animals.updated_at >= thirty_days_ago
             ).scalar() or 0
 
+            recent_sales_previous = db.session.query(func.count(Animals.id)).filter(
+                Animals.status == AnimalStatus.Vendido,
+                and_(
+                    Animals.updated_at >= sixty_days_ago,
+                    Animals.updated_at < thirty_days_ago
+                )
+            ).scalar() or 0
+
             # Promedio de tratamientos por animal (últimos 30 días)
             if active_animals > 0:
                 avg_treatments_per_animal = round(active_treatments / active_animals, 2)
+                avg_treatments_previous_avg = round(active_treatments_previous / active_animals, 2)
             else:
                 avg_treatments_per_animal = 0
+                avg_treatments_previous_avg = 0
 
             # Promedio de controles por animal (últimos 30 días)
             recent_controls_count = db.session.query(func.count(Control.id)).filter(
@@ -678,12 +877,39 @@ class CompleteDashboardStats(Resource):
 
             if active_animals > 0:
                 avg_controls_per_animal = round(recent_controls_count / active_animals, 2)
+                avg_controls_previous_avg = round(recent_controls_previous / active_animals, 2)
             else:
                 avg_controls_per_animal = 0
+                avg_controls_previous_avg = 0
 
             # ============================================
             # CONSTRUIR RESPUESTA COMPLETA
             # ============================================
+            kpi_cards = build_kpi_cards({
+                'total_animals': total_animals,
+                'active_animals': active_animals,
+                'health_status_stats': health_status_stats,
+                'animals_critical_health': animals_critical_health,
+                'animals_critical_health_prev': animals_critical_health_prev,
+                'animals_without_control': animals_without_control,
+                'animals_without_control_prev': animals_without_control_prev,
+                'animals_without_vaccination': animals_without_vaccination,
+                'animals_without_vaccination_prev': animals_without_vaccination_prev,
+                'recent_deaths': recent_deaths,
+                'recent_deaths_previous': recent_deaths_previous,
+                'recent_sales': recent_sales,
+                'recent_sales_previous': recent_sales_previous,
+                'avg_treatments_per_animal': avg_treatments_per_animal,
+                'avg_treatments_per_animal_prev': avg_treatments_previous_avg,
+                'avg_controls_per_animal': avg_controls_per_animal,
+                'avg_controls_per_animal_prev': avg_controls_previous_avg,
+                'active_treatments': active_treatments,
+                'active_treatments_previous': active_treatments_previous,
+                'recent_controls_count': recent_controls_count,
+                'recent_controls_previous': recent_controls_previous,
+                'window_days': 30
+            })
+
             complete_stats = {
                 # Usuarios
                 'usuarios_registrados': {
@@ -783,6 +1009,12 @@ class CompleteDashboardStats(Resource):
                         'periodo_actual': fields_current_period,
                         'periodo_anterior': fields_previous_period
                     }
+                },
+
+                # KPIs derivados
+                'kpi_resumen': {
+                    'ventana_dias': 30,
+                    'cards': kpi_cards
                 },
 
                 # Catálogos
