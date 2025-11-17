@@ -222,6 +222,63 @@ def build_kpi_cards(context):
         }
     )
 
+    # Crecimiento del hato (altas recientes)
+    recent_animals = context.get('recent_animals') or 0
+    new_animals_previous_period = context.get('new_animals_previous_period') or 0
+    herd_growth_value = safe_percentage(recent_animals, total_animals)
+    herd_growth_previous = safe_percentage(new_animals_previous_period, total_animals)
+    create_card(
+        'herd_growth_rate',
+        'Crecimiento del hato 30d',
+        herd_growth_value,
+        herd_growth_previous,
+        '%',
+        'Ingreso de nuevos animales respecto al tamaño total del hato.',
+        'trending-up',
+        {
+            'altas_30d': recent_animals,
+            'altas_previas': new_animals_previous_period
+        }
+    )
+
+    # Presión de alertas (alertas vs animales activos)
+    total_alerts = context.get('total_alerts') or 0
+    total_alerts_previous = context.get('total_alerts_previous') or 0
+    alert_pressure_value = safe_percentage(total_alerts, active_animals)
+    alert_pressure_previous = safe_percentage(total_alerts_previous, active_animals)
+    create_card(
+        'alert_pressure',
+        'Presión de alertas',
+        alert_pressure_value,
+        alert_pressure_previous,
+        '%',
+        'Alertas activas comparadas con el número de animales en seguimiento.',
+        'alert-triangle',
+        {
+            'alertas_actuales': total_alerts,
+            'alertas_previas': total_alerts_previous
+        }
+    )
+
+    # Carga operativa (tareas pendientes frente a animales activos)
+    pending_tasks = context.get('pending_tasks') or 0
+    pending_tasks_previous = context.get('pending_tasks_previous') or 0
+    task_load_value = safe_percentage(pending_tasks, active_animals) if active_animals else pending_tasks
+    task_load_previous = safe_percentage(pending_tasks_previous, active_animals) if active_animals else pending_tasks_previous
+    create_card(
+        'task_load_index',
+        'Índice de carga operativa',
+        task_load_value,
+        task_load_previous,
+        '%' if active_animals else 'tareas',
+        'Relación de tareas pendientes frente a la capacidad del hato activo.',
+        'list-checks',
+        {
+            'tareas_pendientes': pending_tasks,
+            'tareas_previas': pending_tasks_previous
+        }
+    )
+
     return cards
 
 # Modelos de respuesta
@@ -907,6 +964,12 @@ class CompleteDashboardStats(Resource):
                 'active_treatments_previous': active_treatments_previous,
                 'recent_controls_count': recent_controls_count,
                 'recent_controls_previous': recent_controls_previous,
+                'recent_animals': recent_animals,
+                'new_animals_previous_period': new_animals_previous_period,
+                'total_alerts': total_alerts,
+                'total_alerts_previous': total_alerts_previous,
+                'pending_tasks': pending_tasks,
+                'pending_tasks_previous': pending_tasks_previous,
                 'window_days': 30
             })
 
