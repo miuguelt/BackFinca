@@ -323,7 +323,8 @@ class OptimizedIntegrityChecker:
         for rel in self_refs:
             try:
                 # Para auto-referencias, usar el campo FK específico
-                field_name = rel['foreign_keys'][0] if rel['foreign_keys'] else f"{table_name}_id"
+                raw_field = rel['foreign_keys'][0] if rel['foreign_keys'] else f"{table_name}_id"
+                field_name = raw_field.split('.')[-1].strip('`" ')
                 count = cls._check_reverse_dependency(table_name, field_name, record_id)
                 results.append((table_name, count, field_name, rel['cascade']))
                 logger.debug(f"Auto-referencia {field_name}: {count} dependencias")
@@ -338,8 +339,9 @@ class OptimizedIntegrityChecker:
                 logger.warning(f"Error en batch de dependencias inversas: {e}")
                 # Fallback a procesamiento individual
                 for rel in reverse_deps:
+                    raw_field = rel['foreign_keys'][0]
+                    field_name = raw_field.split('.')[-1].strip('`" ')
                     count = cls._check_reverse_dependency(rel['target_table'], rel['foreign_keys'][0], record_id)
-                    field_name = rel['foreign_keys'][0]
                     results.append((rel['target_table'], count, field_name, rel['cascade']))
         
         # Procesar dependencias directas con UNION ALL si hay múltiples
@@ -351,8 +353,9 @@ class OptimizedIntegrityChecker:
                 # Fallback a procesamiento individual
                 for rel in forward_deps:
                     fk_field = rel['foreign_keys'][0] if rel['foreign_keys'] else f"{table_name}_id"
+                    column_name = fk_field.split('.')[-1].strip('`" ')
                     count = cls._check_forward_dependency(rel['target_table'], table_name, record_id, fk_field)
-                    results.append((rel['target_table'], count, fk_field, rel['cascade']))
+                    results.append((rel['target_table'], count, column_name, rel['cascade']))
         
         return results
     
@@ -372,17 +375,18 @@ class OptimizedIntegrityChecker:
         for rel in reverse_deps:
             table_name = rel['target_table']
             fk_field = rel['foreign_keys'][0]
+            column_name = fk_field.split('.')[-1].strip('`" ')
             
             # Subquery para cada tabla con EXISTS optimizado
             subquery = f"""
                 SELECT 
                     '{table_name}' as table_name,
-                    '{fk_field}' as field_name,
+                    '{column_name}' as field_name,
                     {str(rel['cascade']).lower()} as cascade_delete,
                     CASE 
                         WHEN EXISTS (
                             SELECT 1 FROM {table_name} 
-                            WHERE {fk_field} = {record_id} 
+                            WHERE {column_name} = :record_id 
                             LIMIT 1
                         ) THEN 1 
                         ELSE 0 
@@ -391,11 +395,14 @@ class OptimizedIntegrityChecker:
             union_queries.append(subquery)
         
         # Ejecutar query UNION ALL
+        if not union_queries:
+            return results
+
         try:
             union_query = " UNION ALL ".join(union_queries)
             query = text(union_query)
             
-            batch_results = db.session.execute(query).fetchall()
+            batch_results = db.session.execute(query, {'record_id': record_id}).fetchall()
             
             for row in batch_results:
                 results.append((
@@ -427,18 +434,18 @@ class OptimizedIntegrityChecker:
             table_name = rel['target_table']
             # Usar el nombre de columna FK correcto de la relación en lugar de asumir el patrón
             fk_field = rel['foreign_keys'][0] if rel['foreign_keys'] else f"{parent_table}_id"
+            column_name = fk_field.split('.')[-1].strip('`" ')
             
             # Validar que la columna exista realmente en la tabla de destino.
             # Cuando la relación es MANY-TO-ONE (ej: animal -> breed), no hay
             # una columna en la tabla de destino que apunte al registro actual,
             # por lo que debemos omitirla para evitar errores SQL.
             table_metadata = db.metadata.tables.get(table_name)
-            column_name = fk_field.split('.')[-1].strip()
-            if not table_metadata or column_name not in table_metadata.columns:
+            if table_metadata is None or column_name not in table_metadata.columns:
                 logger.debug(
                     "Omitiendo verificación directa para %s.%s: columna inexistente en tabla destino",
                     table_name,
-                    fk_field
+                    column_name
                 )
                 continue
             
@@ -446,12 +453,12 @@ class OptimizedIntegrityChecker:
             subquery = f"""
                 SELECT
                     '{table_name}' as table_name,
-                    '{fk_field}' as field_name,
+                    '{column_name}' as field_name,
                     {str(rel['cascade']).lower()} as cascade_delete,
                     CASE
                         WHEN EXISTS (
                             SELECT 1 FROM {table_name}
-                            WHERE {fk_field} = {record_id}
+                            WHERE {column_name} = :record_id
                             LIMIT 1
                         ) THEN 1
                         ELSE 0
@@ -460,11 +467,14 @@ class OptimizedIntegrityChecker:
             union_queries.append(subquery)
         
         # Ejecutar query UNION ALL
+        if not union_queries:
+            return results
+
         try:
             union_query = " UNION ALL ".join(union_queries)
             query = text(union_query)
             
-            batch_results = db.session.execute(query).fetchall()
+            batch_results = db.session.execute(query, {'record_id': record_id}).fetchall()
             
             for row in batch_results:
                 results.append((
@@ -493,11 +503,12 @@ class OptimizedIntegrityChecker:
         try:
             # Query ultra-optimizada con EXISTS para máximo rendimiento
             # EXISTS detiene la búsqueda en el primer match vs COUNT que escanea todos
+            column_name = foreign_key_field.split('.')[-1].strip('`" ')
             query = text(f"""
                 SELECT CASE 
                     WHEN EXISTS (
                         SELECT 1 FROM {dependent_table} 
-                        WHERE {foreign_key_field} = :record_id 
+                        WHERE {column_name} = :record_id 
                         LIMIT 1
                     ) THEN 1 
                     ELSE 0 
@@ -522,13 +533,14 @@ class OptimizedIntegrityChecker:
             # Usar el nombre de columna FK proporcionado o el patrón predeterminado como fallback
             if fk_field is None:
                 fk_field = f"{parent_table}_id"
+            column_name = fk_field.split('.')[-1].strip('`" ')
             
             # Query ultra-optimizada con EXISTS para mejor rendimiento
             query = text(f"""
                 SELECT CASE
                     WHEN EXISTS (
                         SELECT 1 FROM {dependent_table}
-                        WHERE {fk_field} = :record_id
+                        WHERE {column_name} = :record_id
                         LIMIT 1
                     ) THEN 1
                     ELSE 0

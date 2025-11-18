@@ -53,6 +53,7 @@ class BaseModel(db.Model):
     _required_fields = []
     _unique_fields = []
     _enum_fields = {}
+    _allowed_input_fields = []  # Campos extra permitidos para payloads (no columnas directas)
 
     # Configuración de caché para PWA (optimizado para diferentes tipos de datos)
     _cache_config = {
@@ -70,6 +71,29 @@ class BaseModel(db.Model):
         únicos y enums.
         """
         errors = []
+        incoming_data = dict(data or {})
+
+        # 0. Filtrar campos desconocidos para evitar errores de construcción
+        allowed_fields = {col.name for col in cls.__table__.columns}
+        extra_fields = getattr(cls, '_allowed_input_fields', []) or []
+        allowed_fields.update(extra_fields)
+
+        cleaned_data = {}
+        dropped_fields = []
+        for key, value in incoming_data.items():
+            if key in allowed_fields:
+                cleaned_data[key] = value
+            else:
+                dropped_fields.append(key)
+
+        if dropped_fields:
+            logger.debug(
+                "%s: ignorando campos no soportados en payload -> %s",
+                cls.__name__,
+                ', '.join(sorted(dropped_fields))
+            )
+
+        data = cleaned_data
         # 1. Normalizar y validar enums
         for field, enum_class in cls._enum_fields.items():
             if field in data and data[field] is not None:
