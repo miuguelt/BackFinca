@@ -5,6 +5,8 @@ from datetime import timezone, datetime
 import logging
 from flask import current_app
 
+from app.utils.token_blocklist import is_token_revoked
+
 
 def configure_jwt_handlers(jwt):
     """Configura los handlers para errores de JWT usando APIResponse estándar."""
@@ -60,6 +62,33 @@ def configure_jwt_handlers(jwt):
                 error_code="MISSING_TOKEN",
                 details={"error": reason}
             )
+
+    @jwt.token_in_blocklist_loader
+    def check_if_token_revoked(jwt_header, jwt_payload):
+        try:
+            revoked = is_token_revoked(jwt_payload)
+            if revoked:
+                logger.info("Token revocado detectado (sub=%s, type=%s)", jwt_payload.get('sub'), jwt_payload.get('type'))
+            return revoked
+        except Exception as e:
+            logger.exception("Fallo verificando token en blocklist: %s", e)
+            return False
+
+    @jwt.revoked_token_loader
+    def revoked_token_callback(jwt_header, jwt_payload):
+        logger.warning("Intento de uso de token revocado (sub=%s, type=%s)", jwt_payload.get('sub'), jwt_payload.get('type'))
+        details = {
+            'token_type': jwt_payload.get('type'),
+            'client_action': 'CLEAR_AUTH_AND_RELOGIN',
+            'should_clear_auth': True,
+            'logout_url': '/api/v1/auth/logout'
+        }
+        return APIResponse.error(
+            "Token revocado",
+            status_code=401,
+            error_code="TOKEN_REVOKED",
+            details=details
+        )
 
     @jwt.additional_claims_loader
     def add_claims_to_jwt(identity):

@@ -187,6 +187,7 @@ class LRUCache:
 
 # Cache global: cada modelo tiene su propio LRUCache
 _LIST_CACHE: Dict[str, LRUCache] = {}
+_DETAIL_CACHE: Dict[str, LRUCache] = {}
 
 
 def _get_cache_key_with_user(model_name: str, base_key: str, model_class) -> str:
@@ -215,25 +216,26 @@ def _get_cache_ttl(model_class) -> int:
     return cache_config.get('ttl', 120)  # 2 minutos por defecto
 
 
-def _cache_get(model_name: str, key: str, model_class):
-    """Obtiene valor de caché con TTL configurable por modelo."""
-    # Crear LRUCache si no existe para este modelo
+def _cache_get(model_name: str, key: str, model_class, *, allow_stale: bool = False, allow_stale_seconds: int = 0):
+    """Obtiene valor de caché con TTL configurable por modelo y opción de usar stale (offline)."""
     if model_name not in _LIST_CACHE:
-        return None
+        return (None, False)
 
     lru_cache = _LIST_CACHE[model_name]
     full_key = _get_cache_key_with_user(model_name, key, model_class)
     entry = lru_cache.get(full_key)
 
     if not entry:
-        return None
+        return (None, False)
 
     ttl = _get_cache_ttl(model_class)
-    if time.time() - entry['ts'] > ttl:
-        # Expirado - el LRUCache lo eliminará eventualmente
-        return None
+    age = time.time() - entry['ts']
+    if age > ttl:
+        if allow_stale and age <= (ttl + allow_stale_seconds):
+            return (entry['value'], True)
+        return (None, False)
 
-    return entry['value']
+    return (entry['value'], False)
 
 
 def _cache_set(model_name: str, key: str, value: Any, model_class):
@@ -263,6 +265,56 @@ def _cache_clear(model_name: str):
         num_entries = lru_cache.size()
         lru_cache.clear()
         logger.info(f"Cache cleared for model {model_name}: {num_entries} entries invalidated")
+    if model_name in _DETAIL_CACHE:
+        lru_cache = _DETAIL_CACHE[model_name]
+        num_entries = lru_cache.size()
+        lru_cache.clear()
+        logger.info(f"Detail cache cleared for model {model_name}: {num_entries} entries invalidated")
+
+
+def _detail_cache_get(model_name: str, record_id: int, model_class, *, allow_stale: bool = False, allow_stale_seconds: int = 0):
+    """Obtiene valor de caché para detalle con opción de usar stale."""
+    if model_name not in _DETAIL_CACHE:
+        return (None, False)
+    lru_cache = _DETAIL_CACHE[model_name]
+    full_key = _get_cache_key_with_user(model_name, str(record_id), model_class)
+    entry = lru_cache.get(full_key)
+    if not entry:
+        return (None, False)
+    ttl = _get_cache_ttl(model_class)
+    age = time.time() - entry['ts']
+    if age > ttl:
+        if allow_stale and age <= (ttl + allow_stale_seconds):
+            return (entry['value'], True)
+        return (None, False)
+    return (entry['value'], False)
+
+
+def _detail_cache_set(model_name: str, record_id: int, value: Any, model_class):
+    """Guarda detalle en cache con segmentación por usuario."""
+    if model_name not in _DETAIL_CACHE:
+        _DETAIL_CACHE[model_name] = LRUCache(max_size=MAX_CACHE_ENTRIES_PER_MODEL)
+    lru_cache = _DETAIL_CACHE[model_name]
+    full_key = _get_cache_key_with_user(model_name, str(record_id), model_class)
+    lru_cache.set(full_key, {'value': value, 'ts': time.time()})
+
+
+def _detail_cache_clear(model_name: str, record_id: Optional[int] = None):
+    """Invalida caché de detalle de un modelo, opcionalmente solo un ID."""
+    if model_name not in _DETAIL_CACHE:
+        return
+    lru_cache = _DETAIL_CACHE[model_name]
+    if record_id is None:
+        lru_cache.clear()
+        logger.info(f"Detail cache cleared for model {model_name}")
+        return
+    full_key_prefix = f"user:"  # se limpia por user y anónimo
+    keys_to_delete = []
+    for k in list(lru_cache.cache.keys()):
+        if k.endswith(f":{record_id}") or k.split(':')[-1] == str(record_id):
+            keys_to_delete.append(k)
+    for k in keys_to_delete:
+        lru_cache.cache.pop(k, None)
 
 
 def _generate_cache_headers(model_class, max_updated_at=None) -> Dict[str, str]:
@@ -277,11 +329,14 @@ def _generate_cache_headers(model_class, max_updated_at=None) -> Dict[str, str]:
     cache_type = cache_config.get('type', 'private')
     max_age = cache_config.get('max_age', 120)
     stale_while_revalidate = cache_config.get('stale_while_revalidate', 60)
+    stale_if_error = cache_config.get('stale_if_error', 0)
 
     cache_control_parts = [cache_type, f'max-age={max_age}']
 
     if stale_while_revalidate > 0:
         cache_control_parts.append(f'stale-while-revalidate={stale_while_revalidate}')
+    if stale_if_error > 0:
+        cache_control_parts.append(f'stale-if-error={stale_if_error}')
 
     headers['Cache-Control'] = ', '.join(cache_control_parts)
 
@@ -299,6 +354,8 @@ def _generate_cache_headers(model_class, max_updated_at=None) -> Dict[str, str]:
     # X-Cache-Strategy hint para Service Workers
     strategy = cache_config.get('strategy', 'stale-while-revalidate')
     headers['X-Cache-Strategy'] = strategy
+    if stale_if_error:
+        headers['X-Stale-If-Error'] = str(stale_if_error)
 
     # Vary header para indicar que la respuesta puede variar según el usuario
     if cache_type == 'private':
@@ -372,6 +429,8 @@ def create_optimized_namespace(
         'sort_order': 'asc o desc (alias: order)',
         'include_relations': 'true para incluir relaciones configuradas',
         'cache_bust': '1 para ignorar caché',
+        'prefer_cache': 'true para usar respuesta en caché incluso expirada (modo offline)',
+        'offline_fallback': 'alias de prefer_cache para conexiones inestables',
         'fields': 'Lista de campos separados por coma a incluir en items (ej: id,name,status)',
         'export': 'Exportar formato (csv); si se usa, ignora paginación salvo page/limit explícitos',
         **{f: f'Filtro por campo {f}' for f in getattr(model_class, '_filterable_fields', [])}
@@ -385,43 +444,53 @@ def create_optimized_namespace(
                 args_items = sorted((k, v) for k, v in request.args.items() if k != 'cache_bust')
                 cache_key = str(args_items)
                 model_key = model_class.__name__
-                if cache_enabled and request.args.get('cache_bust') != '1':
-                    cached_payload = _cache_get(model_key, cache_key, model_class)
-                    if cached_payload:
-                        # Verificar si el cliente ya tiene esta versión (304 Not Modified)
-                        cached_meta = cached_payload.get('meta', {}).get('pagination', {})
-                        cached_total = cached_meta.get('total_items', 0)
-                        # Extraer max_updated si está disponible
-                        max_updated_cached = None
-                        try:
-                            if cached_payload.get('data'):
-                                upd_vals = [item.get('updated_at') for item in cached_payload['data'] if item.get('updated_at')]
-                                if upd_vals:
-                                    max_updated_cached = max(upd_vals)
-                        except:
-                            pass
+                cache_config = getattr(model_class, '_cache_config', {})
+                stale_if_error = cache_config.get('stale_if_error', 0)
+                prefer_cache = _parse_bool(request.args.get('prefer_cache')) or _parse_bool(request.args.get('offline_fallback'))
+                allow_cache = cache_enabled and request.args.get('cache_bust') != '1'
 
-                        # ETag estable basado en datos (total y último updated_at)
-                        from datetime import datetime, timezone
-                        etag = f'"{cached_total}-{max_updated_cached}"' if max_updated_cached else f'"{cached_total}-none"'
-                        cache_headers = _generate_cache_headers(model_class, max_updated_cached)
-                        # Forzar revalidación del cliente siempre para listados
-                        cache_headers['Cache-Control'] = 'private, max-age=0, must-revalidate'
+                cached_payload = None
+                cache_is_stale = False
+                if cache_enabled or stale_if_error > 0 or prefer_cache:
+                    cached_payload, cache_is_stale = _cache_get(
+                        model_key,
+                        cache_key,
+                        model_class,
+                        allow_stale=(prefer_cache or stale_if_error > 0),
+                        allow_stale_seconds=stale_if_error
+                    )
 
-                        if _check_conditional_request(etag, cache_headers.get('Last-Modified')):
-                            # Cliente tiene versión válida, retornar 304 Not Modified
-                            resp = flask_make_response('', 304)
-                            resp.headers['ETag'] = etag
-                            for k, v in cache_headers.items():
-                                resp.headers[k] = v
-                            return resp
+                if allow_cache and cached_payload and (prefer_cache or not cache_is_stale):
+                    cached_meta = cached_payload.get('meta', {}).get('pagination', {})
+                    cached_total = cached_meta.get('total_items', 0)
+                    max_updated_cached = None
+                    try:
+                        if cached_payload.get('data'):
+                            upd_vals = [item.get('updated_at') for item in cached_payload['data'] if item.get('updated_at')]
+                            if upd_vals:
+                                max_updated_cached = max(upd_vals)
+                    except Exception:
+                        pass
 
-                        # Ya es respuesta completa estandarizada, agregar headers PWA
-                        resp = flask_make_response(jsonify(cached_payload), 200)
+                    from datetime import datetime, timezone
+                    etag = f'"{cached_total}-{max_updated_cached}"' if max_updated_cached else f'"{cached_total}-none"'
+                    cache_headers = _generate_cache_headers(model_class, max_updated_cached)
+                    cache_headers['X-Cache-Status'] = 'STALE' if cache_is_stale else 'HIT'
+                    if cache_is_stale:
+                        cache_headers['Warning'] = '110 - "Contenido en caché expirado usado por prefer_cache/offline"'
+
+                    if _check_conditional_request(etag, cache_headers.get('Last-Modified')):
+                        resp = flask_make_response('', 304)
                         resp.headers['ETag'] = etag
                         for k, v in cache_headers.items():
                             resp.headers[k] = v
                         return resp
+
+                    resp = flask_make_response(jsonify(cached_payload), 200)
+                    resp.headers['ETag'] = etag
+                    for k, v in cache_headers.items():
+                        resp.headers[k] = v
+                    return resp
 
                 page = request.args.get('page', type=int)
                 # Accept new 'limit' param or legacy 'per_page' for compatibility
@@ -680,8 +749,6 @@ def create_optimized_namespace(
                 from datetime import datetime, timezone
                 etag = f'"{total_val}-{max_updated}"' if max_updated else f'"{total_val}-none"'
                 pwa_headers = _generate_cache_headers(model_class, max_updated)
-                # Forzar revalidación del cliente siempre para listados
-                pwa_headers['Cache-Control'] = 'private, max-age=0, must-revalidate'
 
                 # Verificar si el cliente ya tiene esta versión
                 if _check_conditional_request(etag, pwa_headers.get('Last-Modified')):
@@ -717,6 +784,34 @@ def create_optimized_namespace(
             except Exception as e:
                 logger.error(f"Error listando {model_class.__name__}: {e}", exc_info=True)
                 from app.utils.response_handler import APIResponse
+
+                # Intentar fallback a caché stale si existe y está permitido
+                if cached_payload and stale_if_error > 0:
+                    try:
+                        cached_meta = cached_payload.get('meta', {}).get('pagination', {})
+                        cached_total = cached_meta.get('total_items', 0)
+                        max_updated_cached = None
+                        try:
+                            if cached_payload.get('data'):
+                                upd_vals = [item.get('updated_at') for item in cached_payload['data'] if item.get('updated_at')]
+                                if upd_vals:
+                                    max_updated_cached = max(upd_vals)
+                        except Exception:
+                            pass
+
+                        etag = f'"{cached_total}-{max_updated_cached}"' if max_updated_cached else f'"{cached_total}-none"'
+                        cache_headers = _generate_cache_headers(model_class, max_updated_cached)
+                        cache_headers['X-Cache-Status'] = 'STALE-FALLBACK'
+                        cache_headers['Warning'] = '111 - "Respuesta en caché servida por error de backend"'
+                        cache_headers['X-Offline-Fallback'] = 'true'
+                        resp = flask_make_response(jsonify(cached_payload), 200)
+                        resp.headers['ETag'] = etag
+                        for k, v in cache_headers.items():
+                            resp.headers[k] = v
+                        return resp
+                    except Exception:
+                        logger.debug("No se pudo usar fallback de caché tras error de backend", exc_info=True)
+
                 resp_body, status = APIResponse.error('Error interno del servidor', details={'error': str(e), 'context': f'list {model_class.__name__}'})
                 resp = flask_make_response(jsonify(resp_body), status)
                 return resp
@@ -797,6 +892,7 @@ def create_optimized_namespace(
 
                 # Invalidar cache DESPUÉS de serialización exitosa
                 _cache_clear(model_class.__name__)
+                _detail_cache_clear(model_class.__name__, record_id)
                 logger.debug(f"Cache cleared for {model_class.__name__}")
 
                 # Construir respuesta con datos serializados
@@ -829,6 +925,46 @@ def create_optimized_namespace(
         @_maybe_rate_limit
         def get(self, record_id: int):  # Retrieve
             try:
+                cache_config = getattr(model_class, '_cache_config', {})
+                stale_if_error = cache_config.get('stale_if_error', 0)
+                prefer_cache = _parse_bool(request.args.get('prefer_cache')) or _parse_bool(request.args.get('offline_fallback'))
+                allow_cache = cache_enabled and request.args.get('cache_bust') != '1'
+
+                cached_payload = None
+                cache_is_stale = False
+                if cache_enabled or stale_if_error > 0 or prefer_cache:
+                    cached_payload, cache_is_stale = _detail_cache_get(
+                        model_class.__name__,
+                        record_id,
+                        model_class,
+                        allow_stale=(prefer_cache or stale_if_error > 0),
+                        allow_stale_seconds=stale_if_error
+                    )
+
+                if allow_cache and cached_payload and (prefer_cache or not cache_is_stale):
+                    max_updated_cached = None
+                    try:
+                        data_obj = cached_payload.get('data', {})
+                        max_updated_cached = data_obj.get('updated_at')
+                    except Exception:
+                        pass
+                    etag = f'"{record_id}-{max_updated_cached}"' if max_updated_cached else f'"{record_id}-none"'
+                    cache_headers = _generate_cache_headers(model_class, max_updated_cached)
+                    cache_headers['X-Cache-Status'] = 'STALE' if cache_is_stale else 'HIT'
+                    if cache_is_stale:
+                        cache_headers['Warning'] = '110 - "Detalle en caché expirado usado por prefer_cache/offline"'
+                    if _check_conditional_request(etag, cache_headers.get('Last-Modified')):
+                        resp = flask_make_response('', 304)
+                        resp.headers['ETag'] = etag
+                        for k, v in cache_headers.items():
+                            resp.headers[k] = v
+                        return resp
+                    resp = flask_make_response(jsonify(cached_payload), 200)
+                    resp.headers['ETag'] = etag
+                    for k, v in cache_headers.items():
+                        resp.headers[k] = v
+                    return resp
+
                 include_relations = request.args.get('include_relations', 'false').lower() == 'true'
                 instance = model_class.get_by_id(record_id, include_relations=include_relations)
                 if not instance:
@@ -842,9 +978,42 @@ def create_optimized_namespace(
                     data_obj = {k: v for k, v in data_obj.items() if k in selected}
                 body, status = APIResponse.success(data=data_obj, message=f'{name.capitalize()} obtenido exitosamente')
                 resp = flask_make_response(jsonify(body), status)
+
+                try:
+                    etag = f'"{record_id}-{data_obj.get("updated_at")}"' if isinstance(data_obj, dict) else f'"{record_id}"'
+                    pwa_headers = _generate_cache_headers(model_class, data_obj.get('updated_at') if isinstance(data_obj, dict) else None)
+                    pwa_headers['X-Cache-Status'] = 'MISS'
+                    resp.headers['ETag'] = etag
+                    for k, v in pwa_headers.items():
+                        resp.headers[k] = v
+                    if cache_enabled:
+                        _detail_cache_set(model_class.__name__, record_id, body, model_class)
+                except Exception:
+                    logger.debug("No se pudo cachear/etiquetar respuesta de detalle", exc_info=True)
+
                 return resp
             except Exception as e:
                 logger.error(f"Error obteniendo {model_class.__name__} ID {record_id}: {e}", exc_info=True)
+                if cached_payload and stale_if_error > 0:
+                    try:
+                        max_updated_cached = None
+                        try:
+                            data_obj = cached_payload.get('data', {})
+                            max_updated_cached = data_obj.get('updated_at')
+                        except Exception:
+                            pass
+                        etag = f'"{record_id}-{max_updated_cached}"' if max_updated_cached else f'"{record_id}-none"'
+                        cache_headers = _generate_cache_headers(model_class, max_updated_cached)
+                        cache_headers['X-Cache-Status'] = 'STALE-FALLBACK'
+                        cache_headers['Warning'] = '111 - "Detalle en caché servido por error de backend"'
+                        cache_headers['X-Offline-Fallback'] = 'true'
+                        resp = flask_make_response(jsonify(cached_payload), 200)
+                        resp.headers['ETag'] = etag
+                        for k, v in cache_headers.items():
+                            resp.headers[k] = v
+                        return resp
+                    except Exception:
+                        logger.debug("No se pudo usar fallback de caché para detalle tras error", exc_info=True)
                 body, status = APIResponse.error('Error interno del servidor', details={'error': str(e), 'context': f'get {model_class.__name__}'}, status_code=500)
                 resp = flask_make_response(jsonify(body), status)
                 return resp
@@ -942,6 +1111,7 @@ def create_optimized_namespace(
 
                     # Invalidar cache DESPUÉS de serialización exitosa
                     _cache_clear(model_class.__name__)
+                    _detail_cache_clear(model_class.__name__, record_id)
 
                     # Construir respuesta
                     from flask import make_response
@@ -1148,6 +1318,7 @@ def create_optimized_namespace(
 
                     # Invalidar cache DESPUÉS de serialización exitosa
                     _cache_clear(model_class.__name__)
+                    _detail_cache_clear(model_class.__name__)
 
                     # Construir respuesta
                     from flask import make_response

@@ -220,7 +220,9 @@ def log_jwt_token_event(event_type, user_id=None, token_info=None):
     if token_info:
         safe_token_info = {
             'access_token_created': token_info.get('access_token_created', False),
-            'new_access_token_created': token_info.get('new_access_token_created', False)
+            'new_access_token_created': token_info.get('new_access_token_created', False),
+            'token_revoked': token_info.get('token_revoked', False),
+            'refresh_token_revoked': token_info.get('refresh_token_revoked', False)
         }
     
     log_data = {

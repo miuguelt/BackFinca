@@ -139,6 +139,8 @@ class Config:
     JWT_REFRESH_CSRF_COOKIE_NAME = os.getenv('JWT_REFRESH_CSRF_COOKIE_NAME', 'csrf_refresh_token')
     JWT_COOKIE_SAMESITE = 'None'
     JWT_COOKIE_CSRF_PROTECT = False
+    JWT_BLOCKLIST_ENABLED = True
+    JWT_BLOCKLIST_TOKEN_CHECKS = ['access', 'refresh']
 
     # -----------------------
     # CORS

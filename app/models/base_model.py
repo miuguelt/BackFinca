@@ -62,6 +62,7 @@ class BaseModel(db.Model):
         'strategy': 'stale-while-revalidate',  # estrategia para Service Worker
         'max_age': 120,  # max-age para Cache-Control header
         'stale_while_revalidate': 60,  # tiempo para usar caché stale mientras revalida
+        'stale_if_error': 3600,  # permitir usar caché hasta 1h si el backend falla (modo offline)
     }
 
     @classmethod

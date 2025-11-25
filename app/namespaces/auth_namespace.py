@@ -3,7 +3,8 @@ from flask import request, jsonify, current_app
 from flask_jwt_extended import (
     create_access_token, create_refresh_token, jwt_required,
     get_jwt_identity, get_jwt, set_access_cookies, 
-    set_refresh_cookies, unset_jwt_cookies, verify_jwt_in_request
+    set_refresh_cookies, unset_jwt_cookies, verify_jwt_in_request,
+    decode_token
 )
 from flask_jwt_extended.exceptions import CSRFError, JWTExtendedException
 from app.models.user import User
@@ -13,6 +14,7 @@ from app.utils.security_logger import (
     log_jwt_token_event,
     log_admin_action
 )
+from app.utils.token_blocklist import mark_token_revoked
 from datetime import timedelta
 import logging
 
@@ -277,10 +279,30 @@ class LogoutResource(Resource):
         """Cerrar sesión y limpiar cookies JWT."""
         try:
             current_user_id = get_jwt_identity()
-            log_jwt_token_event('LOGOUT', current_user_id)
+            decoded_access = get_jwt()
+            access_revoked = mark_token_revoked(decoded_access)
+            refresh_revoked = False
+
+            # Intentar revocar también el refresh token si viene en la cookie
+            try:
+                refresh_cookie_name = current_app.config.get('JWT_REFRESH_COOKIE_NAME', 'refresh_token_cookie')
+                refresh_token = request.cookies.get(refresh_cookie_name)
+                if refresh_token:
+                    decoded_refresh = decode_token(refresh_token)
+                    refresh_revoked = mark_token_revoked(decoded_refresh)
+            except Exception as decode_err:
+                logger.warning("No se pudo revocar el refresh token en logout: %s", decode_err)
+
+            log_jwt_token_event('LOGOUT', current_user_id, {
+                'token_revoked': access_revoked,
+                'refresh_token_revoked': refresh_revoked
+            })
             
             # Construir respuesta JSON y luego limpiar cookies sobre el objeto Response
-            api_response_dict, status_code = APIResponse.success(message='Sesión cerrada exitosamente')
+            api_response_dict, status_code = APIResponse.success(
+                message='Sesión cerrada exitosamente',
+                data={'should_clear_auth': True}
+            )
             resp = jsonify(api_response_dict)
             unset_jwt_cookies(resp)
             resp.status_code = status_code
