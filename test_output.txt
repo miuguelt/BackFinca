@@ -1,0 +1,35 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\Miguel\Documents\Flask Projects\BackFinca
+plugins: anyio-4.10.0, mock-3.14.0
+collected 3 items
+
+test_field_animals_endpoint.py ...                                       [100%]
+
+============================== warnings summary ===============================
+..\..\..\AppData\Roaming\Python\Python313\site-packages\flask_restx\api.py:19
+..\..\..\AppData\Roaming\Python\Python313\site-packages\flask_restx\api.py:19
+  C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\flask_restx\api.py:19: DeprecationWarning: jsonschema.RefResolver is deprecated as of v4.18.0, in favor of the https://github.com/python-jsonschema/referencing library, which provides more compliant referencing behavior as well as more flexible APIs for customization. A future release will remove RefResolver. Please file a feature request (on referencing) if you are missing an API for the kind of customization you need.
+    from jsonschema import RefResolver
+
+test_field_animals_endpoint.py::test_get_animals_in_field
+test_field_animals_endpoint.py::test_get_animals_in_field
+test_field_animals_endpoint.py::test_get_animals_in_empty_field
+test_field_animals_endpoint.py::test_get_animals_in_empty_field
+test_field_animals_endpoint.py::test_get_animals_in_nonexistent_field
+test_field_animals_endpoint.py::test_get_animals_in_nonexistent_field
+  C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\flask_caching\__init__.py:145: DeprecationWarning: Using the initialization functions in flask_caching.backend is deprecated.  Use the a full path to backend classes directly.
+    self._set_cache(app, config)
+
+test_field_animals_endpoint.py: 18 warnings
+  C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\sql\schema.py:3624: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore
+
+test_field_animals_endpoint.py::test_get_animals_in_field
+test_field_animals_endpoint.py::test_get_animals_in_empty_field
+test_field_animals_endpoint.py::test_get_animals_in_nonexistent_field
+  C:\Users\Miguel\Documents\Flask Projects\BackFinca\app\namespaces\fields_namespace.py:25: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    field = Fields.query.get(id)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 3 passed, 29 warnings in 27.10s =======================
