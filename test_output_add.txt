@@ -1,0 +1,701 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\Miguel\Documents\Flask Projects\BackFinca
+plugins: anyio-4.10.0, mock-3.14.0
+collected 3 items
+
+test_add_animal_to_field.py FFF                                          [100%]
+
+================================== FAILURES ===================================
+______________________ test_add_animal_to_field_success _______________________
+
+client = <FlaskClient <Flask 'app'>>
+auth_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc2NTMxMzU2MSwianRpIjoiYWF...yNS0xMi0wOVQyMDo1Mjo0MS40MTQ5MDcrMDA6MDAiLCJzZXJ2ZXJfZW52IjoidGVzdGluZyJ9.czndA7imLmJsi3N7lpllwpiTRmJIK0i_nf8oEQb0xnw'}
+
+    def test_add_animal_to_field_success(client, auth_headers):
+        # Setup
+        species = Species(name="Bovino")
+        db.session.add(species)
+        db.session.commit()
+        breed = Breeds(name="Brahman", species_id=species.id)
+        db.session.add(breed)
+        db.session.commit()
+        field = Fields(name="Field A", area="10", state="Activo")
+        db.session.add(field)
+        db.session.commit()
+        animal = Animals(record="A001", sex=Sex.Hembra, weight=300, birth_date=date.today(), breeds_id=breed.id)
+        db.session.add(animal)
+        db.session.commit()
+    
+        # Test
+        payload = {
+            "field_id": field.id,
+            "animal_id": animal.id,
+            "assignment_date": date.today().isoformat(),
+            "notes": "Initial assignment"
+        }
+        response = client.post('/api/v1/animal-fields', json=payload, headers=auth_headers)
+    
+>       assert response.status_code == 201
+E       assert 400 == 201
+E        +  where 400 = <WrapperTestResponse streamed [400 BAD REQUEST]>.status_code
+
+test_add_animal_to_field.py:56: AssertionError
+---------------------------- Captured stdout setup ----------------------------
+2025-12-09 15:52:31,819 - [INFO] - app - configure_logging:84 - Sistema de logging configurado exitosamente
+2025-12-09 15:52:31,820 - [INFO] - app - create_app:209 - Initializing Flask app...
+2025-12-09 15:52:31,820 - [DEBUG] - app - create_app:210 - Using configuration: testing
+2025-12-09 15:52:36,130 - [WARNING] - app - create_app:241 - Redis no disponible, aplicando fallback a SimpleCache: Error 10061 connecting to localhost:6379. No se puede establecer una conexi├│n ya que el equipo de destino deneg├│ expresamente dicha conexi├│n.
+2025-12-09 15:52:36,131 - [INFO] - app - create_app:243 - SimpleCache inicializado como fallback
+2025-12-09 15:52:36,137 - [INFO] - app.utils.db_optimization - configure_connection_pool:61 - Connection pooling configurado: pool_size=20, max_overflow=30
+2025-12-09 15:52:36,138 - [INFO] - app.utils.db_optimization - configure_mysql_optimizations:97 - Skipping MySQL optimizations for non-MySQL database URI
+2025-12-09 15:52:36,138 - [INFO] - app.utils.db_optimization - init_db_optimizations:287 - Optimizaciones de base de datos inicializadas
+2025-12-09 15:52:36,138 - [INFO] - app - create_app:252 - Database optimizations initialized
+2025-12-09 15:52:36,141 - [INFO] - app - init_cors:132 - CORS habilitado. Or├¡genes permitidos (solo .env): []
+2025-12-09 15:52:36,141 - [INFO] - app - init_cors:133 - CORS detalles -> supports_credentials: True, methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'], allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Cache-Control', 'X-File-Name', 'X-CSRF-Token', 'X-CSRF-TOKEN', 'X-App-Version', 'X-Client-Timezone', 'X-Client-Locale', 'ngrok-skip-browser-warning'], expose_headers: ['Content-Range', 'X-Content-Range', 'X-Total-Count', 'Authorization'], max_age: 86400
+2025-12-09 15:52:36,141 - [INFO] - app - init_cors:146 - JWT cookies -> domain: None, secure: False, samesite: None, token_location: ['headers']
+2025-12-09 15:52:40,215 - [WARNING] - app - init_rate_limiter:96 - Rate limiter Redis 'redis://localhost:6379/2' fallo: Error 10061 connecting to localhost:6379. No se puede establecer una conexi├│n ya que el equipo de destino deneg├│ expresamente dicha conexi├│n.. Reintentando con memory://
+2025-12-09 15:52:40,216 - [INFO] - app - init_rate_limiter:105 - Rate limiter inicializado con storage: memory:// (fallback)
+2025-12-09 15:52:40,217 - [INFO] - app - create_app:272 - Rate limiting habilitado por configuraci├│n
+2025-12-09 15:52:40,217 - [INFO] - app - create_app:283 - Middlewares de optimizaci├│n y seguridad inicializados
+2025-12-09 15:52:40,718 - [INFO] - app - seed_admin_user:32 - Skipping seed admin: tabla user no existe a├║n
+2025-12-09 15:52:40,739 - [INFO] - app - warmup_initial_caches:219 - Warmup de cach├® disparado en segundo plano (async=True)
+2025-12-09 15:52:40,754 - [INFO] - app - create_app:310 - Warmup de cach├® inicial ejecutado
+2025-12-09 15:52:40,778 - [INFO] - app - create_app:456 - Flask app initialization complete.
+2025-12-09 15:52:41,006 - [WARNING] - app - _warm_model_list:155 - Fallo warmup para Animals: (sqlite3.OperationalError) no such table: animals
+[SQL: SELECT animals.id AS animals_id, animals.sex AS animals_sex, animals.birth_date AS animals_birth_date, animals.weight AS animals_weight, animals.record AS animals_record, animals.status AS animals_status, animals.breeds_id AS animals_breeds_id, animals."idFather" AS "animals_idFather", animals."idMother" AS "animals_idMother", animals.created_at AS animals_created_at, animals.updated_at AS animals_updated_at 
+FROM animals ORDER BY animals.updated_at DESC
+ LIMIT ? OFFSET ?]
+[parameters: (10, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Traceback (most recent call last):
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: animals
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Miguel\Documents\Flask Projects\BackFinca\app\utils\bootstrap.py", line 109, in _warm_model_list
+    query = model_cls.get_namespace_query(
+        filters=filters,
+    ...<6 lines>...
+        include_relations=include_rel,
+    )
+  File "C:\Users\Miguel\Documents\Flask Projects\BackFinca\app\models\base_model.py", line 599, in get_namespace_query
+    query = query.paginate(page=page, per_page=per_page, error_out=False)
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\flask_sqlalchemy\query.py", line 98, in paginate
+    return QueryPagination(
+        query=self,
+    ...<4 lines>...
+        count=count,
+    )
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\flask_sqlalchemy\pagination.py", line 72, in __init__
+    items = self._query_items()
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\flask_sqlalchemy\pagination.py", line 358, in _query_items
+    out = query.limit(self.per_page).offset(self._query_offset).all()
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\query.py", line 2704, in all
+    return self._iter().all()  # type: ignore
+           ~~~~~~~~~~^^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\query.py", line 2857, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+        params,
+        ^^^^^^^
+        execution_options={"_sa_orm_load_options": self.load_options},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py", line 2365, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py", line 2251, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: animals
+[SQL: SELECT animals.id AS animals_id, animals.sex AS animals_sex, animals.birth_date AS animals_birth_date, animals.weight AS animals_weight, animals.record AS animals_record, animals.status AS animals_status, animals.breeds_id AS animals_breeds_id, animals."idFather" AS "animals_idFather", animals."idMother" AS "animals_idMother", animals.created_at AS animals_created_at, animals.updated_at AS animals_updated_at 
+FROM animals ORDER BY animals.updated_at DESC
+ LIMIT ? OFFSET ?]
+[parameters: (10, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+---------------------------- Captured stdout call -----------------------------
+2025-12-09 15:52:41,514 - [INFO] - app.utils.namespace_helpers - post:840 - Creating AnimalFields with payload: {'animal_id': 1, 'assignment_date': '2025-12-09', 'field_id': 1, 'notes': 'Initial assignment'}
+2025-12-09 15:52:41,515 - [DEBUG] - app.utils.namespace_helpers - post:871 - Creating AnimalFields instance...
+2025-12-09 15:52:41,542 - [DEBUG] - app.utils.namespace_helpers - post:873 - Instance created with ID: 1
+2025-12-09 15:52:41,543 - [DEBUG] - app.utils.namespace_helpers - post:877 - Serializing AnimalFields instance...
+2025-12-09 15:52:41,543 - [INFO] - app.utils.namespace_helpers - post:880 - AnimalFields created successfully with ID: 1
+2025-12-09 15:52:41,543 - [ERROR] - app.utils.namespace_helpers - post:920 - Error creando AnimalFields: name 'record_id' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Miguel\Documents\Flask Projects\BackFinca\app\utils\namespace_helpers.py", line 895, in post
+    _detail_cache_clear(model_class.__name__, record_id)
+                                              ^^^^^^^^^
+NameError: name 'record_id' is not defined
+2025-12-09 15:52:41,550 - [ERROR] - app.utils.response_handler - error:97 - Error response: 400 - Error interno del servidor (Trace ID: f44e6033-6d1b-4f00-a3b7-b72932065d68)
+2025-12-09 15:52:41,551 - [DEBUG] - app - _add_cors_headers_and_log:120 - Response -> path: /api/v1/animal-fields, status: 400 BAD REQUEST, origin: None, A-C-Allow-Origin: None
+------------------------------ Captured log call ------------------------------
+INFO     app.utils.namespace_helpers:namespace_helpers.py:840 Creating AnimalFields with payload: {'animal_id': 1, 'assignment_date': '2025-12-09', 'field_id': 1, 'notes': 'Initial assignment'}
+DEBUG    app.utils.namespace_helpers:namespace_helpers.py:871 Creating AnimalFields instance...
+DEBUG    app.utils.namespace_helpers:namespace_helpers.py:873 Instance created with ID: 1
+DEBUG    app.utils.namespace_helpers:namespace_helpers.py:877 Serializing AnimalFields instance...
+INFO     app.utils.namespace_helpers:namespace_helpers.py:880 AnimalFields created successfully with ID: 1
+ERROR    app.utils.namespace_helpers:namespace_helpers.py:920 Error creando AnimalFields: name 'record_id' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Miguel\Documents\Flask Projects\BackFinca\app\utils\namespace_helpers.py", line 895, in post
+    _detail_cache_clear(model_class.__name__, record_id)
+                                              ^^^^^^^^^
+NameError: name 'record_id' is not defined
+ERROR    app.utils.response_handler:response_handler.py:97 Error response: 400 - Error interno del servidor (Trace ID: f44e6033-6d1b-4f00-a3b7-b72932065d68)
+DEBUG    app:cors_setup.py:120 Response -> path: /api/v1/animal-fields, status: 400 BAD REQUEST, origin: None, A-C-Allow-Origin: None
+______________________ test_add_animal_to_field_conflict ______________________
+
+client = <FlaskClient <Flask 'app'>>
+auth_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc2NTMxMzU3NiwianRpIjoiNTQ...yNS0xMi0wOVQyMDo1Mjo1Ni4wODIwOTArMDA6MDAiLCJzZXJ2ZXJfZW52IjoidGVzdGluZyJ9.ot4ozNgMlu-EaJKHi3XAqgmTL8tkuuYE5DitLRHgh3E'}
+
+    def test_add_animal_to_field_conflict(client, auth_headers):
+        # Setup
+        species = Species(name="Bovino")
+        db.session.add(species)
+        db.session.commit()
+        breed = Breeds(name="Brahman", species_id=species.id)
+        db.session.add(breed)
+        db.session.commit()
+        field_a = Fields(name="Field A", area="10", state="Activo")
+        field_b = Fields(name="Field B", area="10", state="Activo")
+        db.session.add_all([field_a, field_b])
+        db.session.commit()
+        animal = Animals(record="A001", sex=Sex.Hembra, weight=300, birth_date=date.today(), breeds_id=breed.id)
+        db.session.add(animal)
+        db.session.commit()
+    
+        # Initial Assignment (directly to DB for setup)
+        af = AnimalFields(animal_id=animal.id, field_id=field_a.id, assignment_date=date.today())
+        db.session.add(af)
+        db.session.commit()
+    
+        # Test Conflict
+        payload = {
+            "field_id": field_b.id,
+            "animal_id": animal.id,
+            "assignment_date": date.today().isoformat(),
+            "notes": "Try valid assignment"
+        }
+        response = client.post('/api/v1/animal-fields', json=payload, headers=auth_headers)
+    
+>       assert response.status_code == 409
+E       assert 400 == 409
+E        +  where 400 = <WrapperTestResponse streamed [400 BAD REQUEST]>.status_code
+
+test_add_animal_to_field.py:91: AssertionError
+---------------------------- Captured stdout setup ----------------------------
+2025-12-09 15:52:43,686 - [DEBUG] - app.utils.enum_registry - register:40 - Enum registrado para JSON: app.models.user.Role
+2025-12-09 15:52:43,687 - [DEBUG] - app.utils.enum_registry - register:40 - Enum registrado para JSON: app.models.animals.Sex
+2025-12-09 15:52:43,687 - [DEBUG] - app.utils.enum_registry - register:40 - Enum registrado para JSON: app.models.animals.AnimalStatus
+2025-12-09 15:52:43,687 - [DEBUG] - app.utils.enum_registry - register:40 - Enum registrado para JSON: app.models.vaccines.VaccineType
+2025-12-09 15:52:43,687 - [DEBUG] - app.utils.enum_registry - register:40 - Enum registrado para JSON: app.models.control.HealthStatus
+2025-12-09 15:52:43,687 - [DEBUG] - app.utils.enum_registry - register:40 - Enum registrado para JSON: app.models.fields.LandStatus
+2025-12-09 15:52:43,687 - [INFO] - app.utils.enum_registry - register_application_enums:160 - Se registraron 12 enums para serializaci├│n JSON
+2025-12-09 15:52:43,688 - [INFO] - app - configure_logging:84 - Sistema de logging configurado exitosamente
+2025-12-09 15:52:43,688 - [INFO] - app - create_app:209 - Initializing Flask app...
+2025-12-09 15:52:43,688 - [DEBUG] - app - create_app:210 - Using configuration: testing
+2025-12-09 15:52:47,764 - [WARNING] - app - create_app:241 - Redis no disponible, aplicando fallback a SimpleCache: Error 10061 connecting to localhost:6379. No se puede establecer una conexi├│n ya que el equipo de destino deneg├│ expresamente dicha conexi├│n.
+2025-12-09 15:52:47,766 - [INFO] - app - create_app:243 - SimpleCache inicializado como fallback
+2025-12-09 15:52:47,766 - [INFO] - app.utils.db_optimization - configure_connection_pool:61 - Connection pooling configurado: pool_size=20, max_overflow=30
+2025-12-09 15:52:47,766 - [INFO] - app.utils.db_optimization - configure_mysql_optimizations:97 - Skipping MySQL optimizations for non-MySQL database URI
+2025-12-09 15:52:47,767 - [INFO] - app.utils.db_optimization - init_db_optimizations:287 - Optimizaciones de base de datos inicializadas
+2025-12-09 15:52:47,767 - [INFO] - app - create_app:252 - Database optimizations initialized
+2025-12-09 15:52:47,767 - [INFO] - app - init_cors:132 - CORS habilitado. Or├¡genes permitidos (solo .env): []
+2025-12-09 15:52:47,767 - [INFO] - app - init_cors:133 - CORS detalles -> supports_credentials: True, methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'], allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Cache-Control', 'X-File-Name', 'X-CSRF-Token', 'X-CSRF-TOKEN', 'X-App-Version', 'X-Client-Timezone', 'X-Client-Locale', 'ngrok-skip-browser-warning'], expose_headers: ['Content-Range', 'X-Content-Range', 'X-Total-Count', 'Authorization'], max_age: 86400
+2025-12-09 15:52:47,767 - [INFO] - app - init_cors:146 - JWT cookies -> domain: None, secure: False, samesite: None, token_location: ['headers']
+2025-12-09 15:52:51,831 - [WARNING] - app - init_rate_limiter:96 - Rate limiter Redis 'redis://localhost:6379/2' fallo: Error 10061 connecting to localhost:6379. No se puede establecer una conexi├│n ya que el equipo de destino deneg├│ expresamente dicha conexi├│n.. Reintentando con memory://
+2025-12-09 15:52:52,273 - [INFO] - app - init_rate_limiter:105 - Rate limiter inicializado con storage: memory:// (fallback)
+2025-12-09 15:52:52,274 - [INFO] - app - create_app:272 - Rate limiting habilitado por configuraci├│n
+2025-12-09 15:52:52,274 - [INFO] - app - create_app:283 - Middlewares de optimizaci├│n y seguridad inicializados
+2025-12-09 15:52:54,527 - [INFO] - app - seed_admin_user:32 - Skipping seed admin: tabla user no existe a├║n
+2025-12-09 15:52:54,687 - [INFO] - app - warmup_initial_caches:219 - Warmup de cach├® disparado en segundo plano (async=True)
+2025-12-09 15:52:54,693 - [INFO] - app - create_app:310 - Warmup de cach├® inicial ejecutado
+2025-12-09 15:52:54,703 - [INFO] - app - create_app:456 - Flask app initialization complete.
+2025-12-09 15:52:54,703 - [WARNING] - app - _warm_model_list:155 - Fallo warmup para Animals: (sqlite3.OperationalError) no such table: animals
+[SQL: SELECT animals.id AS animals_id, animals.sex AS animals_sex, animals.birth_date AS animals_birth_date, animals.weight AS animals_weight, animals.record AS animals_record, animals.status AS animals_status, animals.breeds_id AS animals_breeds_id, animals."idFather" AS "animals_idFather", animals."idMother" AS "animals_idMother", animals.created_at AS animals_created_at, animals.updated_at AS animals_updated_at 
+FROM animals ORDER BY animals.updated_at DESC
+ LIMIT ? OFFSET ?]
+[parameters: (10, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Traceback (most recent call last):
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: animals
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Miguel\Documents\Flask Projects\BackFinca\app\utils\bootstrap.py", line 109, in _warm_model_list
+    query = model_cls.get_namespace_query(
+        filters=filters,
+    ...<6 lines>...
+        include_relations=include_rel,
+    )
+  File "C:\Users\Miguel\Documents\Flask Projects\BackFinca\app\models\base_model.py", line 599, in get_namespace_query
+    query = query.paginate(page=page, per_page=per_page, error_out=False)
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\flask_sqlalchemy\query.py", line 98, in paginate
+    return QueryPagination(
+        query=self,
+    ...<4 lines>...
+        count=count,
+    )
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\flask_sqlalchemy\pagination.py", line 72, in __init__
+    items = self._query_items()
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\flask_sqlalchemy\pagination.py", line 358, in _query_items
+    out = query.limit(self.per_page).offset(self._query_offset).all()
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\query.py", line 2704, in all
+    return self._iter().all()  # type: ignore
+           ~~~~~~~~~~^^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\query.py", line 2857, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+        params,
+        ^^^^^^^
+        execution_options={"_sa_orm_load_options": self.load_options},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py", line 2365, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py", line 2251, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: animals
+[SQL: SELECT animals.id AS animals_id, animals.sex AS animals_sex, animals.birth_date AS animals_birth_date, animals.weight AS animals_weight, animals.record AS animals_record, animals.status AS animals_status, animals.breeds_id AS animals_breeds_id, animals."idFather" AS "animals_idFather", animals."idMother" AS "animals_idMother", animals.created_at AS animals_created_at, animals.updated_at AS animals_updated_at 
+FROM animals ORDER BY animals.updated_at DESC
+ LIMIT ? OFFSET ?]
+[parameters: (10, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+----------------------------- Captured log setup ------------------------------
+DEBUG    app.utils.enum_registry:enum_registry.py:40 Enum registrado para JSON: app.models.user.Role
+DEBUG    app.utils.enum_registry:enum_registry.py:40 Enum registrado para JSON: app.models.animals.Sex
+DEBUG    app.utils.enum_registry:enum_registry.py:40 Enum registrado para JSON: app.models.animals.AnimalStatus
+DEBUG    app.utils.enum_registry:enum_registry.py:40 Enum registrado para JSON: app.models.vaccines.VaccineType
+DEBUG    app.utils.enum_registry:enum_registry.py:40 Enum registrado para JSON: app.models.control.HealthStatus
+DEBUG    app.utils.enum_registry:enum_registry.py:40 Enum registrado para JSON: app.models.fields.LandStatus
+INFO     app.utils.enum_registry:enum_registry.py:160 Se registraron 12 enums para serializaci├│n JSON
+---------------------------- Captured stdout call -----------------------------
+2025-12-09 15:53:00,419 - [INFO] - app.utils.namespace_helpers - post:840 - Creating AnimalFields with payload: {'animal_id': 1, 'assignment_date': '2025-12-09', 'field_id': 2, 'notes': 'Try valid assignment'}
+2025-12-09 15:53:00,420 - [DEBUG] - app.utils.namespace_helpers - post:871 - Creating AnimalFields instance...
+2025-12-09 15:53:00,444 - [DEBUG] - app.utils.namespace_helpers - post:873 - Instance created with ID: 2
+2025-12-09 15:53:00,445 - [DEBUG] - app.utils.namespace_helpers - post:877 - Serializing AnimalFields instance...
+2025-12-09 15:53:00,445 - [INFO] - app.utils.namespace_helpers - post:880 - AnimalFields created successfully with ID: 2
+2025-12-09 15:53:00,446 - [ERROR] - app.utils.namespace_helpers - post:920 - Error creando AnimalFields: name 'record_id' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Miguel\Documents\Flask Projects\BackFinca\app\utils\namespace_helpers.py", line 895, in post
+    _detail_cache_clear(model_class.__name__, record_id)
+                                              ^^^^^^^^^
+NameError: name 'record_id' is not defined
+2025-12-09 15:53:00,449 - [ERROR] - app.utils.response_handler - error:97 - Error response: 400 - Error interno del servidor (Trace ID: 6bd6e902-ba2c-4ef0-a5b8-d772f19840a7)
+2025-12-09 15:53:00,450 - [DEBUG] - app - _add_cors_headers_and_log:120 - Response -> path: /api/v1/animal-fields, status: 400 BAD REQUEST, origin: None, A-C-Allow-Origin: None
+------------------------------ Captured log call ------------------------------
+INFO     app.utils.namespace_helpers:namespace_helpers.py:840 Creating AnimalFields with payload: {'animal_id': 1, 'assignment_date': '2025-12-09', 'field_id': 2, 'notes': 'Try valid assignment'}
+DEBUG    app.utils.namespace_helpers:namespace_helpers.py:871 Creating AnimalFields instance...
+DEBUG    app.utils.namespace_helpers:namespace_helpers.py:873 Instance created with ID: 2
+DEBUG    app.utils.namespace_helpers:namespace_helpers.py:877 Serializing AnimalFields instance...
+INFO     app.utils.namespace_helpers:namespace_helpers.py:880 AnimalFields created successfully with ID: 2
+ERROR    app.utils.namespace_helpers:namespace_helpers.py:920 Error creando AnimalFields: name 'record_id' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Miguel\Documents\Flask Projects\BackFinca\app\utils\namespace_helpers.py", line 895, in post
+    _detail_cache_clear(model_class.__name__, record_id)
+                                              ^^^^^^^^^
+NameError: name 'record_id' is not defined
+ERROR    app.utils.response_handler:response_handler.py:97 Error response: 400 - Error interno del servidor (Trace ID: 6bd6e902-ba2c-4ef0-a5b8-d772f19840a7)
+DEBUG    app:cors_setup.py:120 Response -> path: /api/v1/animal-fields, status: 400 BAD REQUEST, origin: None, A-C-Allow-Origin: None
+_____________________ test_add_animal_to_field_not_found ______________________
+
+client = <FlaskClient <Flask 'app'>>
+auth_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc2NTMxMzU5MSwianRpIjoiMjV...yNS0xMi0wOVQyMDo1MzoxMS42NDM4MzIrMDA6MDAiLCJzZXJ2ZXJfZW52IjoidGVzdGluZyJ9.GibmXzWfpGmLZnOW-Hlan9Chk2BGfeMa43r87UnUbqk'}
+
+    def test_add_animal_to_field_not_found(client, auth_headers):
+        payload = {
+            "field_id": 999,
+            "animal_id": 999,
+            "assignment_date": date.today().isoformat()
+        }
+        response = client.post('/api/v1/animal-fields', json=payload, headers=auth_headers)
+>       assert response.status_code == 404
+E       assert 400 == 404
+E        +  where 400 = <WrapperTestResponse streamed [400 BAD REQUEST]>.status_code
+
+test_add_animal_to_field.py:104: AssertionError
+---------------------------- Captured stdout setup ----------------------------
+2025-12-09 15:53:02,306 - [DEBUG] - app.utils.enum_registry - register:40 - Enum registrado para JSON: app.models.user.Role
+2025-12-09 15:53:02,307 - [DEBUG] - app.utils.enum_registry - register:40 - Enum registrado para JSON: app.models.animals.Sex
+2025-12-09 15:53:02,308 - [DEBUG] - app.utils.enum_registry - register:40 - Enum registrado para JSON: app.models.animals.AnimalStatus
+2025-12-09 15:53:02,308 - [DEBUG] - app.utils.enum_registry - register:40 - Enum registrado para JSON: app.models.vaccines.VaccineType
+2025-12-09 15:53:02,308 - [DEBUG] - app.utils.enum_registry - register:40 - Enum registrado para JSON: app.models.control.HealthStatus
+2025-12-09 15:53:02,308 - [DEBUG] - app.utils.enum_registry - register:40 - Enum registrado para JSON: app.models.fields.LandStatus
+2025-12-09 15:53:02,308 - [INFO] - app.utils.enum_registry - register_application_enums:160 - Se registraron 12 enums para serializaci├│n JSON
+2025-12-09 15:53:02,312 - [INFO] - app - configure_logging:84 - Sistema de logging configurado exitosamente
+2025-12-09 15:53:02,312 - [INFO] - app - create_app:209 - Initializing Flask app...
+2025-12-09 15:53:02,312 - [DEBUG] - app - create_app:210 - Using configuration: testing
+2025-12-09 15:53:06,577 - [WARNING] - app - create_app:241 - Redis no disponible, aplicando fallback a SimpleCache: Error 10061 connecting to localhost:6379. No se puede establecer una conexi├│n ya que el equipo de destino deneg├│ expresamente dicha conexi├│n.
+2025-12-09 15:53:06,579 - [INFO] - app - create_app:243 - SimpleCache inicializado como fallback
+2025-12-09 15:53:06,579 - [INFO] - app.utils.db_optimization - configure_connection_pool:61 - Connection pooling configurado: pool_size=20, max_overflow=30
+2025-12-09 15:53:06,580 - [INFO] - app.utils.db_optimization - configure_mysql_optimizations:97 - Skipping MySQL optimizations for non-MySQL database URI
+2025-12-09 15:53:06,580 - [INFO] - app.utils.db_optimization - init_db_optimizations:287 - Optimizaciones de base de datos inicializadas
+2025-12-09 15:53:06,580 - [INFO] - app - create_app:252 - Database optimizations initialized
+2025-12-09 15:53:06,580 - [INFO] - app - init_cors:132 - CORS habilitado. Or├¡genes permitidos (solo .env): []
+2025-12-09 15:53:06,581 - [INFO] - app - init_cors:133 - CORS detalles -> supports_credentials: True, methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'], allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Cache-Control', 'X-File-Name', 'X-CSRF-Token', 'X-CSRF-TOKEN', 'X-App-Version', 'X-Client-Timezone', 'X-Client-Locale', 'ngrok-skip-browser-warning'], expose_headers: ['Content-Range', 'X-Content-Range', 'X-Total-Count', 'Authorization'], max_age: 86400
+2025-12-09 15:53:06,581 - [INFO] - app - init_cors:146 - JWT cookies -> domain: None, secure: False, samesite: None, token_location: ['headers']
+2025-12-09 15:53:10,662 - [WARNING] - app - init_rate_limiter:96 - Rate limiter Redis 'redis://localhost:6379/2' fallo: Error 10061 connecting to localhost:6379. No se puede establecer una conexi├│n ya que el equipo de destino deneg├│ expresamente dicha conexi├│n.. Reintentando con memory://
+2025-12-09 15:53:10,665 - [INFO] - app - init_rate_limiter:105 - Rate limiter inicializado con storage: memory:// (fallback)
+2025-12-09 15:53:10,665 - [INFO] - app - create_app:272 - Rate limiting habilitado por configuraci├│n
+2025-12-09 15:53:10,665 - [INFO] - app - create_app:283 - Middlewares de optimizaci├│n y seguridad inicializados
+2025-12-09 15:53:11,084 - [INFO] - app - seed_admin_user:32 - Skipping seed admin: tabla user no existe a├║n
+2025-12-09 15:53:11,145 - [INFO] - app - warmup_initial_caches:219 - Warmup de cach├® disparado en segundo plano (async=True)
+2025-12-09 15:53:11,150 - [INFO] - app - create_app:310 - Warmup de cach├® inicial ejecutado
+2025-12-09 15:53:11,150 - [WARNING] - app - _warm_model_list:155 - Fallo warmup para Animals: (sqlite3.OperationalError) no such table: animals
+[SQL: SELECT animals.id AS animals_id, animals.sex AS animals_sex, animals.birth_date AS animals_birth_date, animals.weight AS animals_weight, animals.record AS animals_record, animals.status AS animals_status, animals.breeds_id AS animals_breeds_id, animals."idFather" AS "animals_idFather", animals."idMother" AS "animals_idMother", animals.created_at AS animals_created_at, animals.updated_at AS animals_updated_at 
+FROM animals ORDER BY animals.updated_at DESC
+ LIMIT ? OFFSET ?]
+[parameters: (10, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Traceback (most recent call last):
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: animals
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Miguel\Documents\Flask Projects\BackFinca\app\utils\bootstrap.py", line 109, in _warm_model_list
+    query = model_cls.get_namespace_query(
+        filters=filters,
+    ...<6 lines>...
+        include_relations=include_rel,
+    )
+  File "C:\Users\Miguel\Documents\Flask Projects\BackFinca\app\models\base_model.py", line 599, in get_namespace_query
+    query = query.paginate(page=page, per_page=per_page, error_out=False)
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\flask_sqlalchemy\query.py", line 98, in paginate
+    return QueryPagination(
+        query=self,
+    ...<4 lines>...
+        count=count,
+    )
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\flask_sqlalchemy\pagination.py", line 72, in __init__
+    items = self._query_items()
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\flask_sqlalchemy\pagination.py", line 358, in _query_items
+    out = query.limit(self.per_page).offset(self._query_offset).all()
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\query.py", line 2704, in all
+    return self._iter().all()  # type: ignore
+           ~~~~~~~~~~^^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\query.py", line 2857, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+        params,
+        ^^^^^^^
+        execution_options={"_sa_orm_load_options": self.load_options},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py", line 2365, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py", line 2251, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: animals
+[SQL: SELECT animals.id AS animals_id, animals.sex AS animals_sex, animals.birth_date AS animals_birth_date, animals.weight AS animals_weight, animals.record AS animals_record, animals.status AS animals_status, animals.breeds_id AS animals_breeds_id, animals."idFather" AS "animals_idFather", animals."idMother" AS "animals_idMother", animals.created_at AS animals_created_at, animals.updated_at AS animals_updated_at 
+FROM animals ORDER BY animals.updated_at DESC
+ LIMIT ? OFFSET ?]
+[parameters: (10, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-12-09 15:53:11,159 - [INFO] - app - create_app:456 - Flask app initialization complete.
+----------------------------- Captured log setup ------------------------------
+DEBUG    app.utils.enum_registry:enum_registry.py:40 Enum registrado para JSON: app.models.user.Role
+DEBUG    app.utils.enum_registry:enum_registry.py:40 Enum registrado para JSON: app.models.animals.Sex
+DEBUG    app.utils.enum_registry:enum_registry.py:40 Enum registrado para JSON: app.models.animals.AnimalStatus
+DEBUG    app.utils.enum_registry:enum_registry.py:40 Enum registrado para JSON: app.models.vaccines.VaccineType
+DEBUG    app.utils.enum_registry:enum_registry.py:40 Enum registrado para JSON: app.models.control.HealthStatus
+DEBUG    app.utils.enum_registry:enum_registry.py:40 Enum registrado para JSON: app.models.fields.LandStatus
+INFO     app.utils.enum_registry:enum_registry.py:160 Se registraron 12 enums para serializaci├│n JSON
+---------------------------- Captured stdout call -----------------------------
+2025-12-09 15:53:11,769 - [INFO] - app.utils.namespace_helpers - post:840 - Creating AnimalFields with payload: {'animal_id': 999, 'assignment_date': '2025-12-09', 'field_id': 999}
+2025-12-09 15:53:11,770 - [DEBUG] - app.utils.namespace_helpers - post:871 - Creating AnimalFields instance...
+2025-12-09 15:53:12,044 - [DEBUG] - app.utils.namespace_helpers - post:873 - Instance created with ID: 1
+2025-12-09 15:53:12,044 - [DEBUG] - app.utils.namespace_helpers - post:877 - Serializing AnimalFields instance...
+2025-12-09 15:53:12,047 - [INFO] - app.utils.namespace_helpers - post:880 - AnimalFields created successfully with ID: 1
+2025-12-09 15:53:12,048 - [ERROR] - app.utils.namespace_helpers - post:920 - Error creando AnimalFields: name 'record_id' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Miguel\Documents\Flask Projects\BackFinca\app\utils\namespace_helpers.py", line 895, in post
+    _detail_cache_clear(model_class.__name__, record_id)
+                                              ^^^^^^^^^
+NameError: name 'record_id' is not defined
+2025-12-09 15:53:12,051 - [ERROR] - app.utils.response_handler - error:97 - Error response: 400 - Error interno del servidor (Trace ID: 3c2ff746-5fba-44d0-87ee-07132cda823c)
+2025-12-09 15:53:12,052 - [DEBUG] - app - _add_cors_headers_and_log:120 - Response -> path: /api/v1/animal-fields, status: 400 BAD REQUEST, origin: None, A-C-Allow-Origin: None
+------------------------------ Captured log call ------------------------------
+INFO     app.utils.namespace_helpers:namespace_helpers.py:840 Creating AnimalFields with payload: {'animal_id': 999, 'assignment_date': '2025-12-09', 'field_id': 999}
+DEBUG    app.utils.namespace_helpers:namespace_helpers.py:871 Creating AnimalFields instance...
+DEBUG    app.utils.namespace_helpers:namespace_helpers.py:873 Instance created with ID: 1
+DEBUG    app.utils.namespace_helpers:namespace_helpers.py:877 Serializing AnimalFields instance...
+INFO     app.utils.namespace_helpers:namespace_helpers.py:880 AnimalFields created successfully with ID: 1
+ERROR    app.utils.namespace_helpers:namespace_helpers.py:920 Error creando AnimalFields: name 'record_id' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Miguel\Documents\Flask Projects\BackFinca\app\utils\namespace_helpers.py", line 895, in post
+    _detail_cache_clear(model_class.__name__, record_id)
+                                              ^^^^^^^^^
+NameError: name 'record_id' is not defined
+ERROR    app.utils.response_handler:response_handler.py:97 Error response: 400 - Error interno del servidor (Trace ID: 3c2ff746-5fba-44d0-87ee-07132cda823c)
+DEBUG    app:cors_setup.py:120 Response -> path: /api/v1/animal-fields, status: 400 BAD REQUEST, origin: None, A-C-Allow-Origin: None
+============================== warnings summary ===============================
+..\..\..\AppData\Roaming\Python\Python313\site-packages\flask_restx\api.py:19
+..\..\..\AppData\Roaming\Python\Python313\site-packages\flask_restx\api.py:19
+  C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\flask_restx\api.py:19: DeprecationWarning: jsonschema.RefResolver is deprecated as of v4.18.0, in favor of the https://github.com/python-jsonschema/referencing library, which provides more compliant referencing behavior as well as more flexible APIs for customization. A future release will remove RefResolver. Please file a feature request (on referencing) if you are missing an API for the kind of customization you need.
+    from jsonschema import RefResolver
+
+test_add_animal_to_field.py::test_add_animal_to_field_success
+test_add_animal_to_field.py::test_add_animal_to_field_success
+test_add_animal_to_field.py::test_add_animal_to_field_conflict
+test_add_animal_to_field.py::test_add_animal_to_field_conflict
+test_add_animal_to_field.py::test_add_animal_to_field_not_found
+test_add_animal_to_field.py::test_add_animal_to_field_not_found
+  C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\flask_caching\__init__.py:145: DeprecationWarning: Using the initialization functions in flask_caching.backend is deprecated.  Use the a full path to backend classes directly.
+    self._set_cache(app, config)
+
+test_add_animal_to_field.py: 20 warnings
+  C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\sql\schema.py:3624: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore
+
+test_add_animal_to_field.py::test_add_animal_to_field_success
+test_add_animal_to_field.py::test_add_animal_to_field_conflict
+test_add_animal_to_field.py::test_add_animal_to_field_not_found
+  C:\Users\Miguel\Documents\Flask Projects\BackFinca\app\models\base_model.py:759: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    normalized_data['created_at'] = datetime.utcnow()
+
+test_add_animal_to_field.py::test_add_animal_to_field_success
+test_add_animal_to_field.py::test_add_animal_to_field_conflict
+test_add_animal_to_field.py::test_add_animal_to_field_not_found
+  C:\Users\Miguel\Documents\Flask Projects\BackFinca\app\models\base_model.py:760: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    normalized_data['updated_at'] = datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED test_add_animal_to_field.py::test_add_animal_to_field_success - assert...
+FAILED test_add_animal_to_field.py::test_add_animal_to_field_conflict - asser...
+FAILED test_add_animal_to_field.py::test_add_animal_to_field_not_found - asse...
+======================= 3 failed, 34 warnings in 43.84s =======================

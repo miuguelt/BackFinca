@@ -29,16 +29,19 @@ model_for_partial_update = animal_fields_ns.model('AnimalFieldPartialUpdate', {
 })
 
 model_for_create = animal_fields_ns.model('AnimalFieldCreate', {
-    'value': fields.String(required=True),
-    'field_id': fields.Integer(required=True),
-    'animal_id': fields.Integer(required=True)
+    'assignment_date': fields.Date(required=True, description='Fecha de asignación (YYYY-MM-DD)'),
+    'field_id': fields.Integer(required=True, description='ID del potrero'),
+    'animal_id': fields.Integer(required=True, description='ID del animal'),
+    'notes': fields.String(description='Notas opcionales')
 })
 
 model_for_list = animal_fields_ns.model('AnimalFieldsList', {
     'id': fields.Integer(readonly=True),
-    'value': fields.String,
     'field_id': fields.Integer,
     'animal_id': fields.Integer,
+    'assignment_date': fields.Date,
+    'removal_date': fields.Date,
+    'notes': fields.String,
     'created_at': fields.DateTime,
     'updated_at': fields.DateTime
 })
@@ -113,6 +116,15 @@ class AnimalFieldsDetail(Resource):
             record = AnimalFields.query.get_or_404(record_id)
             for attr, value in data.items():
                 if hasattr(record, attr):
+                    # Especial manejo para fechas
+                    if attr in ['assignment_date', 'removal_date'] and value:
+                        try:
+                             from datetime import date
+                             if isinstance(value, str):
+                                 value = date.fromisoformat(value)
+                        except ValueError:
+                            return APIResponse.error(f"Formato de fecha inválido para {attr}. Use YYYY-MM-DD", 400)
+
                     setattr(record, attr, value)
             record.updated_at = datetime.utcnow()
             db.session.flush()
@@ -129,8 +141,8 @@ class AnimalFieldsDetail(Resource):
             return APIResponse.error(f'Error al actualizar parcialmente campo de animal: {str(e)}', 400)
 
 # Delegado a create_optimized_namespace (evita duplicar recursos y posibles consultas pesadas)
-# animal_fields_ns.add_resource(AnimalFieldsDetail, '/<int:record_id>')
-# animal_fields_ns.add_resource(AnimalFieldsList, '/')
+animal_fields_ns.add_resource(AnimalFieldsDetail, '/<int:record_id>')
+animal_fields_ns.add_resource(AnimalFieldsList, '/')
 
 class AnimalFieldsList(Resource):
     @animal_fields_ns.doc(security=[{'Bearer': []}])
@@ -145,8 +157,9 @@ class AnimalFieldsList(Resource):
 
             query = AnimalFields.query
             if search:
+                # Búsqueda por notas o ID
                 query = query.filter(
-                    AnimalFields.value.ilike(f'%{search}%')
+                    AnimalFields.notes.ilike(f'%{search}%')
                 )
 
             pagination = query.paginate(page=page, per_page=int(limit), error_out=False)
@@ -161,29 +174,60 @@ class AnimalFieldsList(Resource):
             return APIResponse.error(f'Error al listar campos de animales: {str(e)}', 500)
 
     @animal_fields_ns.doc(security=[{'Bearer': []}])
-    @animal_fields_ns.marshal_with(model_for_create, code=201, description='Campo de animal creado exitosamente')
+    @animal_fields_ns.marshal_with(model_for_list, code=201, description='Campo de animal creado exitosamente')
     @animal_fields_ns.expect(model_for_create, validate=True)
     def post(self):
-        """Crear un nuevo campo de animal"""
+        """Asignar un animal a un potrero"""
         try:
             data = request.get_json()
             field_id = data.get('field_id')
             animal_id = data.get('animal_id')
-            value = data.get('value')
+            assignment_date_str = data.get('assignment_date')
+            notes = data.get('notes')
 
-            if not Fields.query.get(field_id):  # Corregido: Fields en lugar de Field
-                return APIResponse.error('Campo no encontrado', 404)
-            if not Animals.query.get(animal_id):
+            # Validaciones básicas
+            if not Fields.query.get(field_id):
+                return APIResponse.error('Potrero no encontrado', 404)
+            
+            animal = Animals.query.get(animal_id)
+            if not animal:
                 return APIResponse.error('Animal no encontrado', 404)
 
-            existing = AnimalFields.query.filter_by(field_id=field_id, animal_id=animal_id).first()
-            if existing:
-                return APIResponse.error('Registro duplicado ya existe', 400)
+            # Validar que el animal no esté en otro potrero activo
+            active_assignment = AnimalFields.query.filter_by(
+                animal_id=animal_id,
+                removal_date=None
+            ).first()
+
+            if active_assignment:
+                # Obtener info del potrero actual para el mensaje
+                current_field = Fields.query.get(active_assignment.field_id)
+                field_name = current_field.name if current_field else "Desconocido"
+                
+                return APIResponse.conflict(
+                    message=f"El animal {animal.record} ya está en el potrero '{field_name}'",
+                    details={
+                        "current_field_id": active_assignment.field_id,
+                        "current_field_name": field_name,
+                        "assignment_id": active_assignment.id
+                    }
+                )
+
+            # Procesar fecha
+            try:
+                from datetime import date
+                if isinstance(assignment_date_str, str):
+                    assignment_date = date.fromisoformat(assignment_date_str)
+                else:
+                    assignment_date = date.today()
+            except ValueError:
+                 return APIResponse.error('Formato de fecha inválido. Use YYYY-MM-DD', 400)
 
             record = AnimalFields(
-                value=value,
                 field_id=field_id,
-                animal_id=animal_id
+                animal_id=animal_id,
+                assignment_date=assignment_date,
+                notes=notes
             )
             db.session.add(record)
             db.session.flush()
@@ -192,9 +236,11 @@ class AnimalFieldsList(Resource):
 
             # Invalidar cache INMEDIATAMENTE después de sincronización
             _cache_clear('AnimalFields')
+            # También limpiar cache de FieldAnimals list
+            _cache_clear('Fields') 
 
             # Respuesta rápida con datos desde BD (sin cache)
-            return APIResponse.success(record, animal_fields_ns), 201
+            return APIResponse.created(record, message="Animal asignado al potrero exitosamente")
         except Exception as e:
             db.session.rollback()
-            return APIResponse.error(f'Error al crear campo de animal: {str(e)}', 400)
+            return APIResponse.error(f'Error al asignar animal a potrero: {str(e)}', 400)
