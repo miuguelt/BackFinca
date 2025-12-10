@@ -13,6 +13,7 @@ from flask_jwt_extended import create_access_token
 def app():
     app = create_app('testing')
     app.config['JWT_SECRET_KEY'] = 'testing_secret'
+    app.config['CACHE_WARMUP_ASYNC'] = False # Disable warmup for tests
     with app.app_context():
         db.create_all()
         yield app

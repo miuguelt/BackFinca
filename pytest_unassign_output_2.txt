@@ -1,0 +1,222 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-8.4.2, pluggy-1.6.0 -- C:\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\Miguel\Documents\Flask Projects\BackFinca
+plugins: anyio-4.10.0, mock-3.14.0
+collecting ... collected 1 item
+
+test_unassign_animal.py::test_unassign_animal_from_field FAILED          [100%]
+
+================================== FAILURES ===================================
+_______________________ test_unassign_animal_from_field _______________________
+
+client = <FlaskClient <Flask 'app'>>
+auth_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc2NTMzOTM2MSwianRpIjoiYjk...yNS0xMi0xMFQwNDowMjo0MS4yNjk1NjMrMDA6MDAiLCJzZXJ2ZXJfZW52IjoidGVzdGluZyJ9.3hhuwD2pwI68m4Ju7j4J3cO6UpSY47eaP91O9-pS6Pk'}
+
+    def test_unassign_animal_from_field(client, auth_headers):
+        # Setup
+        species = Species(name="Bovino")
+        db.session.add(species)
+        db.session.commit()
+        breed = Breeds(name="Brahman", species_id=species.id)
+        db.session.add(breed)
+        db.session.commit()
+        field = Fields(name="Field A", area="10", state="Activo")
+        db.session.add(field)
+        db.session.commit()
+        animal = Animals(record="A001", sex=Sex.Hembra, weight=300, birth_date=date.today(), breeds_id=breed.id)
+        db.session.add(animal)
+        db.session.commit()
+    
+        # Assign to field
+        af = AnimalFields(animal_id=animal.id, field_id=field.id, assignment_date=date.today())
+        db.session.add(af)
+        db.session.commit()
+    
+        # Verify assignment exists and is active
+        assert af.removal_date is None
+    
+        # Test Unassign (field_id: null)
+        payload = {
+            "field_id": None
+        }
+        response = client.put(f'/api/v1/animals/{animal.id}', json=payload, headers=auth_headers)
+    
+>       assert response.status_code == 200
+E       assert 403 == 200
+E        +  where 403 = <WrapperTestResponse streamed [403 FORBIDDEN]>.status_code
+
+test_unassign_animal.py:61: AssertionError
+---------------------------- Captured stdout setup ----------------------------
+2025-12-09 23:02:32,669 - [INFO] - app - configure_logging:84 - Sistema de logging configurado exitosamente
+2025-12-09 23:02:32,669 - [INFO] - app - create_app:209 - Initializing Flask app...
+2025-12-09 23:02:32,669 - [DEBUG] - app - create_app:210 - Using configuration: testing
+2025-12-09 23:02:36,812 - [WARNING] - app - create_app:241 - Redis no disponible, aplicando fallback a SimpleCache: Error 10061 connecting to localhost:6379. No se puede establecer una conexi├│n ya que el equipo de destino deneg├│ expresamente dicha conexi├│n.
+2025-12-09 23:02:36,812 - [INFO] - app - create_app:243 - SimpleCache inicializado como fallback
+2025-12-09 23:02:36,814 - [INFO] - app.utils.db_optimization - configure_connection_pool:61 - Connection pooling configurado: pool_size=20, max_overflow=30
+2025-12-09 23:02:36,814 - [INFO] - app.utils.db_optimization - configure_mysql_optimizations:97 - Skipping MySQL optimizations for non-MySQL database URI
+2025-12-09 23:02:36,814 - [INFO] - app.utils.db_optimization - init_db_optimizations:287 - Optimizaciones de base de datos inicializadas
+2025-12-09 23:02:36,814 - [INFO] - app - create_app:252 - Database optimizations initialized
+2025-12-09 23:02:36,815 - [INFO] - app - init_cors:132 - CORS habilitado. Or├¡genes permitidos (solo .env): []
+2025-12-09 23:02:36,815 - [INFO] - app - init_cors:133 - CORS detalles -> supports_credentials: True, methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'], allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Cache-Control', 'X-File-Name', 'X-CSRF-Token', 'X-CSRF-TOKEN', 'X-App-Version', 'X-Client-Timezone', 'X-Client-Locale', 'ngrok-skip-browser-warning'], expose_headers: ['Content-Range', 'X-Content-Range', 'X-Total-Count', 'Authorization'], max_age: 86400
+2025-12-09 23:02:36,815 - [INFO] - app - init_cors:146 - JWT cookies -> domain: None, secure: False, samesite: None, token_location: ['headers']
+2025-12-09 23:02:40,874 - [WARNING] - app - init_rate_limiter:96 - Rate limiter Redis 'redis://localhost:6379/2' fallo: Error 10061 connecting to localhost:6379. No se puede establecer una conexi├│n ya que el equipo de destino deneg├│ expresamente dicha conexi├│n.. Reintentando con memory://
+2025-12-09 23:02:40,875 - [INFO] - app - init_rate_limiter:105 - Rate limiter inicializado con storage: memory:// (fallback)
+2025-12-09 23:02:40,875 - [INFO] - app - create_app:272 - Rate limiting habilitado por configuraci├│n
+2025-12-09 23:02:40,875 - [INFO] - app - create_app:283 - Middlewares de optimizaci├│n y seguridad inicializados
+2025-12-09 23:02:40,978 - [INFO] - app - seed_admin_user:32 - Skipping seed admin: tabla user no existe a├║n
+2025-12-09 23:02:40,998 - [INFO] - app - warmup_initial_caches:219 - Warmup de cach├® disparado en segundo plano (async=True)
+2025-12-09 23:02:40,998 - [INFO] - app - create_app:310 - Warmup de cach├® inicial ejecutado
+2025-12-09 23:02:41,001 - [INFO] - app - create_app:456 - Flask app initialization complete.
+2025-12-09 23:02:41,049 - [WARNING] - app - _warm_model_list:155 - Fallo warmup para Animals: (sqlite3.OperationalError) no such table: animals
+[SQL: SELECT animals.id AS animals_id, animals.sex AS animals_sex, animals.birth_date AS animals_birth_date, animals.weight AS animals_weight, animals.record AS animals_record, animals.status AS animals_status, animals.breeds_id AS animals_breeds_id, animals."idFather" AS "animals_idFather", animals."idMother" AS "animals_idMother", animals.created_at AS animals_created_at, animals.updated_at AS animals_updated_at 
+FROM animals ORDER BY animals.updated_at DESC
+ LIMIT ? OFFSET ?]
+[parameters: (10, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Traceback (most recent call last):
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: animals
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Miguel\Documents\Flask Projects\BackFinca\app\utils\bootstrap.py", line 109, in _warm_model_list
+    query = model_cls.get_namespace_query(
+        filters=filters,
+    ...<6 lines>...
+        include_relations=include_rel,
+    )
+  File "C:\Users\Miguel\Documents\Flask Projects\BackFinca\app\models\base_model.py", line 599, in get_namespace_query
+    query = query.paginate(page=page, per_page=per_page, error_out=False)
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\flask_sqlalchemy\query.py", line 98, in paginate
+    return QueryPagination(
+        query=self,
+    ...<4 lines>...
+        count=count,
+    )
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\flask_sqlalchemy\pagination.py", line 72, in __init__
+    items = self._query_items()
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\flask_sqlalchemy\pagination.py", line 358, in _query_items
+    out = query.limit(self.per_page).offset(self._query_offset).all()
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\query.py", line 2704, in all
+    return self._iter().all()  # type: ignore
+           ~~~~~~~~~~^^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\query.py", line 2857, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+        params,
+        ^^^^^^^
+        execution_options={"_sa_orm_load_options": self.load_options},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py", line 2365, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py", line 2251, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: animals
+[SQL: SELECT animals.id AS animals_id, animals.sex AS animals_sex, animals.birth_date AS animals_birth_date, animals.weight AS animals_weight, animals.record AS animals_record, animals.status AS animals_status, animals.breeds_id AS animals_breeds_id, animals."idFather" AS "animals_idFather", animals."idMother" AS "animals_idMother", animals.created_at AS animals_created_at, animals.updated_at AS animals_updated_at 
+FROM animals ORDER BY animals.updated_at DESC
+ LIMIT ? OFFSET ?]
+[parameters: (10, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+---------------------------- Captured stdout call -----------------------------
+2025-12-09 23:02:41,318 - [DEBUG] - app - _add_cors_headers_and_log:120 - Response -> path: /api/v1/animals/1, status: 403 FORBIDDEN, origin: None, A-C-Allow-Origin: None
+------------------------------ Captured log call ------------------------------
+DEBUG    app:cors_setup.py:120 Response -> path: /api/v1/animals/1, status: 403 FORBIDDEN, origin: None, A-C-Allow-Origin: None
+============================== warnings summary ===============================
+..\..\..\AppData\Roaming\Python\Python313\site-packages\flask_restx\api.py:19
+..\..\..\AppData\Roaming\Python\Python313\site-packages\flask_restx\api.py:19
+  C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\flask_restx\api.py:19: DeprecationWarning: jsonschema.RefResolver is deprecated as of v4.18.0, in favor of the https://github.com/python-jsonschema/referencing library, which provides more compliant referencing behavior as well as more flexible APIs for customization. A future release will remove RefResolver. Please file a feature request (on referencing) if you are missing an API for the kind of customization you need.
+    from jsonschema import RefResolver
+
+test_unassign_animal.py::test_unassign_animal_from_field
+test_unassign_animal.py::test_unassign_animal_from_field
+  C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\flask_caching\__init__.py:145: DeprecationWarning: Using the initialization functions in flask_caching.backend is deprecated.  Use the a full path to backend classes directly.
+    self._set_cache(app, config)
+
+test_unassign_animal.py: 10 warnings
+  C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\sql\schema.py:3624: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED test_unassign_animal.py::test_unassign_animal_from_field - assert 403 ...
+======================= 1 failed, 14 warnings in 9.95s ========================

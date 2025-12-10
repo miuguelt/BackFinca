@@ -27,10 +27,27 @@ def register_api(app, limiter=None):
     # Crear el blueprint para la API
     api_bp = Blueprint('api', __name__, url_prefix='/api/v1')
 
+
     access_cookie_name = app.config.get('JWT_ACCESS_COOKIE_NAME', 'access_token_cookie')
     refresh_cookie_name = app.config.get('JWT_REFRESH_COOKIE_NAME', 'refresh_token_cookie')
     csrf_access_cookie_name = app.config.get('JWT_ACCESS_CSRF_COOKIE_NAME', 'csrf_access_token')
     csrf_refresh_cookie_name = app.config.get('JWT_REFRESH_CSRF_COOKIE_NAME', 'csrf_refresh_token')
+
+    from collections import OrderedDict
+    
+    authorizations = OrderedDict()
+    authorizations['Bearer'] = {
+        'type': 'apiKey',
+        'in': 'header',
+        'name': 'Authorization',
+        'description': 'JWT token. Formato: Bearer <token>'
+    }
+    authorizations['Cookie'] = {
+        'type': 'apiKey',
+        'in': 'cookie',
+        'name': access_cookie_name,
+        'description': 'JWT token en cookie (autenticación automática)'
+    }
 
     # Configurar Flask-RESTX con optimizaciones JSON y documentación
     api = Api(
@@ -44,20 +61,7 @@ def register_api(app, limiter=None):
         contact_email='info@fincavillaluz.com',
         license='MIT',
         license_url='https://opensource.org/licenses/MIT',
-        authorizations={
-            'Bearer': {
-                'type': 'apiKey',
-                'in': 'header',
-                'name': 'Authorization',
-                'description': 'JWT token. Formato: Bearer <token>'
-            },
-            'Cookie': {
-                'type': 'apiKey',
-                'in': 'cookie',
-                'name': access_cookie_name,
-                'description': 'JWT token en cookie (autenticación automática)'
-            }
-        },
+        authorizations=authorizations,
         security=['Bearer', 'Cookie'],
         validate=False,
         ordered=True,

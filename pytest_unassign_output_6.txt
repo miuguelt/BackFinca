@@ -1,0 +1,260 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-8.4.2, pluggy-1.6.0 -- C:\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\Miguel\Documents\Flask Projects\BackFinca
+plugins: anyio-4.10.0, mock-3.14.0
+collecting ... collected 1 item
+
+test_unassign_animal.py::test_unassign_animal_from_field ERROR           [100%]
+
+=================================== ERRORS ====================================
+______________ ERROR at setup of test_unassign_animal_from_field ______________
+
+    @pytest.fixture
+    def app():
+>       app = create_app('testing')
+              ^^^^^^^^^^^^^^^^^^^^^
+
+test_unassign_animal.py:14: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+config_name = 'testing'
+
+    def create_app(config_name='development'):
+        # Prefer testing config when running under pytest to avoid touching dev DBs
+        try:
+            if config_name != 'testing' and ('PYTEST_CURRENT_TEST' in os.environ or 'pytest' in sys.modules):
+                config_name = 'testing'
+        except Exception:
+            pass
+    
+        app = Flask(__name__)
+        # Avoid automatic redirects on missing/extra trailing slashes which break CORS preflight (307 redirect not allowed)
+        app.url_map.strict_slashes = False
+    
+        # A├▒ade ProxyFix para entornos con proxies como Vercel o Nginx
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+    
+        # Configurar el codificador JSON personalizado para toda la aplicaci├│n
+        from app.utils.json_utils import JSONEncoder
+        from app.utils.enum_registry import EnumJSONEncoder, register_application_enums
+        import json as json_stdlib
+        import enum
+    
+        # Registrar todos los enums de la aplicaci├│n
+        register_application_enums()
+    
+        # Usar nuestro encoder personalizado para toda la aplicaci├│n
+        app.json_encoder = EnumJSONEncoder
+    
+        # Forzar respuestas JSON (sin sobrescribir exportaciones CSV u otros binarios)
+        @app.after_request
+        def force_json_response(response):
+            try:
+                # No tocar si ya es JSON o es un tipo espec├¡fico (csv, octet-stream, text/csv)
+                if response.mimetype in ('application/json', 'text/csv', 'application/octet-stream'):
+                    return response
+                # Detectar cuerpos JSON (dict/list serializados) cuando Flask ya convirti├│ dict -> JSON
+                # Flask 3 ya establece application/json para dict; fallback por si un middleware lo altera
+                data_prefix = (response.get_data(as_text=False) or b'')[:1]
+                if data_prefix in (b'{', b'['):
+                    response.headers['Content-Type'] = 'application/json; charset=utf-8'
+            except Exception:
+                # Fallback silencioso: no bloquear la respuesta por un error menor
+                pass
+            return response
+    
+        @app.after_request
+        def attach_access_token_to_json(response):
+            """Inyecta access_token en el cuerpo JSON de respuestas espec├¡ficas si est├í presente en Authorization o cookie HttpOnly.
+            Esto permite que el frontend lo persista en localStorage y el interceptor lo env├¡e en Authorization.
+            """
+            try:
+                # Detectar si es JSON o contiene JSON serializado
+                data_bytes = response.get_data(as_text=False) or b''
+                is_json_like = (response.mimetype and response.mimetype.startswith('application/json')) or (data_bytes[:1] in (b'{', b'['))
+                if not is_json_like:
+                    return response
+    
+                # Extraer token de Authorization o cookie HttpOnly
+                token = None
+                try:
+                    auth = request.headers.get('Authorization', '')
+                    if isinstance(auth, str) and auth.lower().startswith('bearer '):
+                        token = auth.split(' ', 1)[1].strip()
+                    if not token:
+                        cookie_name = current_app.config.get('JWT_ACCESS_COOKIE_NAME', 'access_token_cookie')
+                        token = request.cookies.get(cookie_name)
+                except Exception:
+                    token = None
+    
+                if not token:
+                    return response
+    
+                # Parsear el cuerpo, agregar access_token y re-serializar
+                try:
+                    data_text = response.get_data(as_text=True) or ''
+                    payload = json.loads(data_text) if data_text else None
+                except Exception:
+                    # Si no se puede parsear, no modificar
+                    return response
+    
+                if isinstance(payload, dict):
+                    # No inyectar token en respuestas que ya tienen estructura de APIResponse
+                    # con campos espec├¡ficos como 'success', 'data', 'message', 'error'
+                    if 'success' in payload and ('data' in payload or 'error' in payload):
+                        # Es una respuesta de APIResponse, no inyectar token para evitar conflictos
+                        return response
+    
+                    # Inyectar token solo en respuestas que no son de APIResponse
+                    payload['access_token'] = token
+                    response.set_data(json.dumps(payload))
+                    response.headers['Content-Type'] = 'application/json; charset=utf-8'
+            except Exception:
+                # No bloquear la respuesta por un error de inyecci├│n de token
+                pass
+            return response
+    
+        # Handlers globales b├ísicos eliminados: ahora centralizados en app.utils.error_handlers
+    
+        # Flask-RESTX: forzar JSON en todos los endpoints
+        from flask_restx import apidoc
+        # apidoc.apidoc.add_resource = lambda *a, **kw: None  # Deshabilitar UI de Swagger si se desea solo JSON
+    
+        app_config = config.get(config_name, 'default')
+        app.config.from_object(app_config)
+        app.config['CONFIG_NAME'] = config_name
+    
+        # If using SQLite (tests / in-memory), remove SQLAlchemy engine options that
+        # are incompatible with sqlite dialect (prevents errors during local checks).
+        try:
+            db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+            if isinstance(db_uri, str) and db_uri.startswith('sqlite'):
+                app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {}
+        except Exception:
+            pass
+    
+        # Configura el logging (antes de cualquier otra cosa)
+        configure_logging(app)
+        logger = logging.getLogger(__name__)
+    
+        logger.info("Initializing Flask app...")
+        logger.debug(f"Using configuration: {config_name}")
+    
+        # Comentado: Evitar exponer URI de conexi├│n con credenciales en logs
+        # db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', 'No URI configurada')
+        # logger.info(f"URI de conexi├│n a la base de datos: {db_uri}")
+    
+        # Inicializa y enlaza las extensiones con la app
+        db.init_app(app)
+        jwt.init_app(app)
+    
+        # Inicializar cach├® con fallback robusto si Redis no est├í disponible
+        try:
+            cache_config = {
+                'CACHE_TYPE': app.config.get('CACHE_TYPE', 'redis'),
+                'CACHE_DEFAULT_TIMEOUT': app.config.get('CACHE_DEFAULT_TIMEOUT', 600),
+                'CACHE_THRESHOLD': app.config.get('CACHE_THRESHOLD', 1000),
+            }
+            if cache_config['CACHE_TYPE'] == 'redis':
+                cache_config['CACHE_REDIS_URL'] = app.config.get('CACHE_REDIS_URL') or app.config.get('REDIS_URL')
+            cache.init_app(app, config=cache_config)
+    
+            # Si se usa Redis, realizar una verificaci├│n de salud del backend de cach├®
+            if cache_config['CACHE_TYPE'] == 'redis':
+                try:
+                    _k = '__cache_health__'
+                    cache.set(_k, 'ok', timeout=5)
+                    _v = cache.get(_k)
+                    if _v != 'ok':
+                        raise RuntimeError('Redis cache set/get comprobaci├│n fallida')
+                    logger.info('Redis cache inicializado correctamente')
+                except Exception as e:
+                    logger.warning(f'Redis no disponible, aplicando fallback a SimpleCache: {e}')
+                    cache.init_app(app, config={'CACHE_TYPE': 'simple', 'CACHE_DEFAULT_TIMEOUT': cache_config['CACHE_DEFAULT_TIMEOUT']})
+                    logger.info('SimpleCache inicializado como fallback')
+        except Exception:
+            logger.exception('Error inicializando cach├®; usando SimpleCache por seguridad')
+            cache.init_app(app, config={'CACHE_TYPE': 'simple', 'CACHE_DEFAULT_TIMEOUT': app.config.get('CACHE_DEFAULT_TIMEOUT', 600)})
+    
+        migrate.init_app(app, db)
+    
+        # Inicializar optimizaciones de base de datos
+        init_db_optimizations(app)
+        logger.info("Database optimizations initialized")
+    
+        # Inicializar CORS y hooks relacionados (m├│dulo utilitario)
+        from app.utils.cors_setup import init_cors
+        init_cors(app, logger)
+    
+        # Configurar JWT handlers mejorados
+        configure_jwt_handlers(jwt)
+    
+        # Inicializar security logging
+        setup_security_logging(app)
+    
+        # Registrar manejadores de error centralizados
+        register_error_handlers(app)
+    
+        # Inicializar rate limiter (solo si est├í habilitado por configuraci├│n)
+        limiter = None
+        try:
+            if app.config.get('RATE_LIMIT_ENABLED', True):
+                limiter = init_rate_limiter(app)
+                logger.info("Rate limiting habilitado por configuraci├│n")
+            else:
+                logger.info("Rate limiting desactivado por configuraci├│n")
+        except Exception:
+            logging.getLogger(__name__).exception('No se pudo inicializar el rate limiter')
+    
+        # Inicializar middlewares de optimizaci├│n
+        # request_middleware = RequestMiddleware(app)
+        # security_middleware = SecurityMiddleware(app)
+        # metrics_middleware = MetricsMiddleware(app)
+    
+        logger.info("Middlewares de optimizaci├│n y seguridad inicializados")
+    
+        # Inicializar middlewares de seguridad (JWT global + debug logging)
+        from app.utils.security_middleware import init_security_middlewares
+        init_security_middlewares(app)
+    
+        # Registrar toda la API, namespaces y endpoints utilitarios desde m├│dulo dedicado
+>       from app.api import register_api
+E         File "C:\Users\Miguel\Documents\Flask Projects\BackFinca\app\api.py", line 29
+E           from __future__ import annotations
+E           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       SyntaxError: from __future__ imports must occur at the beginning of the file
+
+app\__init__.py:290: SyntaxError
+---------------------------- Captured stdout setup ----------------------------
+2025-12-09 23:10:08,103 - [INFO] - app - configure_logging:84 - Sistema de logging configurado exitosamente
+2025-12-09 23:10:08,103 - [INFO] - app - create_app:209 - Initializing Flask app...
+2025-12-09 23:10:08,103 - [DEBUG] - app - create_app:210 - Using configuration: testing
+2025-12-09 23:10:12,227 - [WARNING] - app - create_app:241 - Redis no disponible, aplicando fallback a SimpleCache: Error 10061 connecting to localhost:6379. No se puede establecer una conexi├│n ya que el equipo de destino deneg├│ expresamente dicha conexi├│n.
+2025-12-09 23:10:12,228 - [INFO] - app - create_app:243 - SimpleCache inicializado como fallback
+2025-12-09 23:10:12,230 - [INFO] - app.utils.db_optimization - configure_connection_pool:61 - Connection pooling configurado: pool_size=20, max_overflow=30
+2025-12-09 23:10:12,230 - [INFO] - app.utils.db_optimization - configure_mysql_optimizations:97 - Skipping MySQL optimizations for non-MySQL database URI
+2025-12-09 23:10:12,230 - [INFO] - app.utils.db_optimization - init_db_optimizations:287 - Optimizaciones de base de datos inicializadas
+2025-12-09 23:10:12,230 - [INFO] - app - create_app:252 - Database optimizations initialized
+2025-12-09 23:10:12,231 - [INFO] - app - init_cors:132 - CORS habilitado. Or├¡genes permitidos (solo .env): []
+2025-12-09 23:10:12,231 - [INFO] - app - init_cors:133 - CORS detalles -> supports_credentials: True, methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'], allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Cache-Control', 'X-File-Name', 'X-CSRF-Token', 'X-CSRF-TOKEN', 'X-App-Version', 'X-Client-Timezone', 'X-Client-Locale', 'ngrok-skip-browser-warning'], expose_headers: ['Content-Range', 'X-Content-Range', 'X-Total-Count', 'Authorization'], max_age: 86400
+2025-12-09 23:10:12,231 - [INFO] - app - init_cors:146 - JWT cookies -> domain: None, secure: False, samesite: None, token_location: ['headers']
+2025-12-09 23:10:16,302 - [WARNING] - app - init_rate_limiter:96 - Rate limiter Redis 'redis://localhost:6379/2' fallo: Error 10061 connecting to localhost:6379. No se puede establecer una conexi├│n ya que el equipo de destino deneg├│ expresamente dicha conexi├│n.. Reintentando con memory://
+2025-12-09 23:10:16,303 - [INFO] - app - init_rate_limiter:105 - Rate limiter inicializado con storage: memory:// (fallback)
+2025-12-09 23:10:16,303 - [INFO] - app - create_app:272 - Rate limiting habilitado por configuraci├│n
+2025-12-09 23:10:16,303 - [INFO] - app - create_app:283 - Middlewares de optimizaci├│n y seguridad inicializados
+============================== warnings summary ===============================
+..\..\..\AppData\Roaming\Python\Python313\site-packages\flask_restx\api.py:19
+..\..\..\AppData\Roaming\Python\Python313\site-packages\flask_restx\api.py:19
+  C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\flask_restx\api.py:19: DeprecationWarning: jsonschema.RefResolver is deprecated as of v4.18.0, in favor of the https://github.com/python-jsonschema/referencing library, which provides more compliant referencing behavior as well as more flexible APIs for customization. A future release will remove RefResolver. Please file a feature request (on referencing) if you are missing an API for the kind of customization you need.
+    from jsonschema import RefResolver
+
+test_unassign_animal.py::test_unassign_animal_from_field
+test_unassign_animal.py::test_unassign_animal_from_field
+  C:\Users\Miguel\AppData\Roaming\Python\Python313\site-packages\flask_caching\__init__.py:145: DeprecationWarning: Using the initialization functions in flask_caching.backend is deprecated.  Use the a full path to backend classes directly.
+    self._set_cache(app, config)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+ERROR test_unassign_animal.py::test_unassign_animal_from_field -   File "C:\U...
+======================== 4 warnings, 1 error in 9.39s =========================

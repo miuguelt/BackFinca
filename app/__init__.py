@@ -301,10 +301,15 @@ def create_app(config_name='development'):
         seed_admin_user(app, logger)
     except Exception:
         logger.exception('Fallo al ejecutar seed_admin_user')
-    
+
     # Warmup de caché para acelerar primera carga (controlado por config)
     try:
-        if app.config.get('CACHE_WARMUP_ENABLED', True):
+        # Check explicitly for False to allow disabling in testing
+        warmup_enabled = app.config.get('CACHE_WARMUP_ENABLED', True)
+        if hasattr(app.config, 'get') and app.config['CONFIG_NAME'] == 'testing':
+             warmup_enabled = False
+
+        if warmup_enabled:
             from app.utils.bootstrap import warmup_initial_caches
             warmup_initial_caches(app, logger)
             logger.info('Warmup de caché inicial ejecutado')
@@ -315,7 +320,6 @@ def create_app(config_name='development'):
     
     # Redirecciones públicas convenientes para documentación
     @app.route('/docs')
-    @app.route('/docs/')
     def docs_redirect():
         """Redirigir a la documentación de la API versionada"""
         return redirect('/api/v1/docs/', code=302)
