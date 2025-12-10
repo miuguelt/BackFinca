@@ -892,7 +892,7 @@ def create_optimized_namespace(
 
                 # Invalidar cache DESPUÉS de serialización exitosa
                 _cache_clear(model_class.__name__)
-                _detail_cache_clear(model_class.__name__, record_id)
+                _detail_cache_clear(model_class.__name__, instance_id)
                 logger.debug(f"Cache cleared for {model_class.__name__}")
 
                 # Construir respuesta con datos serializados
