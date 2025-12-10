@@ -140,9 +140,7 @@ class AnimalFieldsDetail(Resource):
             db.session.rollback()
             return APIResponse.error(f'Error al actualizar parcialmente campo de animal: {str(e)}', 400)
 
-# Delegado a create_optimized_namespace (evita duplicar recursos y posibles consultas pesadas)
-animal_fields_ns.add_resource(AnimalFieldsDetail, '/<int:record_id>')
-animal_fields_ns.add_resource(AnimalFieldsList, '/')
+
 
 class AnimalFieldsList(Resource):
     @animal_fields_ns.doc(security=[{'Bearer': []}])
@@ -244,3 +242,7 @@ class AnimalFieldsList(Resource):
         except Exception as e:
             db.session.rollback()
             return APIResponse.error(f'Error al asignar animal a potrero: {str(e)}', 400)
+
+# Delegado a create_optimized_namespace (evita duplicar recursos y posibles consultas pesadas)
+animal_fields_ns.add_resource(AnimalFieldsDetail, '/<int:record_id>')
+animal_fields_ns.add_resource(AnimalFieldsList, '/')

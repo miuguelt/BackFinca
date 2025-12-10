@@ -13,6 +13,8 @@ from app.utils.namespace_helpers import create_optimized_namespace, _cache_clear
 from app.utils.tree_builder import build_ancestor_tree, build_descendant_tree, invalidate_animal_tree_cache_for
 from app.utils.integrity_checker import OptimizedIntegrityChecker
 from app.utils.file_storage import delete_animal_image, delete_animal_directory
+from app.models.animalFields import AnimalFields
+from datetime import date
 
 # Helper para mapear campos del frontend al backend
 def map_frontend_filters(filters):
@@ -143,6 +145,21 @@ class AnimalDetail(Resource):
         try:
             animal = Animals.query.get_or_404(record_id)
             data = request.get_json()
+
+            # Handle field unassignment
+            if 'field_id' in data:
+                field_id = data.pop('field_id')
+                if field_id is None:
+                    # Find active assignment and close it
+                    active_assignment = AnimalFields.query.filter_by(
+                        animal_id=record_id,
+                        removal_date=None
+                    ).first()
+                    
+                    if active_assignment:
+                        active_assignment.removal_date = date.today()
+                        # Allow the commit later in the function to save this change
+
             for key, value in data.items():
                 setattr(animal, key, value)
             db.session.flush()  # Aplicar cambios
