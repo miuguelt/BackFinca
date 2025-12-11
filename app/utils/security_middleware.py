@@ -56,8 +56,8 @@ def init_security_middlewares(app):
         ):
             return
 
-        # Permitir la creación de usuarios sin JWT (ruta pública controlada)
-        if path == '/api/v1/users' and request.method == 'POST':
+        # Permitir la creación de usuarios sin JWT (rutas públicas controladas)
+        if request.method == 'POST' and path in ('/api/v1/users', '/api/v1/users/public'):
             return
             
         # Permitir rutas públicas sin JWT

@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, current_app, json, redirect, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager, unset_jwt_cookies
 from flask_cors import CORS
 from flask_restx import Api
 from flask_caching import Cache
@@ -410,7 +410,16 @@ def create_app(config_name='development'):
         """Bienvenida pública en la raíz de la aplicación"""
         if request.method == 'OPTIONS':
             return '', 200
-        return "Bienvenido al backend de la Finca Villaluz.", 200, {'Content-Type': 'text/plain; charset=utf-8'}
+        # Respuesta simple que además instruye al navegador a limpiar cualquier cookie JWT previa
+        resp_body, status_code = APIResponse.success(
+            message='Bienvenido al backend de la Finca Villaluz. Autenticación limpiada para nueva sesión.',
+            data={'auth_cleared': True}
+        )
+        resp = jsonify(resp_body)
+        unset_jwt_cookies(resp)
+        resp.status_code = status_code
+        resp.headers['Cache-Control'] = 'no-store'
+        return resp
 
     # Endpoint de health check público a nivel de aplicación (sin prefijo /api/v1)
     @app.route('/health', methods=['GET', 'OPTIONS'])

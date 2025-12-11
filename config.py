@@ -185,7 +185,7 @@ class Config:
     # -----------------------
     # Permite habilitar la creación pública de usuarios incluso si ya existen
     # usuarios en la base de datos. Úsese con precaución.
-    PUBLIC_USER_CREATION_ENABLED = os.getenv('PUBLIC_USER_CREATION_ENABLED', 'false').lower() == 'true'
+    PUBLIC_USER_CREATION_ENABLED = os.getenv('PUBLIC_USER_CREATION_ENABLED', 'true').lower() == 'true'
 
     # -----------------------
     # URLs
