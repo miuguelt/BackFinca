@@ -1,6 +1,6 @@
 from app import db
 from werkzeug.security import generate_password_hash, check_password_hash
-from app.models.base_model import BaseModel
+from app.models.base_model import BaseModel, ValidationError
 import enum
 
 class Role(enum.Enum):
@@ -65,6 +65,51 @@ class User(BaseModel):
     diseases = db.relationship('AnimalDiseases', back_populates='instructor', lazy='dynamic')
     vaccines_as_apprentice = db.relationship('Vaccinations', foreign_keys='Vaccinations.apprentice_id', back_populates='apprentice', lazy='dynamic')
     vaccines_as_instructor = db.relationship('Vaccinations', foreign_keys='Vaccinations.instructor_id', back_populates='instructor', lazy='dynamic')
+
+    @classmethod
+    def _validate_and_normalize(cls, data, is_update=False, instance_id=None):
+        """Sanitiza y valida datos de entrada antes de la creación/actualización."""
+        sanitized = dict(data or {})
+        errors = []
+
+        # Normalizar strings comunes
+        for field in ['fullname', 'email', 'phone', 'address', 'password']:
+            if field in sanitized and isinstance(sanitized[field], str):
+                sanitized[field] = sanitized[field].strip()
+        if 'email' in sanitized and isinstance(sanitized['email'], str):
+            sanitized['email'] = sanitized['email'].lower()
+
+        # Convertir identification a entero si es posible
+        if 'identification' in sanitized:
+            try:
+                sanitized['identification'] = int(str(sanitized['identification']).strip())
+            except (TypeError, ValueError, AttributeError):
+                errors.append("El campo 'identification' debe ser numérico")
+
+        # Validar contraseña mínima si se proporciona (o si es requerida en creación)
+        password = sanitized.get('password')
+        if password is not None:
+            if isinstance(password, str):
+                password = password.strip()
+                sanitized['password'] = password
+            if password:
+                if len(password) < 8:
+                    errors.append("El campo 'password' debe tener al menos 8 caracteres")
+            elif not is_update:
+                errors.append("El campo 'password' es requerido")
+        elif not is_update:
+            errors.append("El campo 'password' es requerido")
+
+        # Validación básica de correo
+        email_value = sanitized.get('email')
+        if email_value:
+            if not isinstance(email_value, str) or '@' not in email_value or email_value.count('@') != 1:
+                errors.append("El campo 'email' debe ser un correo válido")
+
+        if errors:
+            raise ValidationError('; '.join(errors), errors=errors)
+
+        return super()._validate_and_normalize(sanitized, is_update=is_update, instance_id=instance_id)
 
     def set_password(self, password: str) -> None:
         """Genera y asigna el hash de la contraseña."""

@@ -13,17 +13,35 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
+limiter = None
 
 users_ns = create_optimized_namespace(
     name='users',
     description='👥 Gestión Optimizada de Usuarios del Sistema',
     model_class=User,
-    path='/users'
+    path='/users',
+    public_create=True,
 )
 
+# Configurar rate limiting específico para creación de usuarios (sólo POST /users)
+def set_limiter(app_limiter):
+    global limiter
+    limiter = app_limiter
+    try:
+        if not limiter:
+            return
+        from app.utils.rate_limiter import RATE_LIMIT_CONFIG, get_remote_address_with_forwarded
+        create_limit = (RATE_LIMIT_CONFIG.get('users', {}) or {}).get('create', "10 per hour")
+        list_resource = getattr(users_ns, '_model_list_resource', None)
+        if list_resource and hasattr(list_resource, 'post') and not getattr(list_resource.post, '_rate_limit_applied', False):
+            list_resource.post = limiter.limit(create_limit, key_func=get_remote_address_with_forwarded, methods=["POST"])(list_resource.post)
+            list_resource.post._rate_limit_applied = True
+            logger.info("Rate limit aplicado a creación de usuarios: %s", create_limit)
+    except Exception:
+        logger.exception("No se pudo aplicar rate limit a creación de usuarios")
+
 # El endpoint POST se crea automáticamente por create_optimized_namespace
-# No requiere autenticación por defecto
+# Configurado como ruta pública en security_middleware (sin JWT)
 
 # Modelos Swagger para estadísticas (definir después de users_ns)
 user_role_stats_model = users_ns.model('UserRoleStats', {

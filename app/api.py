@@ -85,7 +85,7 @@ def register_api(app, limiter=None):
 
     # Namespaces
     from .namespaces.auth_namespace import auth_ns, set_limiter as set_auth_limiter
-    from .namespaces.users_namespace import users_ns
+    from .namespaces.users_namespace import users_ns, set_limiter as set_users_limiter
     from .namespaces.animals_namespace import animals_ns
     from .namespaces.analytics_namespace import analytics_ns
     from .namespaces.security_namespace import security_ns
@@ -113,10 +113,14 @@ def register_api(app, limiter=None):
     try:
         if app.config.get('RATE_LIMIT_ENABLED', True) and limiter:
             set_auth_limiter(limiter)
+            try:
+                set_users_limiter(limiter)
+            except Exception:
+                logging.getLogger(__name__).exception('No se pudo aplicar rate limiting a users_namespace')
         else:
-            logging.getLogger(__name__).info('Rate limiting no aplicado a auth_namespace (deshabilitado o sin limiter)')
+            logging.getLogger(__name__).info('Rate limiting no aplicado (deshabilitado o sin limiter)')
     except Exception:
-        logging.getLogger(__name__).exception('No se pudo aplicar rate limiting a auth_namespace')
+        logging.getLogger(__name__).exception('No se pudo aplicar rate limiting a auth/users namespaces')
 
     # Registrar namespaces
     api.add_namespace(auth_ns)

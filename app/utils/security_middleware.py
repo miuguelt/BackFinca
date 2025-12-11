@@ -55,6 +55,10 @@ def init_security_middlewares(app):
             or path.startswith('/public/')  # permitir imágenes públicas y endpoints públicos
         ):
             return
+
+        # Permitir la creación de usuarios sin JWT (ruta pública controlada)
+        if path == '/api/v1/users' and request.method == 'POST':
+            return
             
         # Permitir rutas públicas sin JWT
         if path in public_paths:

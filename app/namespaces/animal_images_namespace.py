@@ -162,9 +162,10 @@ class ImageUpload(Resource):
                     message += f' ({len(errors)} error(es))'
                 return APIResponse.success(data=response_data, message=message)
             else:
+                # Usar details para evitar errores por argumento inesperado en APIResponse.error
                 return APIResponse.error(
                     message='No se pudo subir ninguna imagen',
-                    data=response_data,
+                    details=response_data,
                     status_code=400
                 )
 

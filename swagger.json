@@ -3197,11 +3197,20 @@
             },
             "post": {
                 "responses": {
-                    "200": {
-                        "description": "Success"
+                    "201": {
+                        "description": "Usuario creado"
+                    },
+                    "400": {
+                        "description": "Datos inválidos en el cuerpo de la petición"
+                    },
+                    "409": {
+                        "description": "El usuario ya existe o hay un conflicto de unicidad"
+                    },
+                    "500": {
+                        "description": "Error interno del servidor"
                     }
                 },
-                "description": "Crear nuevo registro",
+                "description": "Crear nuevo usuario (ruta pública, protegida con rate limiting).",
                 "operationId": "create_users",
                 "parameters": [
                     {
@@ -3213,6 +3222,7 @@
                         }
                     }
                 ],
+                "security": [],
                 "tags": [
                     "users"
                 ]

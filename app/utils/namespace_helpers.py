@@ -22,6 +22,7 @@ from typing import Dict, List, Type, Any, Optional, Callable
 from app import db
 from app.utils.response_handler import APIResponse
 from app.models.base_model import ValidationError
+from sqlalchemy.exc import IntegrityError
 import logging
 import csv
 import io
@@ -401,6 +402,7 @@ def create_optimized_namespace(
     enable_stats: bool = True,
     cache_enabled: bool = True,
     rate_limit_decorator: Optional[Callable] = None,
+    public_create: bool = False,
 ) -> Namespace:
     """Crear namespace con CRUD auto-registrado para un modelo dado.
 
@@ -414,11 +416,28 @@ def create_optimized_namespace(
     ns = Namespace(name=name, description=description, path=path or f'/{name}')
 
     input_model, response_model, list_model = _build_models(ns, model_class)
+    validation_error_status = getattr(model_class, '_validation_error_status', None)
+    is_public_create = public_create or getattr(model_class, '_public_create', False)
 
     def _maybe_rate_limit(func):
         if rate_limit_decorator:
             return rate_limit_decorator(func)
         return func
+
+    def _format_validation_errors(exc: ValidationError):
+        """Normaliza ValidationError a un payload listo para APIResponse.validation_error."""
+        errs = getattr(exc, 'errors', None) or exc.message or 'Datos inválidos'
+        field = getattr(exc, 'field', None)
+        if isinstance(errs, str):
+            if field:
+                return {field: errs}
+            return {'error': errs}
+        return errs
+
+    def _validation_error_response(errors):
+        """Construye la respuesta de validación respetando overrides por modelo."""
+        status_code = validation_error_status if validation_error_status else (400 if is_public_create else 422)
+        return APIResponse.validation_error(errors, status_code=status_code)
 
     # Documentar parámetros comunes del listado
     ns.doc(params={
@@ -828,14 +847,26 @@ def create_optimized_namespace(
                     return '', resp[1]
             return '', 200
 
-        @ns.doc('create_' + name, description='Crear nuevo registro')
+        create_doc_kwargs = {
+            'id': 'create_' + name,
+            'description': 'Crear nuevo registro',
+        }
+        if is_public_create:
+            create_doc_kwargs['security'] = []
+            create_doc_kwargs['responses'] = {
+                201: 'Recurso creado',
+                400: 'Datos inválidos',
+                409: 'Conflicto de unicidad',
+                500: 'Error interno del servidor',
+            }
+        @ns.doc(**create_doc_kwargs)
         @ns.expect(input_model, validate=False)  # Validación manual para mejor control
         @_maybe_rate_limit
         def post(self):  # Create
             try:
                 payload = request.get_json(force=True, silent=True)
                 if not payload or not isinstance(payload, dict):
-                    return APIResponse.validation_error({'payload': 'Se requiere un objeto JSON válido y no vacío.'})
+                    return _validation_error_response({'payload': 'Se requiere un objeto JSON válido y no vacío.'})
 
                 logger.info(f"Creating {model_class.__name__} with payload: {payload}")
                 # Convert ISO date/datetime strings into Python objects for DB drivers
@@ -914,7 +945,31 @@ def create_optimized_namespace(
             except ValidationError as ve:
                 db.session.rollback()
                 logger.warning(f"Validation error creating {model_class.__name__}: {ve.message}")
-                return APIResponse.validation_error({'error': ve.message})
+                errors = _format_validation_errors(ve)
+                conflict_detected = False
+                try:
+                    conflict_detected = getattr(ve, 'code', '').lower() in ('conflict', 'unique')
+                    if not conflict_detected:
+                        error_list = []
+                        if isinstance(errors, dict):
+                            error_list = errors.values()
+                        elif isinstance(errors, list):
+                            error_list = errors
+                        else:
+                            error_list = [errors]
+                        conflict_detected = any(isinstance(err, str) and 'ya existe' in err.lower() for err in error_list)
+                except Exception:
+                    conflict_detected = False
+
+                if conflict_detected:
+                    return APIResponse.conflict('Violación de unicidad', details={'validation_errors': errors})
+
+                return _validation_error_response(errors)
+            except IntegrityError as ie:
+                db.session.rollback()
+                logger.warning(f"Integrity error creating {model_class.__name__}: {ie}", exc_info=True)
+                detail = str(getattr(ie, 'orig', ie))
+                return APIResponse.conflict('Violación de integridad de datos', details={'error': detail})
             except Exception as e:
                 db.session.rollback()
                 logger.error(f"Error creando {model_class.__name__}: {e}", exc_info=True)
@@ -1070,7 +1125,7 @@ def create_optimized_namespace(
             except ValidationError as ve:
                 db.session.rollback()
                 logger.warning(f"Validation error updating {model_class.__name__} id={record_id}: {ve.message}")
-                return APIResponse.validation_error({'error': ve.message})
+                return APIResponse.validation_error(_format_validation_errors(ve))
             except Exception as e:
                 db.session.rollback()
                 logger.error(f"Error actualizando {model_class.__name__} id={record_id}: {e}", exc_info=True)
@@ -1130,7 +1185,7 @@ def create_optimized_namespace(
                 except ValidationError as ve:
                     db.session.rollback()
                     logger.warning(f"Validation error patching {model_class.__name__} id={record_id}: {ve.message}")
-                    return APIResponse.validation_error({'error': ve.message})
+                    return APIResponse.validation_error(_format_validation_errors(ve))
                 except Exception as e:
                     db.session.rollback()
                     logger.error(f"Error patch {model_class.__name__} id={record_id}: {e}", exc_info=True)
@@ -1218,6 +1273,8 @@ def create_optimized_namespace(
 
     ns.add_resource(ModelListResource, '/')
     ns.add_resource(ModelDetailResource, '/<int:record_id>')
+    ns._model_list_resource = ModelListResource
+    ns._model_detail_resource = ModelDetailResource
 
     # ---- Metadata endpoint para PWA (revalidación ligera) ----
     @ns.route('/metadata')
@@ -1341,7 +1398,7 @@ def create_optimized_namespace(
                     return response
                 except ValidationError as ve:
                     db.session.rollback()
-                    return APIResponse.validation_error({'error': ve.message})
+                    return APIResponse.validation_error(_format_validation_errors(ve))
                 except Exception as e:
                     db.session.rollback()
                     logger.error(f"Error bulk create {model_class.__name__}: {e}", exc_info=True)

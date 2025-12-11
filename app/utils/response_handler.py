@@ -98,6 +98,8 @@ class APIResponse:
 
         response = {
             "success": False,
+            # Incluir mensaje en la raíz para que el frontend lo pueda mostrar en alertas genéricas
+            "message": message,
             "error": {
                 "code": error_code or f"HTTP_{status_code}",
                 "message": message,
@@ -110,20 +112,22 @@ class APIResponse:
     
     @staticmethod
     def validation_error(errors: Union[Dict, List], 
-                        message: str = "Errores de validación") -> tuple:
+                        message: str = "Errores de validación",
+                        status_code: int = 422) -> tuple:
         """
         Respuesta específica para errores de validación.
         
         Args:
             errors: Errores de validación (dict o list)
             message: Mensaje principal
+            status_code: Código HTTP a devolver (por defecto 422)
         
         Returns:
-            Tuple con (response_json, 422)
+            Tuple con (response_json, status_code)
         """
         return APIResponse.error(
             message=message,
-            status_code=422,
+            status_code=status_code,
             error_code="VALIDATION_ERROR",
             details={"validation_errors": errors}
         )

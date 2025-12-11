@@ -10,11 +10,13 @@ logger = logging.getLogger(__name__)
 
 # Excepción simple para validaciones internas
 class ValidationError(Exception):
-    def __init__(self, message, code="validation_error", field=None):
+    def __init__(self, message, code="validation_error", field=None, errors=None):
         super().__init__(message)
         self.message = message
         self.code = code
         self.field = field
+        # Lista/dict opcional con los errores individuales para exponerlos en la respuesta
+        self.errors = errors
 
 class BaseModel(db.Model):
     """Clase base optimizada para modelos con funcionalidades de namespace.
@@ -130,7 +132,8 @@ class BaseModel(db.Model):
                     errors.append(f"El valor '{data[field]}' ya existe para el campo '{field}'")
 
         if errors:
-            raise ValidationError('; '.join(errors), code="validation_error")
+            # Guardar listado de errores para que los controladores puedan retornarlos
+            raise ValidationError('; '.join(errors), code="validation_error", errors=errors)
         
         return data
 
