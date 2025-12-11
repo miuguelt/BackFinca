@@ -1,5 +1,4 @@
 /certs
-/docs
 /instance/scripts
 /sdk
 /tools
@@ -191,10 +190,7 @@ cython_debug/
 .cursorindexingignore
 /migrations
 /scripts
-/docs
-!docs/api-usage-guia-frontend.md
 /.claude
-*.md
 test_animal_images.ps1
 test_animal_images.sh
 test_api_endpoint.py
