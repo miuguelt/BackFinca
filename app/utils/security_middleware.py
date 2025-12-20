@@ -21,6 +21,8 @@ def init_security_middlewares(app):
         public_paths = {
             '/api/v1/auth/login',
             '/api/v1/auth/refresh',
+            '/api/v1/auth/recover',
+            '/api/v1/auth/reset-password',
             '/api/v1/auth/public-confirm',
             '/api/v1/health',
             '/api/v1',  # raíz pública del blueprint

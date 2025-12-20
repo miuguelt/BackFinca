@@ -7,6 +7,7 @@ from flask_jwt_extended import (
     decode_token
 )
 from flask_jwt_extended.exceptions import CSRFError, JWTExtendedException
+from app import db
 from app.models.user import User
 from app.utils.response_handler import APIResponse
 from app.utils.security_logger import (
@@ -15,6 +16,7 @@ from app.utils.security_logger import (
     log_admin_action
 )
 from app.utils.token_blocklist import mark_token_revoked
+from app.utils.validators import validate_password, ValidationError as ValidatorError
 from datetime import timedelta
 import logging
 
@@ -30,6 +32,18 @@ logger = logging.getLogger(__name__)
 # Importar limiter para aplicar rate limiting después de que la app esté inicializada
 limiter = None
 
+def _mask_email(email: str) -> str:
+    """Return a masked version of the email for friendly responses."""
+    try:
+        local, domain = email.split('@', 1)
+        if len(local) <= 2:
+            masked_local = local[0] + "*" * max(len(local) - 1, 1)
+        else:
+            masked_local = local[0] + "*" * (len(local) - 2) + local[-1]
+        return f"{masked_local}@{domain}"
+    except Exception:
+        return "***"
+
 
 def set_limiter(app_limiter):
     """Configurar el limiter después de la inicialización de la app y aplicar límites por endpoint."""
@@ -44,6 +58,9 @@ def set_limiter(app_limiter):
         login_limit = auth_limits.get('login', "5 per minute")
         refresh_limit = auth_limits.get('refresh', "10 per minute")
         logout_limit = auth_limits.get('logout', "20 per minute")
+        change_limit = auth_limits.get('change_password', "10 per hour")
+        recover_limit = auth_limits.get('recover', "5 per hour")
+        reset_limit = auth_limits.get('reset', "5 per hour")
 
         # Key func específico para login: IP + identifier/identification/email
         def login_key_func():
@@ -67,7 +84,8 @@ def set_limiter(app_limiter):
         if hasattr(LoginResource.post, '_rate_limit_applied'):
             return
         
-        # Aplicar límites a los métodos de los recursos
+        
+        # Aplicar limites a los metodos de los recursos
         try:
             LoginResource.post = limiter.limit(login_limit, key_func=login_key_func)(LoginResource.post)
             LoginResource.post._rate_limit_applied = True
@@ -83,7 +101,22 @@ def set_limiter(app_limiter):
             LogoutResource.post._rate_limit_applied = True
         except Exception:
             logger.exception("No se pudo aplicar rate limit a LogoutResource.post")
-        # Aplicar exención de rate limit para /auth/me (endpoint de verificación frecuente)
+        try:
+            ChangePasswordResource.post = limiter.limit(change_limit, key_func=get_user_id)(ChangePasswordResource.post)
+            ChangePasswordResource.post._rate_limit_applied = True
+        except Exception:
+            logger.exception("No se pudo aplicar rate limit a ChangePasswordResource.post")
+        try:
+            PasswordRecoverResource.post = limiter.limit(recover_limit, key_func=get_remote_address_with_forwarded)(PasswordRecoverResource.post)
+            PasswordRecoverResource.post._rate_limit_applied = True
+        except Exception:
+            logger.exception("No se pudo aplicar rate limit a PasswordRecoverResource.post")
+        try:
+            PasswordResetResource.post = limiter.limit(reset_limit, key_func=get_remote_address_with_forwarded)(PasswordResetResource.post)
+            PasswordResetResource.post._rate_limit_applied = True
+        except Exception:
+            logger.exception("No se pudo aplicar rate limit a PasswordResetResource.post")
+        # Aplicar exencion de rate limit para /auth/me (endpoint de verificacion frecuente)
         try:
             if not hasattr(CurrentUserResource.get, '_rate_limit_exempted'):
                 CurrentUserResource.get = limiter.exempt(CurrentUserResource.get)
@@ -115,6 +148,22 @@ login_response_model = auth_ns.model('LoginResponse', {
     'message': fields.String,
     'user': fields.Nested(user_info_model),
     'access_token': fields.String,
+})
+
+password_change_model = auth_ns.model('PasswordChange', {
+    'current_password': fields.String(required=True, description='Contrasena actual', example='OldPass123!'),
+    'new_password': fields.String(required=True, description='Nueva contrasena (minimo 8 caracteres, compleja)', example='NewPass123!')
+})
+
+password_recover_model = auth_ns.model('PasswordRecoverRequest', {
+    'identifier': fields.Raw(required=False, description='Email o numero de identificacion', example='user@example.com'),
+    'email': fields.String(required=False, description='Alias: email del usuario', example='user@example.com'),
+    'identification': fields.Raw(required=False, description='Alias: numero de identificacion', example='12345678')
+})
+
+password_reset_model = auth_ns.model('PasswordReset', {
+    'reset_token': fields.String(required=True, description='Token de recuperacion generado en /auth/recover'),
+    'new_password': fields.String(required=True, description='Nueva contrasena valida', example='NewPass123!')
 })
 
 # --- Rutas de Autenticación ---
@@ -340,3 +389,195 @@ class CurrentUserResource(Resource):
         except Exception as e:
             logger.error(f"Error obteniendo usuario actual (ID: {get_jwt_identity()}): {e}", exc_info=True)
             return APIResponse.error('Error interno del servidor', details={'error': str(e)}, status_code=500)
+
+
+@auth_ns.route('/change-password')
+class ChangePasswordResource(Resource):
+    @auth_ns.doc('change_password', description='Actualizar la contrasena del usuario autenticado.')
+    @auth_ns.expect(password_change_model)
+    @jwt_required()
+    def post(self):
+        data = request.get_json() or {}
+        current_password = data.get('current_password')
+        new_password = data.get('new_password')
+
+        if not current_password or not new_password:
+            return APIResponse.validation_error({
+                'current_password': 'Requerido',
+                'new_password': 'Requerido'
+            })
+
+        try:
+            validate_password(new_password, field_name='new_password')
+        except ValidatorError as ve:
+            field = ve.field or 'new_password'
+            return APIResponse.validation_error({field: ve.message})
+
+        try:
+            user_id = get_jwt_identity()
+            try:
+                user_id_int = int(user_id)
+            except Exception:
+                user_id_int = user_id
+
+            user = User.get_by_id(user_id_int)
+            if not user:
+                return APIResponse.not_found('Usuario')
+            if not user.status:
+                return APIResponse.error('Usuario inactivo', status_code=403)
+            if not user.check_password(current_password):
+                return APIResponse.unauthorized('Contrasena actual incorrecta')
+            if user.check_password(new_password):
+                return APIResponse.validation_error({'new_password': 'La nueva contrasena no puede ser igual a la actual'})
+
+            user.set_password(new_password)
+            db.session.add(user)
+            db.session.commit()
+
+            # Revocar tokens actuales para forzar re-login
+            try:
+                decoded_access = get_jwt()
+                mark_token_revoked(decoded_access)
+                refresh_cookie_name = current_app.config.get('JWT_REFRESH_COOKIE_NAME', 'refresh_token_cookie')
+                refresh_token = request.cookies.get(refresh_cookie_name)
+                if refresh_token:
+                    decoded_refresh = decode_token(refresh_token)
+                    mark_token_revoked(decoded_refresh)
+            except Exception as revoke_err:
+                logger.debug("No se pudo revocar tokens en cambio de contrasena: %s", revoke_err)
+
+            try:
+                log_admin_action(user.id, 'PASSWORD_CHANGE', 'User', user.id, changes={'self_service': True})
+            except Exception:
+                logger.debug("No se pudo registrar log de cambio de contrasena", exc_info=True)
+
+            return APIResponse.success(
+                message='Contrasena actualizada correctamente',
+                data={'should_clear_auth': True}
+            )
+        except Exception as e:
+            logger.error(f'Error actualizando contrasena para usuario {get_jwt_identity()}: {e}', exc_info=True)
+            db.session.rollback()
+            return APIResponse.error('Error al actualizar contrasena', status_code=500, details={'error': str(e)})
+
+
+@auth_ns.route('/recover')
+class PasswordRecoverResource(Resource):
+    @auth_ns.doc('recover_password', description='Generar token temporal para recuperar la contrasena por email o identificacion.')
+    @auth_ns.expect(password_recover_model)
+    def post(self):
+        data = request.get_json() or {}
+        identifier = data.get('identifier') or data.get('email') or data.get('identification')
+        if isinstance(identifier, (int, float)):
+            identifier = str(int(identifier))
+
+        if not identifier:
+            return APIResponse.validation_error({'identifier': 'Se requiere email o identificacion'})
+
+        user = User.query.filter(
+            (User.email == identifier) | (User.identification == identifier)
+        ).first()
+
+        if not user:
+            return APIResponse.not_found('Usuario')
+        if not user.status:
+            return APIResponse.error('Usuario inactivo', status_code=403)
+
+        # Calcular expiracion del token de recuperacion
+        minutes_conf = current_app.config.get('PASSWORD_RESET_TOKEN_MINUTES', 15)
+        try:
+            minutes_conf = int(minutes_conf)
+        except Exception:
+            minutes_conf = 15
+        expires_delta = timedelta(minutes=minutes_conf)
+
+        reset_token = create_refresh_token(
+            identity=str(user.id),
+            additional_claims={'purpose': 'password_reset', 'email': user.email},
+            expires_delta=expires_delta
+        )
+
+        try:
+            log_admin_action(user.id, 'PASSWORD_RESET_REQUEST', 'User', user.id, changes={'via': 'recover_endpoint'})
+        except Exception:
+            logger.debug("No se pudo registrar log de solicitud de recuperacion", exc_info=True)
+
+        return APIResponse.success(
+            message='Token de recuperacion generado',
+            data={
+                'reset_token': reset_token,
+                'expires_in': int(expires_delta.total_seconds()),
+                'email_hint': _mask_email(user.email)
+            }
+        )
+
+
+@auth_ns.route('/reset-password')
+class PasswordResetResource(Resource):
+    @auth_ns.doc('reset_password', description='Restablecer contrasena usando el token generado en /auth/recover.')
+    @auth_ns.expect(password_reset_model)
+    def post(self):
+        data = request.get_json() or {}
+        reset_token = data.get('reset_token')
+        new_password = data.get('new_password')
+
+        if not reset_token or not new_password:
+            return APIResponse.validation_error({
+                'reset_token': 'Requerido',
+                'new_password': 'Requerido'
+            })
+
+        try:
+            validate_password(new_password, field_name='new_password')
+        except ValidatorError as ve:
+            field = ve.field or 'new_password'
+            return APIResponse.validation_error({field: ve.message})
+
+        try:
+            decoded = decode_token(reset_token)
+        except JWTExtendedException as e:
+            return APIResponse.unauthorized('Token de recuperacion invalido o expirado', details={'error': str(e)})
+        except Exception as e:
+            logger.error(f"Error decodificando token de recuperacion: {e}", exc_info=True)
+            return APIResponse.error('Error al validar token de recuperacion', status_code=500, details={'error': str(e)})
+
+        if decoded.get('type') != 'refresh' or decoded.get('purpose') != 'password_reset':
+            return APIResponse.unauthorized('Token de recuperacion invalido', details={'reason': decoded.get('type')})
+
+        user_id = decoded.get('sub')
+        try:
+            user_id_int = int(user_id)
+        except Exception:
+            user_id_int = user_id
+
+        user = User.get_by_id(user_id_int)
+        if not user:
+            return APIResponse.not_found('Usuario')
+        if not user.status:
+            return APIResponse.error('Usuario inactivo', status_code=403)
+        if user.check_password(new_password):
+            return APIResponse.validation_error({'new_password': 'La nueva contrasena no puede ser igual a la actual'})
+
+        try:
+            user.set_password(new_password)
+            db.session.add(user)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f'Error guardando nueva contrasena para usuario {user_id}: {e}', exc_info=True)
+            return APIResponse.error('Error al guardar la nueva contrasena', status_code=500, details={'error': str(e)})
+
+        try:
+            mark_token_revoked(decoded)
+        except Exception:
+            logger.debug("No se pudo marcar token de recuperacion como usado", exc_info=True)
+
+        try:
+            log_admin_action(user.id, 'PASSWORD_RESET', 'User', user.id, changes={'via': 'recover_endpoint'})
+        except Exception:
+            logger.debug("No se pudo registrar log de reset de contrasena", exc_info=True)
+
+        return APIResponse.success(
+            message='Contrasena restablecida correctamente',
+            data={'should_clear_auth': True}
+        )

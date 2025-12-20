@@ -108,7 +108,14 @@ def init_rate_limiter(app):
 
 # Configuración de rate limiting por defecto por tipo de endpoint
 RATE_LIMIT_CONFIG = {
-    'auth': {'login': "10 per minute", 'refresh': "20 per minute", 'logout': "30 per minute"},
+    'auth': {
+        'login': "10 per minute",
+        'refresh': "20 per minute",
+        'logout': "30 per minute",
+        'change_password': "20 per hour",
+        'recover': "5 per hour",
+        'reset': "5 per hour",
+    },
     'users': {'create': "10 per hour", 'read': "500 per hour", 'update': "100 per hour", 'delete': "20 per hour"},
     'animals': {'create': "100 per hour", 'read': "1000 per hour", 'update': "200 per hour", 'delete': "50 per hour"},
     'general': {'read': "500 per hour", 'write': "100 per hour", 'admin': "2000 per hour"}
