@@ -282,7 +282,7 @@ async function networkFirstStrategy(request, response) {
 
 ```typescript
 class APIClient {
-  private baseUrl = 'https://finca.isladigital.xyz/api/v1';
+  private baseUrl = 'https://finca.enlinea.sbs/api/v1';
   private cachedETags = new Map<string, string>();
 
   async fetchUsers(options: {

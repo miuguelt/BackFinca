@@ -23,7 +23,7 @@ if os.path.exists(directorio_imagenes):
         
         # Generar URL para frontend
         # Usar la configuración de BACKEND_URL del .env
-        backend_url = "https://finca.isladigital.xyz"  # URL de producción según config.py
+        backend_url = "https://finca.enlinea.sbs"  # URL de producción según config.py
         url_publica = f"{backend_url}/static/uploads/animals/52/{archivo}"
         print(f"    URL pública: {url_publica}")
         print("-" * 50)

@@ -19,6 +19,7 @@ from .foodTypes import FoodTypes as FoodType
 from .geneticImprovements import GeneticImprovements as GeneticImprovement
 from .route_administration import RouteAdministration
 from .animal_images import AnimalImages as AnimalImage
+from .activity_log import ActivityLog
 
 __all__ = [
     'BaseModel',
@@ -41,4 +42,5 @@ __all__ = [
     'GeneticImprovement',
     'RouteAdministration',
     'AnimalImage',
+    'ActivityLog',
 ]

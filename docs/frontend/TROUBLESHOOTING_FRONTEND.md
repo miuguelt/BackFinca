@@ -21,17 +21,17 @@ El endpoint está funcionando correctamente. Las peticiones exitosas muestran:
 
 ```javascript
 // ❌ INCORRECTO
-const API_BASE = 'https://finca.isladigital.xyz/api/v1';
+const API_BASE = 'https://finca.enlinea.sbs/api/v1';
 const endpoint = '/api/v1/animal-images/58';
 const url = API_BASE + endpoint; // → /api/v1/api/v1/animal-images/58
 
 // ✅ CORRECTO - Opción 1: Base incluye /api/v1, endpoint no
-const API_BASE = 'https://finca.isladigital.xyz/api/v1';
+const API_BASE = 'https://finca.enlinea.sbs/api/v1';
 const endpoint = '/animal-images/58';
 const url = API_BASE + endpoint; // → /api/v1/animal-images/58
 
 // ✅ CORRECTO - Opción 2: Base sin /api/v1, endpoint sí lo incluye
-const API_BASE = 'https://finca.isladigital.xyz';
+const API_BASE = 'https://finca.enlinea.sbs';
 const endpoint = '/api/v1/animal-images/58';
 const url = API_BASE + endpoint; // → /api/v1/animal-images/58
 ```
@@ -44,13 +44,13 @@ Busca en tu código algo similar a esto y corrígelo:
 // Archivo: src/config/api.js o similar
 
 // ❌ Si tienes esto:
-export const API_BASE = 'https://finca.isladigital.xyz/api/v1';
+export const API_BASE = 'https://finca.enlinea.sbs/api/v1';
 export const ENDPOINTS = {
   getImages: (animalId) => `/api/v1/animal-images/${animalId}` // ← Quitar /api/v1
 }
 
 // ✅ Cámbialo por:
-export const API_BASE = 'https://finca.isladigital.xyz/api/v1';
+export const API_BASE = 'https://finca.enlinea.sbs/api/v1';
 export const ENDPOINTS = {
   getImages: (animalId) => `/animal-images/${animalId}` // ← Sin /api/v1
 }
@@ -137,7 +137,7 @@ async function uploadAnimalImages(animalId, files) {
   }
 
   // 8. Enviar petición
-  const response = await fetch('https://finca.isladigital.xyz/api/v1/animal-images/upload', {
+  const response = await fetch('https://finca.enlinea.sbs/api/v1/animal-images/upload', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`
@@ -190,10 +190,10 @@ En la pestaña "Headers" de DevTools, busca:
 
 ```
 ✅ CORRECTO:
-Request URL: https://finca.isladigital.xyz/api/v1/animal-images/upload
+Request URL: https://finca.enlinea.sbs/api/v1/animal-images/upload
 
 ❌ INCORRECTO:
-Request URL: https://finca.isladigital.xyz/api/v1/api/v1/animal-images/upload
+Request URL: https://finca.enlinea.sbs/api/v1/api/v1/animal-images/upload
 ```
 
 ---
@@ -205,7 +205,7 @@ Revisa estos puntos en tu código del frontend:
 - [ ] **URL base correcta:** Sin duplicar `/api/v1`
   ```javascript
   // ✅ Correcto
-  const API_BASE = 'https://finca.isladigital.xyz/api/v1';
+  const API_BASE = 'https://finca.enlinea.sbs/api/v1';
   const url = `${API_BASE}/animal-images/upload`;
   ```
 
@@ -252,7 +252,7 @@ console.log('API_BASE:', API_BASE || 'No definida');
 const testAnimalId = 58;
 const testUrl = `${API_BASE}/animal-images/${testAnimalId}`;
 console.log('URL construida:', testUrl);
-// Debería mostrar: https://finca.isladigital.xyz/api/v1/animal-images/58
+// Debería mostrar: https://finca.enlinea.sbs/api/v1/animal-images/58
 
 // 3. Verificar token
 const token = localStorage.getItem('token') || sessionStorage.getItem('token');
@@ -300,7 +300,7 @@ Y en la respuesta JSON:
       {
         "id": 1,
         "filename": "20251018_143022_a3f8e9d1_photo.jpg",
-        "url": "https://finca.isladigital.xyz/static/uploads/animals/58/20251018_143022_a3f8e9d1_photo.jpg",
+        "url": "https://finca.enlinea.sbs/static/uploads/animals/58/20251018_143022_a3f8e9d1_photo.jpg",
         "size": 245678
       }
     ],
@@ -317,7 +317,7 @@ Y en la respuesta JSON:
 **1. En tu archivo de configuración de API:**
 ```javascript
 // Asegúrate de no duplicar /api/v1
-const API_BASE = 'https://finca.isladigital.xyz/api/v1';
+const API_BASE = 'https://finca.enlinea.sbs/api/v1';
 const ENDPOINTS = {
   uploadImages: '/animal-images/upload', // Sin /api/v1 al inicio
   getImages: (id) => `/animal-images/${id}` // Sin /api/v1 al inicio

@@ -36,7 +36,7 @@ FLASK_ENV=production  # development | production | testing
 # ============================================================
 # BASE DE DATOS (MySQL)
 # ============================================================
-DB_HOST=isladigital.xyz
+DB_HOST=enlinea.sbs
 DB_PORT=3311
 DB_NAME=finca
 DB_USER=fincau
@@ -71,7 +71,7 @@ JWT_SECRET_KEY=tu_clave_super_secreta_de_64_caracteres_minimo_aqui_123456789
 
 # Dominio de cookies (para producción)
 # Ejemplo: .tudominio.com (el punto inicial permite subdominios)
-JWT_COOKIE_DOMAIN=.isladigital.xyz
+JWT_COOKIE_DOMAIN=.enlinea.sbs
 
 # HTTPS obligatorio en producción
 JWT_COOKIE_SECURE=True
@@ -85,14 +85,14 @@ JWT_COOKIE_SAMESITE=None
 # Lista de orígenes permitidos (separados por coma)
 # Debe incluir TODOS los dominios desde donde se accede al PWA
 
-CORS_ORIGINS=https://finca.isladigital.xyz,https://app.tudominio.com,http://localhost:5173
+CORS_ORIGINS=https://finca.enlinea.sbs,https://app.tudominio.com,http://localhost:5173
 
 # ============================================================
 # URLs del Sistema
 # ============================================================
-API_BASE_URL=https://finca.isladigital.xyz/api/v1
-FRONTEND_URL=https://finca.isladigital.xyz
-BACKEND_URL=https://finca.isladigital.xyz
+API_BASE_URL=https://finca.enlinea.sbs/api/v1
+FRONTEND_URL=https://finca.enlinea.sbs
+BACKEND_URL=https://finca.enlinea.sbs
 
 # ============================================================
 # SEGURIDAD
@@ -193,10 +193,10 @@ requirepass tu_password_redis_seguro
 ```nginx
 server {
     listen 443 ssl http2;
-    server_name finca.isladigital.xyz;
+    server_name finca.enlinea.sbs;
 
-    ssl_certificate /etc/letsencrypt/live/finca.isladigital.xyz/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/finca.isladigital.xyz/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/finca.enlinea.sbs/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/finca.enlinea.sbs/privkey.pem;
 
     # CRITICAL: Headers para PWA
     add_header X-Frame-Options "SAMEORIGIN" always;
@@ -277,7 +277,7 @@ server {
 ```bash
 # Usando Let's Encrypt (certbot)
 sudo apt install certbot python3-certbot-nginx
-sudo certbot --nginx -d finca.isladigital.xyz
+sudo certbot --nginx -d finca.enlinea.sbs
 ```
 
 ### 🔐 JWT Cookies Configuration
@@ -289,7 +289,7 @@ sudo certbot --nginx -d finca.isladigital.xyz
 JWT_COOKIE_SECURE = True          # Solo HTTPS
 JWT_COOKIE_HTTPONLY = True        # No accesible desde JavaScript
 JWT_COOKIE_SAMESITE = 'None'      # Permite cross-origin (PWA necesario)
-JWT_COOKIE_DOMAIN = '.isladigital.xyz'  # Compartir entre subdominios
+JWT_COOKIE_DOMAIN = '.enlinea.sbs'  # Compartir entre subdominios
 ```
 
 **⚠️ IMPORTANTE para React PWA:**
@@ -343,7 +343,7 @@ X-XSS-Protection: 1; mode=block
 
 **Verificar headers:**
 ```bash
-curl -I https://finca.isladigital.xyz/api/v1/users
+curl -I https://finca.enlinea.sbs/api/v1/users
 ```
 
 ---
@@ -403,7 +403,7 @@ GET    /api/v1/{resource}?since=...    # Sincronización delta
 python run_migration.py
 
 # Opción 2: SQL directo
-mysql -h isladigital.xyz -P 3311 -u fincau -p finca < add_performance_indexes.sql
+mysql -h enlinea.sbs -P 3311 -u fincau -p finca < add_performance_indexes.sql
 ```
 
 **Esto crea índices en `updated_at` y `created_at` que aceleran:**
@@ -645,7 +645,7 @@ sudo systemctl status finca-api
 # deploy.sh
 
 # 1. Backup DB
-mysqldump -h isladigital.xyz -P 3311 -u fincau -p finca > backup_$(date +%Y%m%d).sql
+mysqldump -h enlinea.sbs -P 3311 -u fincau -p finca > backup_$(date +%Y%m%d).sql
 
 # 2. Pull código
 git pull origin main
@@ -663,7 +663,7 @@ python run_migration.py
 sudo systemctl restart finca-api
 
 # 7. Verificar salud
-curl -f https://finca.isladigital.xyz/api/v1/auth/me || echo "❌ API no responde"
+curl -f https://finca.enlinea.sbs/api/v1/auth/me || echo "❌ API no responde"
 
 # 8. Ver logs
 tail -f /var/log/gunicorn/error.log

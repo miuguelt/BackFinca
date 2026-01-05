@@ -21,7 +21,7 @@ Las imágenes del animal 52 no se mostraban en el frontend debido a varios probl
 
 **Archivo**: `app/models/animal_images.py`
 - Actualizado el método `to_namespace_dict()` para generar URLs usando el nuevo endpoint público
-- Las URLs ahora tienen el formato: `https://finca.isladigital.xyz/public/images/animals/52/filename.png`
+- Las URLs ahora tienen el formato: `https://finca.enlinea.sbs/public/images/animals/52/filename.png`
 
 ### 3. Actualizada función de utilidad
 
@@ -50,15 +50,15 @@ Las imágenes del animal 52 no se mostraban en el frontend debido a varios probl
 ### 7. Configuración de URLs
 
 **Archivo**: `.env`
-- Agregada la variable `API_BASE_URL_NO_VERSION=https://finca.isladigital.xyz`
+- Agregada la variable `API_BASE_URL_NO_VERSION=https://finca.enlinea.sbs`
 
 ## URLs de las imágenes del animal 52
 
 Las imágenes del animal 52 ahora son accesibles públicamente en:
 
-1. `https://finca.isladigital.xyz/public/images/animals/52/20251018_083235_90993378_2025-07-22_16.53.54_senasofiaplus.edu.co_858e50588c64.png`
-2. `https://finca.isladigital.xyz/public/images/animals/52/20251018_083315_32f1765b_unnamed.png`
-3. `https://finca.isladigital.xyz/public/images/animals/52/20251018_090725_762e8b36_unnamed.png`
+1. `https://finca.enlinea.sbs/public/images/animals/52/20251018_083235_90993378_2025-07-22_16.53.54_senasofiaplus.edu.co_858e50588c64.png`
+2. `https://finca.enlinea.sbs/public/images/animals/52/20251018_083315_32f1765b_unnamed.png`
+3. `https://finca.enlinea.sbs/public/images/animals/52/20251018_090725_762e8b36_unnamed.png`
 
 ## Para el frontend
 
@@ -88,7 +88,7 @@ Headers: Authorization: Bearer {token}
         "file_size": 1835659,
         "mime_type": "image/png",
         "is_primary": true,
-        "url": "https://finca.isladigital.xyz/public/images/animals/52/20251018_083235_90993378_2025-07-22_16.53.54_senasofiaplus.edu.co_858e50588c64.png",
+        "url": "https://finca.enlinea.sbs/public/images/animals/52/20251018_083235_90993378_2025-07-22_16.53.54_senasofiaplus.edu.co_858e50588c64.png",
         "created_at": "2025-10-18T08:32:35.000Z"
       },
       // ... otras imágenes

@@ -88,7 +88,7 @@ Las migraciones de base de datos han sido aplicadas exitosamente. Se crearon **8
 sqlalchemy.url = %(DATABASE_URL)s
 
 # DESPUÉS (conexión directa):
-sqlalchemy.url = mysql+pymysql://fincau:fincac@isladigital.xyz:3311/finca
+sqlalchemy.url = mysql+pymysql://fincau:fincac@enlinea.sbs:3311/finca
 ```
 
 ### 2. Eliminación de Migración Conflictiva

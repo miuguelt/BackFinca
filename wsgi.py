@@ -12,7 +12,9 @@ if flask_env == 'production':
     config_name = 'production'
 else:
     load_dotenv()  # Carga .env por defecto
-    config_name = os.getenv('FLASK_ENV', 'development')
+    config_name = os.getenv('FLASK_ENV')
+    if not config_name:
+        raise SystemExit('FLASK_ENV no esta definido en .env')
 
 from app import create_app, db
 app = create_app(config_name)
@@ -26,16 +28,21 @@ if config_name == 'production':
 
 # Log en tiempo de importación para despliegues WSGI (cuando no se ejecuta __main__)
 try:
-    display_host = os.getenv('BACKEND_DISPLAY_HOST', 'localhost')
-    display_port = int(os.getenv('PORT', 8081))
+    display_host = os.getenv('BACKEND_DISPLAY_HOST')
+    display_port_raw = os.getenv('PORT')
+    display_port = int(display_port_raw) if display_port_raw else None
     # Permitir forzar esquema de visualización, si no, inferir por USE_HTTPS (por defecto https en producción y http en desarrollo)
-    _default_https = 'true' if config_name == 'production' else 'false'
-    scheme = os.getenv('BACKEND_DISPLAY_SCHEME') or ('https' if os.getenv('USE_HTTPS', _default_https).lower() == 'true' else 'http')
-    print(f"[WSGI] IMPORT: Backend address hint: {scheme}://{display_host}:{display_port} (wsgi.py; el bind real lo gestiona el servidor WSGI/proxy)")
-    logging.getLogger('startup').info(
-        '[WSGI] IMPORT: Backend address hint: %s://%s:%s (wsgi.py; el bind real lo gestiona el servidor WSGI/proxy)',
-        scheme, display_host, display_port
-    )
+    scheme = os.getenv('BACKEND_DISPLAY_SCHEME')
+    if not scheme:
+        use_https_env = os.getenv('USE_HTTPS')
+        if use_https_env is not None:
+            scheme = 'https' if use_https_env.lower() == 'true' else 'http'
+    if display_host and display_port and scheme:
+        print(f"[WSGI] IMPORT: Backend address hint: {scheme}://{display_host}:{display_port} (wsgi.py; el bind real lo gestiona el servidor WSGI/proxy)")
+        logging.getLogger('startup').info(
+            '[WSGI] IMPORT: Backend address hint: %s://%s:%s (wsgi.py; el bind real lo gestiona el servidor WSGI/proxy)',
+            scheme, display_host, display_port
+        )
 except Exception:
     pass
 
@@ -45,10 +52,11 @@ except Exception:
 @app.after_request
 def set_security_headers(response):
     try:
-        _default_https = 'true' if config_name == 'production' else 'false'
-        is_secure = request.is_secure or os.getenv('USE_HTTPS', _default_https).lower() == 'true'
+        use_https_env = os.getenv('USE_HTTPS')
+        use_https = use_https_env is not None and use_https_env.lower() == 'true'
+        is_secure = request.is_secure or use_https
     except Exception:
-        is_secure = False
+        is_secure = request.is_secure
 
     # Evitar exponer información sensible
     response.headers.setdefault('X-Content-Type-Options', 'nosniff')
@@ -102,13 +110,14 @@ def set_security_headers(response):
 
 # Evitar ejecutar db.create_all automáticamente en producción
 with app.app_context():
-    if config_name != 'production' or os.getenv('FORCE_DB_CREATE', 'false').lower() == 'true':
+    force_db_create = os.getenv('FORCE_DB_CREATE') or ''
+    if config_name != 'production' or force_db_create.lower() == 'true':
         db.create_all()
 
 def _resolve_ssl_context():
     # En desarrollo, desactivar HTTPS por defecto para evitar problemas con certificados 'adhoc'.
-    _default_https = 'true' if config_name == 'production' else 'false'
-    use_https = os.getenv('USE_HTTPS', _default_https).lower() == 'true'
+    use_https_env = os.getenv('USE_HTTPS')
+    use_https = use_https_env is not None and use_https_env.lower() == 'true'
     if not use_https:
         return None
 
@@ -136,21 +145,25 @@ if config_name == 'production':
         raise SystemExit(1)
     # Ensure cookie domain set
     if not os.getenv('JWT_COOKIE_DOMAIN') and not app.config.get('JWT_COOKIE_DOMAIN'):
-        logging.error('JWT_COOKIE_DOMAIN is not set for production environment. Set JWT_COOKIE_DOMAIN to your base domain (e.g. isladigital.xyz)')
+        logging.error('JWT_COOKIE_DOMAIN is not set for production environment. Set JWT_COOKIE_DOMAIN to your base domain (e.g. enlinea.sbs)')
         raise SystemExit(1)
 
 if __name__ == "__main__":
-    port = int(os.environ.get('PORT', 8081))
+    port_env = os.environ.get('PORT')
+    if not port_env:
+        raise SystemExit('PORT no esta definido en .env')
+    port = int(port_env)
     ssl_context = _resolve_ssl_context()
 
     # NUEVO: Log de URL y puerto del backend en producción (wsgi.py)
     try:
         scheme = 'https' if ssl_context else 'http'
-        display_host = os.getenv('BACKEND_DISPLAY_HOST', 'localhost')
+        display_host = os.getenv('BACKEND_DISPLAY_HOST')
         logger = logging.getLogger('startup')
-        msg = f"Backend escuchando en {scheme}://{display_host}:{port} (wsgi.py)"
-        print(f"[WSGI] PROD: {msg}")
-        logger.info("[WSGI] PROD: %s", msg)
+        if display_host:
+            msg = f"Backend escuchando en {scheme}://{display_host}:{port} (wsgi.py)"
+            print(f"[WSGI] PROD: {msg}")
+            logger.info("[WSGI] PROD: %s", msg)
     except Exception:
         pass
 

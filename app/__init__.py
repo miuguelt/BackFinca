@@ -225,7 +225,7 @@ def create_app(config_name='development'):
             'CACHE_THRESHOLD': app.config.get('CACHE_THRESHOLD', 1000),
         }
         if cache_config['CACHE_TYPE'] == 'redis':
-            cache_config['CACHE_REDIS_URL'] = app.config.get('CACHE_REDIS_URL') or app.config.get('REDIS_URL')
+            cache_config['CACHE_REDIS_URL'] = app.config.get('CACHE_REDIS_URL')
         cache.init_app(app, config=cache_config)
 
         # Si se usa Redis, realizar una verificación de salud del backend de caché

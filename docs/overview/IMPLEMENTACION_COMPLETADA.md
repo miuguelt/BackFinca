@@ -268,7 +268,7 @@ Buscar las nuevas secciones:
 flask db upgrade
 
 # Opción B: Usar variable de entorno
-export DATABASE_URL="mysql+pymysql://fincau:fincac@isladigital.xyz:3311/finca"
+export DATABASE_URL="mysql+pymysql://fincau:fincac@enlinea.sbs:3311/finca"
 flask db upgrade head
 ```
 

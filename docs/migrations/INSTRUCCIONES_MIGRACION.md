@@ -20,7 +20,7 @@ Agrega índices en los campos `updated_at` y `created_at` de **todas** las tabla
 ### Usar MySQL Workbench o cliente MySQL:
 
 ```bash
-mysql -h isladigital.xyz -P 3311 -u fincau -p finca < add_performance_indexes.sql
+mysql -h enlinea.sbs -P 3311 -u fincau -p finca < add_performance_indexes.sql
 ```
 
 ### O copiar y pegar en la consola MySQL:

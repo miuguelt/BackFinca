@@ -1,8 +1,10 @@
 import os
+from dotenv import load_dotenv
 from datetime import timedelta
-import secrets
 import logging
-from pathlib import Path
+
+# Cargar variables de entorno desde .env antes de leer la configuracion.
+load_dotenv(override=True)
 
 # Helper para parsear CORS_ORIGINS desde variables de entorno (.env)
 # Admite formato JSON (p.ej. ["https://a.com","http://b.com"]) o CSV (a.com,b.com)
@@ -60,10 +62,7 @@ class Config:
     DB_USER = os.getenv('DB_USER')
     DB_PASSWORD = os.getenv('DB_PASSWORD')
     DB_DRIVER = 'pymysql'  # pymysql | mysqldb | mysqlconnector
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        'SQLALCHEMY_DATABASE_URI',
-        f'mysql+{DB_DRIVER}://{DB_USER}:{DB_PASSWORD}@{HOST}:{PORT}/{DATABASE}'
-    )
+    SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         # Connection Pool optimizado para alta concurrencia
@@ -84,7 +83,7 @@ class Config:
     }
 
     # Si se usa SQLite, eliminar opciones de pool incompatibles
-    _maybe_db_uri = os.getenv('SQLALCHEMY_DATABASE_URI', '')
+    _maybe_db_uri = os.getenv('SQLALCHEMY_DATABASE_URI')
     if isinstance(_maybe_db_uri, str) and _maybe_db_uri.startswith('sqlite'):
         SQLALCHEMY_ENGINE_OPTIONS = {}
 
@@ -92,8 +91,8 @@ class Config:
     # Cache & Rendimiento
     # -----------------------
     CACHE_TYPE = 'redis'
-    REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
-    CACHE_REDIS_URL = os.getenv('CACHE_REDIS_URL', REDIS_URL)
+    REDIS_URL = os.getenv('REDIS_URL')
+    CACHE_REDIS_URL = os.getenv('CACHE_REDIS_URL')
     CACHE_DEFAULT_TIMEOUT = 600
     CACHE_THRESHOLD = 1000
     PERFORMANCE_MONITORING = True
@@ -112,31 +111,18 @@ class Config:
     COMPRESS_LEVEL = 6
     COMPRESS_MIN_SIZE = 500
 
-    # -----------------------
-    # JWT (con persistencia de secreto en desarrollo)
-    # -----------------------
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
     if not JWT_SECRET_KEY:
-        if os.getenv('FLASK_ENV') == 'production':
-            raise ValueError("JWT_SECRET_KEY es requerido en producción")
-        dev_secret_file = Path('.dev_jwt_secret')
-        try:
-            if dev_secret_file.exists():
-                JWT_SECRET_KEY = dev_secret_file.read_text(encoding='utf-8').strip()
-            else:
-                JWT_SECRET_KEY = secrets.token_hex(32)
-                dev_secret_file.write_text(JWT_SECRET_KEY, encoding='utf-8')
-        except Exception:
-            JWT_SECRET_KEY = secrets.token_hex(32)
+        raise ValueError("JWT_SECRET_KEY es requerido en todos los entornos")
 
     JWT_TOKEN_LOCATION = ['cookies', 'headers']
     JWT_HEADER_NAME = 'Authorization'
     JWT_HEADER_TYPE = 'Bearer'
     JWT_COOKIE_HTTPONLY = True
-    JWT_ACCESS_COOKIE_NAME = os.getenv('JWT_ACCESS_COOKIE_NAME', 'access_token_cookie')
-    JWT_REFRESH_COOKIE_NAME = os.getenv('JWT_REFRESH_COOKIE_NAME', 'refresh_token_cookie')
-    JWT_ACCESS_CSRF_COOKIE_NAME = os.getenv('JWT_ACCESS_CSRF_COOKIE_NAME', 'csrf_access_token')
-    JWT_REFRESH_CSRF_COOKIE_NAME = os.getenv('JWT_REFRESH_CSRF_COOKIE_NAME', 'csrf_refresh_token')
+    JWT_ACCESS_COOKIE_NAME = os.getenv('JWT_ACCESS_COOKIE_NAME')
+    JWT_REFRESH_COOKIE_NAME = os.getenv('JWT_REFRESH_COOKIE_NAME')
+    JWT_ACCESS_CSRF_COOKIE_NAME = os.getenv('JWT_ACCESS_CSRF_COOKIE_NAME')
+    JWT_REFRESH_CSRF_COOKIE_NAME = os.getenv('JWT_REFRESH_CSRF_COOKIE_NAME')
     JWT_COOKIE_SAMESITE = 'None'
     JWT_COOKIE_CSRF_PROTECT = False
     JWT_BLOCKLIST_ENABLED = True
@@ -169,7 +155,7 @@ class Config:
     # -----------------------
     # Rate Limiting
     # -----------------------
-    RATE_LIMIT_STORAGE_URI = os.getenv('RATE_LIMIT_STORAGE_URI', REDIS_URL)
+    RATE_LIMIT_STORAGE_URI = os.getenv('RATE_LIMIT_STORAGE_URI')
     RATE_LIMIT_ENABLED = True
 
     # -----------------------
@@ -185,26 +171,26 @@ class Config:
     # -----------------------
     # Permite habilitar la creación pública de usuarios incluso si ya existen
     # usuarios en la base de datos. Úsese con precaución.
-    PUBLIC_USER_CREATION_ENABLED = os.getenv('PUBLIC_USER_CREATION_ENABLED', 'true').lower() == 'true'
+    PUBLIC_USER_CREATION_ENABLED = os.getenv('PUBLIC_USER_CREATION_ENABLED') == 'true'
 
     # -----------------------
     # URLs
     # -----------------------
-    API_BASE_URL = os.getenv('API_BASE_URL', 'https://finca.isladigital.xyz/api/v1')
-    API_HOST = os.getenv('API_HOST', 'finca.isladigital.xyz')
-    API_PORT = os.getenv('API_PORT', '443')
-    API_PROTOCOL = os.getenv('API_PROTOCOL', 'https')
-    FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://finca.isladigital.xyz')
-    FRONTEND_HOST = os.getenv('FRONTEND_HOST', 'finca.isladigital.xyz')
-    FRONTEND_PORT = os.getenv('FRONTEND_PORT', '443')
-    FRONTEND_PROTOCOL = os.getenv('FRONTEND_PROTOCOL', 'https')
-    BACKEND_URL = os.getenv('BACKEND_URL', 'https://finca.isladigital.xyz')
-    BACKEND_HOST = os.getenv('BACKEND_HOST', 'finca.isladigital.xyz')
-    BACKEND_PORT = os.getenv('BACKEND_PORT', '443')
-    BACKEND_PROTOCOL = os.getenv('BACKEND_PROTOCOL', 'https')
-    API_BASE_URL_NO_VERSION = os.getenv('API_BASE_URL_NO_VERSION', 'https://finca.isladigital.xyz')
-    API_DOCS_URL = os.getenv('API_DOCS_URL', 'https://finca.isladigital.xyz/docs')
-    API_SWAGGER_URL = os.getenv('API_SWAGGER_URL', 'https://finca.isladigital.xyz/swagger.json')
+    API_BASE_URL = os.getenv('API_BASE_URL')
+    API_HOST = os.getenv('API_HOST')
+    API_PORT = os.getenv('API_PORT')
+    API_PROTOCOL = os.getenv('API_PROTOCOL')
+    FRONTEND_URL = os.getenv('FRONTEND_URL')
+    FRONTEND_HOST = os.getenv('FRONTEND_HOST')
+    FRONTEND_PORT = os.getenv('FRONTEND_PORT')
+    FRONTEND_PROTOCOL = os.getenv('FRONTEND_PROTOCOL')
+    BACKEND_URL = os.getenv('BACKEND_URL')
+    BACKEND_HOST = os.getenv('BACKEND_HOST')
+    BACKEND_PORT = os.getenv('BACKEND_PORT')
+    BACKEND_PROTOCOL = os.getenv('BACKEND_PROTOCOL')
+    API_BASE_URL_NO_VERSION = os.getenv('API_BASE_URL_NO_VERSION')
+    API_DOCS_URL = os.getenv('API_DOCS_URL')
+    API_SWAGGER_URL = os.getenv('API_SWAGGER_URL')
 
 class DevelopmentConfig(Config):
     """Configuración para desarrollo (localhost)."""
@@ -225,7 +211,7 @@ class DevelopmentConfig(Config):
     # Plan B: permitir desactivar temporalmente la protección CSRF de cookies JWT para validar el flujo de refresh.
     # Usa DEV_JWT_COOKIE_CSRF_PROTECT=true para reactivar cuando terminemos la validación.
     from os import getenv as _getenv
-    JWT_COOKIE_CSRF_PROTECT = _getenv('DEV_JWT_COOKIE_CSRF_PROTECT', 'false').lower() == 'true'
+    JWT_COOKIE_CSRF_PROTECT = _getenv('DEV_JWT_COOKIE_CSRF_PROTECT') == 'true'
     # Permitir uso de JWT tanto en cookies como en encabezados para facilitar pruebas
     JWT_TOKEN_LOCATION = ['cookies', 'headers']
 
@@ -293,7 +279,7 @@ class ProductionConfig(Config):
 class TestingConfig(Config):
     """Configuración específica para pruebas."""
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI', 'sqlite:///finca_test.db')
+    SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI')
     JWT_COOKIE_CSRF_PROTECT = False
     SQLALCHEMY_ENGINE_OPTIONS = {}
     DEBUG = False
@@ -303,9 +289,9 @@ class TestingConfig(Config):
     JWT_TOKEN_LOCATION = ['headers']
     CACHE_TYPE = 'redis'
     # Permitir usar una BD distinta en pruebas por defecto (db 2)
-    REDIS_URL = os.getenv('TEST_REDIS_URL', os.getenv('REDIS_URL', 'redis://localhost:6379/2'))
-    CACHE_REDIS_URL = os.getenv('TEST_CACHE_REDIS_URL', REDIS_URL)
-    RATE_LIMIT_STORAGE_URI = os.getenv('TEST_RATE_LIMIT_STORAGE_URI', REDIS_URL)
+    REDIS_URL = os.getenv('TEST_REDIS_URL')
+    CACHE_REDIS_URL = os.getenv('TEST_CACHE_REDIS_URL')
+    RATE_LIMIT_STORAGE_URI = os.getenv('TEST_RATE_LIMIT_STORAGE_URI')
 
 # Diccionario de configuración final
 config = {

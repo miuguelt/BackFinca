@@ -22,6 +22,7 @@ from typing import Dict, List, Type, Any, Optional, Callable
 from app import db
 from app.utils.response_handler import APIResponse
 from app.models.base_model import ValidationError
+from app.utils.activity_logger import log_activity_event, build_relations_from_instance
 from sqlalchemy.exc import IntegrityError
 import logging
 import csv
@@ -923,8 +924,35 @@ def create_optimized_namespace(
 
                 # Invalidar cache DESPUÉS de serialización exitosa
                 _cache_clear(model_class.__name__)
+
+                try:
+                    log_activity_event(
+                        action='delete',
+                        entity=model_class.__name__.lower(),
+                        entity_id=record_id,
+                        title=f'{model_class.__name__} eliminado',
+                        description='Eliminacion desde API',
+                        relations=relations_snapshot,
+                        animal_id=relations_snapshot.get('animal_id') if relations_snapshot else None,
+                    )
+                except Exception:
+                    logger.debug("No se pudo registrar activity_log en delete", exc_info=True)
                 _detail_cache_clear(model_class.__name__, instance_id)
                 logger.debug(f"Cache cleared for {model_class.__name__}")
+
+                try:
+                    relations = build_relations_from_instance(instance)
+                    log_activity_event(
+                        action='create',
+                        entity=model_class.__name__.lower(),
+                        entity_id=instance_id,
+                        title=f'{model_class.__name__} creado',
+                        description='Creacion desde API',
+                        relations=relations,
+                        animal_id=relations.get('animal_id') if relations else None,
+                    )
+                except Exception:
+                    logger.debug("No se pudo registrar activity_log en create", exc_info=True)
 
                 # Construir respuesta con datos serializados
                 from flask import make_response
@@ -1108,6 +1136,22 @@ def create_optimized_namespace(
                 # Invalidar cache DESPUÉS de serialización exitosa
                 _cache_clear(model_class.__name__)
 
+                try:
+                    relations = build_relations_from_instance(instance)
+                    updated_fields = ', '.join(sorted(payload.keys())) if isinstance(payload, dict) else ''
+                    description = f"Campos actualizados: {updated_fields}" if updated_fields else 'Actualizacion desde API'
+                    log_activity_event(
+                        action='update',
+                        entity=model_class.__name__.lower(),
+                        entity_id=record_id,
+                        title=f'{model_class.__name__} actualizado',
+                        description=description,
+                        relations=relations,
+                        animal_id=relations.get('animal_id') if relations else None,
+                    )
+                except Exception:
+                    logger.debug("No se pudo registrar activity_log en update", exc_info=True)
+
                 # Construir respuesta
                 from flask import make_response
                 response = APIResponse.success(data=result, message=f'{name.capitalize()} actualizado exitosamente')
@@ -1168,6 +1212,22 @@ def create_optimized_namespace(
                     _cache_clear(model_class.__name__)
                     _detail_cache_clear(model_class.__name__, record_id)
 
+                    try:
+                        relations = build_relations_from_instance(instance)
+                        updated_fields = ', '.join(sorted(payload.keys())) if isinstance(payload, dict) else ''
+                        description = f"Campos actualizados: {updated_fields}" if updated_fields else 'Actualizacion parcial desde API'
+                        log_activity_event(
+                            action='update',
+                            entity=model_class.__name__.lower(),
+                            entity_id=record_id,
+                            title=f'{model_class.__name__} actualizado',
+                            description=description,
+                            relations=relations,
+                            animal_id=relations.get('animal_id') if relations else None,
+                        )
+                    except Exception:
+                        logger.debug("No se pudo registrar activity_log en patch", exc_info=True)
+
                     # Construir respuesta
                     from flask import make_response
                     response = APIResponse.success(data=result, message=f'{name.capitalize()} actualizado parcialmente')
@@ -1225,6 +1285,12 @@ def create_optimized_namespace(
                     logger.info(f"Eliminando {model_class.__name__} id={record_id} con {len(cascade_warnings)} dependencias en cascade")
 
                 # Eliminar de BD (commit incluido en instance.delete())
+                relations_snapshot = {}
+                try:
+                    relations_snapshot = build_relations_from_instance(instance)
+                except Exception:
+                    logger.debug("No se pudo preparar relations para delete", exc_info=True)
+
                 instance.delete()
 
                 # Invalidar cache INMEDIATAMENTE después de commit exitoso
@@ -1376,6 +1442,18 @@ def create_optimized_namespace(
                     # Invalidar cache DESPUÉS de serialización exitosa
                     _cache_clear(model_class.__name__)
                     _detail_cache_clear(model_class.__name__)
+
+                    try:
+                        log_activity_event(
+                            action='create',
+                            entity=model_class.__name__.lower(),
+                            entity_id=None,
+                            title=f'{len(results)} {model_class.__name__} creados',
+                            description='Creacion masiva desde API',
+                            relations=None,
+                        )
+                    except Exception:
+                        logger.debug("No se pudo registrar activity_log en bulk create", exc_info=True)
 
                     # Construir respuesta
                     from flask import make_response

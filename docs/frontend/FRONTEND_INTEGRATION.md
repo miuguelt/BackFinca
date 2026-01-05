@@ -2,13 +2,13 @@
 
 ## 🔗 URLs Correctas de la API
 
-**Base URL de la API:** `https://finca.isladigital.xyz/api/v1` (producción) o `http://localhost:8081/api/v1` (desarrollo)
+**Base URL de la API:** `https://finca.enlinea.sbs/api/v1` (producción) o `http://localhost:8081/api/v1` (desarrollo)
 
 ### Endpoints Disponibles:
 
 ```javascript
 // Configuración base
-const API_BASE = 'https://finca.isladigital.xyz/api/v1';
+const API_BASE = 'https://finca.enlinea.sbs/api/v1';
 // o para desarrollo local:
 // const API_BASE = 'http://localhost:8081/api/v1';
 
@@ -460,12 +460,12 @@ Si sigues teniendo problemas, verifica lo siguiente:
 
 ```
 ✅ Correcto:
-POST https://finca.isladigital.xyz/api/v1/animal-images/upload
-GET  https://finca.isladigital.xyz/api/v1/animal-images/58
+POST https://finca.enlinea.sbs/api/v1/animal-images/upload
+GET  https://finca.enlinea.sbs/api/v1/animal-images/58
 
 ❌ Incorrecto:
-POST https://finca.isladigital.xyz/api/v1/undefined/upload
-GET  https://finca.isladigital.xyz/api/v1/undefined/58
+POST https://finca.enlinea.sbs/api/v1/undefined/upload
+GET  https://finca.enlinea.sbs/api/v1/undefined/58
 ```
 
 ### 2. Verificar que el token de autenticación se envía:
@@ -493,7 +493,7 @@ En tu archivo `.env` o `.env.local` de React:
 VITE_API_BASE_URL=http://localhost:8081/api/v1
 
 # Producción
-# VITE_API_BASE_URL=https://finca.isladigital.xyz/api/v1
+# VITE_API_BASE_URL=https://finca.enlinea.sbs/api/v1
 ```
 
 ## ✅ Checklist de Integración
