@@ -295,17 +295,24 @@ def create_app(config_name='development'):
     # provided by app.api.register_api under /api/v1/docs/*
     # ==============================================================
 
-    # Bootstrap: crear usuario administrador semilla si no existe (movido a utilitario)
+    # Bootstrap: crear usuario administrador semilla si no existe (opcional)
+    # En producci¢n conviene ejecutarlo como tarea post-deploy/CLI para evitar
+    # tormenta de conexiones con m£ltiples workers.
     try:
-        from app.utils.bootstrap import seed_admin_user
-        seed_admin_user(app, logger)
+        seed_enabled = app.config.get('SEED_ADMIN_ENABLED', False)
+        if seed_enabled:
+            from app.utils.bootstrap import seed_admin_user
+            seed_admin_user(app, logger)
+            logger.info('SEED_ADMIN_ENABLED activo; seed_admin_user ejecutado')
+        else:
+            logger.info('SEED_ADMIN_ENABLED desactivado; se omite seed_admin_user')
     except Exception:
         logger.exception('Fallo al ejecutar seed_admin_user')
 
     # Warmup de caché para acelerar primera carga (controlado por config)
     try:
         # Check explicitly for False to allow disabling in testing
-        warmup_enabled = app.config.get('CACHE_WARMUP_ENABLED', True)
+        warmup_enabled = app.config.get('CACHE_WARMUP_ENABLED', False)
         if hasattr(app.config, 'get') and app.config['CONFIG_NAME'] == 'testing':
              warmup_enabled = False
 

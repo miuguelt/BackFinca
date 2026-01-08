@@ -119,14 +119,32 @@ class Config:
     JWT_HEADER_NAME = 'Authorization'
     JWT_HEADER_TYPE = 'Bearer'
     JWT_COOKIE_HTTPONLY = True
-    JWT_ACCESS_COOKIE_NAME = os.getenv('JWT_ACCESS_COOKIE_NAME')
-    JWT_REFRESH_COOKIE_NAME = os.getenv('JWT_REFRESH_COOKIE_NAME')
-    JWT_ACCESS_CSRF_COOKIE_NAME = os.getenv('JWT_ACCESS_CSRF_COOKIE_NAME')
-    JWT_REFRESH_CSRF_COOKIE_NAME = os.getenv('JWT_REFRESH_CSRF_COOKIE_NAME')
+    # IMPORTANT: nunca permitir nombres de cookie None/vacíos porque Werkzeug explota
+    # cuando intenta hacer dump_cookie() con key=None.
+    JWT_ACCESS_COOKIE_NAME = (os.getenv('JWT_ACCESS_COOKIE_NAME') or 'access_token_cookie').strip()
+    JWT_REFRESH_COOKIE_NAME = (os.getenv('JWT_REFRESH_COOKIE_NAME') or 'refresh_token_cookie').strip()
+    JWT_ACCESS_CSRF_COOKIE_NAME = (os.getenv('JWT_ACCESS_CSRF_COOKIE_NAME') or 'csrf_access_token').strip()
+    JWT_REFRESH_CSRF_COOKIE_NAME = (os.getenv('JWT_REFRESH_CSRF_COOKIE_NAME') or 'csrf_refresh_token').strip()
+    if not JWT_ACCESS_COOKIE_NAME or not JWT_REFRESH_COOKIE_NAME:
+        raise ValueError("JWT_ACCESS_COOKIE_NAME y JWT_REFRESH_COOKIE_NAME no pueden estar vacíos")
     JWT_COOKIE_SAMESITE = 'None'
     JWT_COOKIE_CSRF_PROTECT = False
     JWT_BLOCKLIST_ENABLED = True
     JWT_BLOCKLIST_TOKEN_CHECKS = ['access', 'refresh']
+
+    # -----------------------
+    # Bootstrap / Warmup (arranque)
+    # -----------------------
+    def _env_bool(name: str, default: bool = False) -> bool:
+        raw = os.getenv(name)
+        if raw is None:
+            return default
+        return str(raw).strip().lower() in {'1', 'true', 'yes', 'y', 'on'}
+
+    # Semilla de admin y warmup pueden disparar tormenta de conexiones al iniciar.
+    SEED_ADMIN_ENABLED = _env_bool('SEED_ADMIN_ENABLED', default=False)
+    CACHE_WARMUP_ENABLED = _env_bool('CACHE_WARMUP_ENABLED', default=False)
+    CACHE_WARMUP_LIMIT = int(os.getenv('CACHE_WARMUP_LIMIT') or 10)
 
     # -----------------------
     # CORS
