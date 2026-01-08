@@ -101,6 +101,11 @@ class Config:
     QUERY_CACHE_TIMEOUT = 600
     QUERY_CACHE_MAX_SIZE = 500
 
+    # Activity feed caching (perfil/analytics)
+    ACTIVITY_SUMMARY_CACHE_TTL = int(os.getenv('ACTIVITY_SUMMARY_CACHE_TTL', '60'))
+    ACTIVITY_STATS_CACHE_TTL = int(os.getenv('ACTIVITY_STATS_CACHE_TTL', '60'))
+    ACTIVITY_FILTERS_CACHE_TTL = int(os.getenv('ACTIVITY_FILTERS_CACHE_TTL', '120'))
+
     # -----------------------
     # Compresión
     # -----------------------

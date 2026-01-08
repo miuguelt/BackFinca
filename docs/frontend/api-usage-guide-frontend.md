@@ -280,6 +280,11 @@ Para evitar reconstruir el feed en el frontend y soportar auditoria/notificacion
 ### Propuesta de endpoint
 
 - `GET /api/v1/activity` (opcional: `GET /api/v1/users/{id}/activity`)
+- `GET /api/v1/activity/me` (actividad del usuario autenticado)
+- `GET /api/v1/activity/me/summary` (tarjetas/resumen 7d+30d)
+- `GET /api/v1/activity/me/stats` (agregados del usuario)
+- `GET /api/v1/activity/stats` (agregados globales o por filtros)
+- `GET /api/v1/activity/filters` (valores distintos para dropdowns)
 - Filtros: `entity`, `action`, `from`, `to`, `severity`, `user_id`, `animal_id`, `page`, `per_page`
 - Orden: `created_at DESC`
 
@@ -325,6 +330,7 @@ Para evitar reconstruir el feed en el frontend y soportar auditoria/notificacion
 - Usa filtros desde la UI sin transformar la data.
 - Maneja estados `loading`, `empty`, `error`.
 - Cache en memoria opcional por combinacion de filtros.
+- Usa `ETag` / `If-None-Match` para evitar descargar el mismo resumen/filters/stats (304).
 
 ### Ejemplo de fetch con filtros
 
@@ -349,6 +355,33 @@ async function fetchActivity({ page = 1, perPage = 20, entity, action, from, to,
   return data.data;
 }
 ```
+
+### Keyset pagination (recomendado en feeds grandes)
+
+- Request: `GET /api/v1/activity/me?cursor=<cursor>&limit=20`
+- Response: `data.items`, `data.next_cursor`, `data.has_more`
+
+### Payload mínimo (timeline)
+
+- `include=actor,relations` (default ambos). Ej: `include=actor` omite `relations`.
+- `fields=id,entity,action,created_at,title` devuelve solo esos campos.
+
+### Filters scope
+
+`GET /api/v1/activity/filters?days=365&scope=me` (default) devuelve entidades/acciones/severities presentes en tu actividad. Usa `scope=global` si necesitas valores globales.
+
+### Tarjetas "Tu Actividad" (perfil)
+
+- Actividad del usuario: `GET /api/v1/activity/me?page=1&per_page=20`
+- Resumen listo para UI: `GET /api/v1/activity/me/summary`
+- Agregados (para gráficas): `GET /api/v1/activity/me/stats?days=30`
+- Dropdowns dinámicos: `GET /api/v1/activity/filters?days=365`
+
+Respuesta de `GET /api/v1/activity/me/summary` (estructura):
+- `data.window_7d.totals.events`: total eventos últimos 7 días
+- `data.window_30d.totals.events`: total eventos últimos 30 días
+- `data.window_30d.by_entity`: para tabs por entidad (conteos)
+- `data.window_30d.daily`: serie para gráfica (date, count)
 
 ### Ejemplo de paginado simple
 

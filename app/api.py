@@ -108,7 +108,7 @@ def register_api(app, limiter=None):
     from .namespaces.user_preferences_namespace import prefs_ns
     from .namespaces.navigation_namespace import nav_ns
     from .namespaces.animal_images_namespace import animal_images_ns
-    from .namespaces.activity_namespace import activity_ns
+    from .namespaces.activity_namespace import activity_ns, set_limiter as set_activity_limiter
 
     # Aplicar rate limits específicos a endpoints de autenticación (solo si hay limiter)
     try:
@@ -118,6 +118,10 @@ def register_api(app, limiter=None):
                 set_users_limiter(limiter)
             except Exception:
                 logging.getLogger(__name__).exception('No se pudo aplicar rate limiting a users_namespace')
+            try:
+                set_activity_limiter(limiter)
+            except Exception:
+                logging.getLogger(__name__).exception('No se pudo aplicar rate limiting a activity_namespace')
         else:
             logging.getLogger(__name__).info('Rate limiting no aplicado (deshabilitado o sin limiter)')
     except Exception:

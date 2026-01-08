@@ -119,5 +119,11 @@ RATE_LIMIT_CONFIG = {
     },
     'users': {'create': "10 per hour", 'read': "500 per hour", 'update': "100 per hour", 'delete': "20 per hour"},
     'animals': {'create': "100 per hour", 'read': "1000 per hour", 'update': "200 per hour", 'delete': "50 per hour"},
+    'activity': {
+        # lectura frecuente en perfil; mantener alto pero proteger contra abuso
+        'summary': "120 per minute",
+        'stats': "120 per minute",
+        'filters': "60 per minute",
+    },
     'general': {'read': "500 per hour", 'write': "100 per hour", 'admin': "2000 per hour"}
 }

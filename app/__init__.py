@@ -255,6 +255,13 @@ def create_app(config_name='development'):
     from app.utils.cors_setup import init_cors
     init_cors(app, logger)
 
+    # Compresión gzip para respuestas JSON/text (sin dependencias externas)
+    try:
+        from app.utils.compression import init_compression
+        init_compression(app)
+    except Exception:
+        logger.exception("No se pudo inicializar compresión gzip")
+
     # Configurar JWT handlers mejorados
     configure_jwt_handlers(jwt)
     
@@ -313,6 +320,12 @@ def create_app(config_name='development'):
     try:
         # Check explicitly for False to allow disabling in testing
         warmup_enabled = app.config.get('CACHE_WARMUP_ENABLED', False)
+        # Evitar warmup durante comandos CLI (migraciones, etc.) para no tocar tablas incompletas.
+        try:
+            if os.environ.get('FLASK_RUN_FROM_CLI') == 'true':
+                warmup_enabled = False
+        except Exception:
+            pass
         if hasattr(app.config, 'get') and app.config['CONFIG_NAME'] == 'testing':
              warmup_enabled = False
 

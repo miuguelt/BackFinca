@@ -20,6 +20,7 @@ from .geneticImprovements import GeneticImprovements as GeneticImprovement
 from .route_administration import RouteAdministration
 from .animal_images import AnimalImages as AnimalImage
 from .activity_log import ActivityLog
+from .activity_daily_agg import ActivityDailyAgg
 
 __all__ = [
     'BaseModel',

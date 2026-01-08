@@ -12,6 +12,12 @@ class ActivityLog(BaseModel):
         db.Index('ix_activity_log_actor_id', 'actor_id'),
         db.Index('ix_activity_log_entity_id', 'entity_id'),
         db.Index('ix_activity_log_animal_id', 'animal_id'),
+        # Composite indexes (actor_id == "user_id" in API terminology)
+        db.Index('ix_activity_log_actor_created_at', 'actor_id', 'created_at'),
+        db.Index('ix_activity_log_actor_entity_created_at', 'actor_id', 'entity', 'created_at'),
+        db.Index('ix_activity_log_actor_action_created_at', 'actor_id', 'action', 'created_at'),
+        db.Index('ix_activity_log_actor_severity_created_at', 'actor_id', 'severity', 'created_at'),
+        db.Index('ix_activity_log_actor_animal_created_at', 'actor_id', 'animal_id', 'created_at'),
     )
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -25,7 +31,8 @@ class ActivityLog(BaseModel):
     animal_id = db.Column(db.Integer, nullable=True)
     relations = db.Column(db.JSON, nullable=True)
 
-    actor = db.relationship('User', foreign_keys=[actor_id], lazy='joined')
+    # Default to selectin to avoid unnecessary joins; endpoints can opt into joinedload when needed.
+    actor = db.relationship('User', foreign_keys=[actor_id], lazy='selectin')
 
     _namespace_fields = [
         'id',

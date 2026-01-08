@@ -104,12 +104,27 @@ def init_cors(app, logger: logging.Logger = None):
 
     @app.after_request
     def _add_cors_headers_and_log(response):
+        def _merge_vary(value: str):
+            existing = response.headers.get('Vary')
+            parts = []
+            if existing:
+                parts.extend([p.strip() for p in existing.split(',') if p.strip()])
+            parts.extend([p.strip() for p in (value or '').split(',') if p.strip()])
+            seen = set()
+            merged = []
+            for p in parts:
+                if p not in seen:
+                    merged.append(p)
+                    seen.add(p)
+            if merged:
+                response.headers['Vary'] = ', '.join(merged)
+
         origin = request.headers.get('Origin')
         allowed_origins = current_app.config.get('CORS_ORIGINS', []) or []
         if origin and origin in allowed_origins:
             response.headers['Access-Control-Allow-Origin'] = origin
             response.headers['Access-Control-Allow-Credentials'] = 'true'
-            response.headers['Vary'] = 'Origin'
+            _merge_vary('Origin')
         elif origin and origin not in allowed_origins:
             logger.warning(
                 "CORS: Origin %s no está en CORS_ORIGINS. Agregue '%s' a la variable CORS_ORIGINS en .env",
