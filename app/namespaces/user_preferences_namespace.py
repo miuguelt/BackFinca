@@ -1,14 +1,96 @@
 """User Preferences Namespace - Favorites and Settings"""
 from flask_restx import Namespace, Resource, fields
-from flask import request
+from flask import request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, timezone
+from typing import Optional
 import logging
+import threading
+import time
 
 from app import db, cache
 from app.utils.response_handler import APIResponse
 
 logger = logging.getLogger(__name__)
+
+_fallback_cache = {}
+_fallback_cache_lock = threading.Lock()
+_redis_health = {"ok": True, "ts": 0.0}
+_REDIS_HEALTH_TTL_SECONDS = 5.0
+
+
+def _redis_cache_available() -> bool:
+    try:
+        if current_app.config.get('CACHE_TYPE') != 'redis':
+            return True
+    except Exception:
+        return True
+    now = time.time()
+    if now - _redis_health["ts"] < _REDIS_HEALTH_TTL_SECONDS:
+        return _redis_health["ok"]
+    try:
+        from app.utils.cache_utils import _get_redis_client
+        ok = _get_redis_client() is not None
+    except Exception:
+        ok = False
+    _redis_health["ok"] = ok
+    _redis_health["ts"] = now
+    return ok
+
+
+def _fallback_get(key: str):
+    with _fallback_cache_lock:
+        entry = _fallback_cache.get(key)
+    if not entry:
+        return None
+    value, expires_at = entry
+    if expires_at and time.time() >= expires_at:
+        with _fallback_cache_lock:
+            _fallback_cache.pop(key, None)
+        return None
+    return value
+
+
+def _fallback_set(key: str, value, timeout: Optional[int] = None) -> None:
+    expires_at = None
+    if timeout:
+        expires_at = time.time() + int(timeout)
+    with _fallback_cache_lock:
+        _fallback_cache[key] = (value, expires_at)
+
+
+def _fallback_delete(key: str) -> None:
+    with _fallback_cache_lock:
+        _fallback_cache.pop(key, None)
+
+
+def _cache_get(key: str):
+    if not _redis_cache_available():
+        return _fallback_get(key)
+    try:
+        return cache.get(key)
+    except Exception:
+        return _fallback_get(key)
+
+
+def _cache_set(key: str, value, timeout: Optional[int] = None) -> None:
+    if not _redis_cache_available():
+        _fallback_set(key, value, timeout)
+        return
+    try:
+        cache.set(key, value, timeout=timeout)
+    except Exception:
+        _fallback_set(key, value, timeout)
+
+
+def _cache_delete(key: str) -> None:
+    if not _redis_cache_available():
+        _fallback_delete(key)
+        return
+    try:
+        cache.delete(key)
+    except Exception:
+        _fallback_delete(key)
 
 prefs_ns = Namespace(
     'preferences',
@@ -49,7 +131,7 @@ class UserFavorites(Resource):
 
             # Try to get from cache first
             cache_key = f"favorites_{user_id}"
-            cached_favorites = cache.get(cache_key)
+            cached_favorites = _cache_get(cache_key)
 
             if cached_favorites:
                 logger.debug(f"Cache hit for favorites user {user_id}")
@@ -60,7 +142,7 @@ class UserFavorites(Resource):
             favorites = get_user_favorites_from_storage(user_id)
 
             # Cache for 5 minutes
-            cache.set(cache_key, favorites, timeout=300)
+            _cache_set(cache_key, favorites, timeout=300)
 
             return APIResponse.success(
                 data={
@@ -110,7 +192,7 @@ class UserFavorites(Resource):
             save_user_favorite(user_id, favorite)
 
             # Invalidate cache
-            cache.delete(f"favorites_{user_id}")
+            _cache_delete(f"favorites_{user_id}")
 
             return APIResponse.success(
                 data=favorite,
@@ -141,7 +223,7 @@ class UserFavorites(Resource):
             clear_user_favorites(user_id)
 
             # Invalidate cache
-            cache.delete(f"favorites_{user_id}")
+            _cache_delete(f"favorites_{user_id}")
 
             return APIResponse.success(
                 message='Favoritos eliminados exitosamente'
@@ -175,7 +257,7 @@ class UserFavorite(Resource):
             remove_user_favorite(user_id, favorite_id)
 
             # Invalidate cache
-            cache.delete(f"favorites_{user_id}")
+            _cache_delete(f"favorites_{user_id}")
 
             return APIResponse.success(
                 message='Favorito eliminado exitosamente'
@@ -209,7 +291,7 @@ class EndpointHistory(Resource):
 
             # Get from cache
             cache_key = f"history_{user_id}"
-            history = cache.get(cache_key) or []
+            history = _cache_get(cache_key) or []
 
             return APIResponse.success(
                 data={
@@ -246,7 +328,7 @@ class EndpointHistory(Resource):
 
             # Get current history
             cache_key = f"history_{user_id}"
-            history = cache.get(cache_key) or []
+            history = _cache_get(cache_key) or []
 
             # Add new entry
             new_entry = {
@@ -263,7 +345,7 @@ class EndpointHistory(Resource):
             history = history[:20]
 
             # Cache for 1 hour
-            cache.set(cache_key, history, timeout=3600)
+            _cache_set(cache_key, history, timeout=3600)
 
             return APIResponse.success(
                 message='Agregado al historial'
@@ -287,14 +369,14 @@ class EndpointHistory(Resource):
 def get_user_favorites_from_storage(user_id):
     """Get user favorites from cache/storage"""
     cache_key = f"favorites_storage_{user_id}"
-    favorites = cache.get(cache_key) or []
+    favorites = _cache_get(cache_key) or []
     return favorites
 
 
 def save_user_favorite(user_id, favorite):
     """Save favorite to storage"""
     cache_key = f"favorites_storage_{user_id}"
-    favorites = cache.get(cache_key) or []
+    favorites = _cache_get(cache_key) or []
 
     # Check if already exists
     for fav in favorites:
@@ -306,22 +388,22 @@ def save_user_favorite(user_id, favorite):
     favorites.append(favorite)
 
     # Save back to cache (24 hours)
-    cache.set(cache_key, favorites, timeout=86400)
+    _cache_set(cache_key, favorites, timeout=86400)
 
 
 def remove_user_favorite(user_id, favorite_id):
     """Remove specific favorite"""
     cache_key = f"favorites_storage_{user_id}"
-    favorites = cache.get(cache_key) or []
+    favorites = _cache_get(cache_key) or []
 
     # Filter out the favorite
     favorites = [f for f in favorites if f.get('id') != favorite_id]
 
     # Save back
-    cache.set(cache_key, favorites, timeout=86400)
+    _cache_set(cache_key, favorites, timeout=86400)
 
 
 def clear_user_favorites(user_id):
     """Clear all favorites"""
     cache_key = f"favorites_storage_{user_id}"
-    cache.delete(cache_key)
+    _cache_delete(cache_key)

@@ -1,3 +1,4 @@
+import functools
 import hashlib
 import json
 import logging
@@ -11,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 _local_locks: dict[str, threading.Lock] = {}
 _local_locks_guard = threading.Lock()
+_redis_health = {"ok": True, "ts": 0.0}
+_REDIS_HEALTH_TTL_SECONDS = 5.0
 
 
 def _get_cache():
@@ -40,6 +43,77 @@ def _get_redis_client():
         return client
     except Exception:
         return None
+
+
+def _redis_cache_available() -> bool:
+    try:
+        if current_app and current_app.config.get("CACHE_TYPE") != "redis":
+            return True
+    except Exception:
+        return True
+    try:
+        url = None
+        if current_app:
+            url = current_app.config.get("CACHE_REDIS_URL") or current_app.config.get("REDIS_URL")
+        if not url:
+            return False
+    except Exception:
+        pass
+    now = time.time()
+    if now - _redis_health["ts"] < _REDIS_HEALTH_TTL_SECONDS:
+        return _redis_health["ok"]
+    ok = _get_redis_client() is not None
+    _redis_health["ok"] = ok
+    _redis_health["ts"] = now
+    return ok
+
+
+def _is_redis_error(exc: Exception) -> bool:
+    try:
+        from redis.exceptions import RedisError
+        if isinstance(exc, RedisError):
+            return True
+    except Exception:
+        pass
+    cur = exc
+    seen = set()
+    while cur and id(cur) not in seen:
+        seen.add(id(cur))
+        mod = (type(cur).__module__ or "").lower()
+        name = (type(cur).__name__ or "").lower()
+        if "redis" in mod or "redis" in name:
+            return True
+        cur = getattr(cur, "__cause__", None) or getattr(cur, "__context__", None)
+    return False
+
+
+def safe_cached(*cache_args, **cache_kwargs):
+    def decorator(func):
+        try:
+            from app import cache as app_cache
+        except Exception:
+            app_cache = None
+
+        if not app_cache:
+            return func
+
+        cached_func = app_cache.cached(*cache_args, **cache_kwargs)(func)
+
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            if not _redis_cache_available():
+                return func(*args, **kwargs)
+            try:
+                return cached_func(*args, **kwargs)
+            except Exception as exc:
+                if _is_redis_error(exc):
+                    logger.warning("Redis cache error; bypassing cache", exc_info=True)
+                    return func(*args, **kwargs)
+                raise
+
+        return wrapper
+
+    return decorator
 
 
 def stable_hash(payload: Any) -> str:

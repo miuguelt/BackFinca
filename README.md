@@ -26,13 +26,9 @@ DB_PORT=3306
 DB_NAME=finca
 DB_USER=finca
 DB_PASSWORD=changeme
-SQLALCHEMY_DATABASE_URI=mysql+pymysql://finca:changeme@localhost:3306/finca
 
 # Redis / caché / rate limit
 REDIS_URL=redis://localhost:6379/0
-CACHE_REDIS_URL=${REDIS_URL}
-RATE_LIMIT_STORAGE_URI=${REDIS_URL}
-RATE_LIMIT_ENABLED=true
 
 # Seguridad
 JWT_SECRET_KEY=super-secret-key
@@ -44,8 +40,9 @@ FRONTEND_URL=http://localhost:3000
 BACKEND_URL=http://localhost:8081
 ```
 Notas:
-- En desarrollo `JWT_SECRET_KEY` se genera solo si no existe, pero define uno explícito para compartir sesiones entre instancias.
-- Si usas HTTPS en local, añade `SSL_CERT_FILE` y `SSL_KEY_FILE` apuntando a tus certificados.
+- JWT_SECRET_KEY es requerido en todos los entornos; usa un valor seguro.
+- SQLALCHEMY_DATABASE_URI es opcional; si no se define se arma con DB_*.
+- Si usas HTTPS en local, anade SSL_CERT_FILE y SSL_KEY_FILE apuntando a tus certificados.
 
 ## Levantar en local (sin Docker)
 1) Crear entorno y dependencias
@@ -89,3 +86,4 @@ Todo el material está en `docs/`. Consulta `docs/README.md` para un índice por
 - `app/`: código fuente (namespaces, modelos, utils, cache, JWT, rate limiting).
 - `migrations/`: historial de Alembic.
 - `docs/`: documentación organizada por área.
+

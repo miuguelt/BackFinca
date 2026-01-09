@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from datetime import timedelta
 import logging
+from urllib.parse import quote_plus
 
 # Cargar variables de entorno desde .env antes de leer la configuracion.
 load_dotenv(override=True)
@@ -49,6 +50,30 @@ def _parse_cors_origins_env():
     return deduped or None
 
 
+def _build_sqlalchemy_database_uri():
+    """Build SQLALCHEMY_DATABASE_URI from DB_* env vars when not provided."""
+    uri = os.getenv('SQLALCHEMY_DATABASE_URI')
+    if uri:
+        return uri
+
+    host = os.getenv('DB_HOST')
+    port = os.getenv('DB_PORT') or '3306'
+    name = os.getenv('DB_NAME')
+    user = os.getenv('DB_USER')
+    password = os.getenv('DB_PASSWORD')
+
+    if not all([host, name, user, password]):
+        return None
+
+    try:
+        safe_user = quote_plus(user)
+        safe_password = quote_plus(password)
+    except Exception:
+        safe_user = user
+        safe_password = password
+
+    return f"mysql+pymysql://{safe_user}:{safe_password}@{host}:{port}/{name}"
+
 
 class Config:
     """Configuración base de la aplicación. Aplica a todos los entornos."""
@@ -57,12 +82,14 @@ class Config:
     # Base de Datos
     # -----------------------
     HOST = os.getenv('DB_HOST')
-    PORT = os.getenv('DB_PORT')
+    PORT = os.getenv('DB_PORT') or '3306'
     DATABASE = os.getenv('DB_NAME')
     DB_USER = os.getenv('DB_USER')
     DB_PASSWORD = os.getenv('DB_PASSWORD')
     DB_DRIVER = 'pymysql'  # pymysql | mysqldb | mysqlconnector
-    SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI')
+    SQLALCHEMY_DATABASE_URI = _build_sqlalchemy_database_uri()
+    if not SQLALCHEMY_DATABASE_URI:
+        raise ValueError("SQLALCHEMY_DATABASE_URI o DB_* (DB_HOST/DB_NAME/DB_USER/DB_PASSWORD) es requerido")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         # Connection Pool optimizado para alta concurrencia
@@ -83,16 +110,17 @@ class Config:
     }
 
     # Si se usa SQLite, eliminar opciones de pool incompatibles
-    _maybe_db_uri = os.getenv('SQLALCHEMY_DATABASE_URI')
+    _maybe_db_uri = SQLALCHEMY_DATABASE_URI
     if isinstance(_maybe_db_uri, str) and _maybe_db_uri.startswith('sqlite'):
         SQLALCHEMY_ENGINE_OPTIONS = {}
 
     # -----------------------
     # Cache & Rendimiento
     # -----------------------
-    CACHE_TYPE = 'redis'
     REDIS_URL = os.getenv('REDIS_URL')
-    CACHE_REDIS_URL = os.getenv('CACHE_REDIS_URL')
+    CACHE_REDIS_URL = os.getenv('CACHE_REDIS_URL') or REDIS_URL
+    CACHE_TYPE = 'redis' if CACHE_REDIS_URL else 'simple'
+    CACHE_IGNORE_ERRORS = True
     CACHE_DEFAULT_TIMEOUT = 600
     CACHE_THRESHOLD = 1000
     PERFORMANCE_MONITORING = True
@@ -178,7 +206,7 @@ class Config:
     # -----------------------
     # Rate Limiting
     # -----------------------
-    RATE_LIMIT_STORAGE_URI = os.getenv('RATE_LIMIT_STORAGE_URI')
+    RATE_LIMIT_STORAGE_URI = os.getenv('RATE_LIMIT_STORAGE_URI') or REDIS_URL
     RATE_LIMIT_ENABLED = True
 
     # -----------------------
@@ -310,10 +338,10 @@ class TestingConfig(Config):
     RATE_LIMIT_ENABLED = True
     # Forzar uso de headers en testing ya que las cookies no funcionan bien en entorno de pruebas
     JWT_TOKEN_LOCATION = ['headers']
-    CACHE_TYPE = 'redis'
     # Permitir usar una BD distinta en pruebas por defecto (db 2)
     REDIS_URL = os.getenv('TEST_REDIS_URL')
-    CACHE_REDIS_URL = os.getenv('TEST_CACHE_REDIS_URL')
+    CACHE_REDIS_URL = os.getenv('TEST_CACHE_REDIS_URL') or REDIS_URL
+    CACHE_TYPE = 'redis' if CACHE_REDIS_URL else 'simple'
     RATE_LIMIT_STORAGE_URI = os.getenv('TEST_RATE_LIMIT_STORAGE_URI')
 
 # Diccionario de configuración final

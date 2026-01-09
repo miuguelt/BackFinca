@@ -70,6 +70,8 @@ def init_rate_limiter(app):
             on_breach=rate_limit_handler,
             storage_uri='memory://',
             headers_enabled=True,
+            swallow_errors=True,
+            in_memory_fallback_enabled=True,
         )
         app.logger.info("Rate limiter inicializado con storage: memory:// (sin configuración de REDIS_URL)")
         return limiter
@@ -89,6 +91,8 @@ def init_rate_limiter(app):
             on_breach=rate_limit_handler,
             storage_uri=storage_uri,
             headers_enabled=True,
+            swallow_errors=True,
+            in_memory_fallback_enabled=True,
         )
         app.logger.info(f"Rate limiter inicializado con storage Redis: {storage_uri}")
         return limiter
@@ -102,6 +106,8 @@ def init_rate_limiter(app):
             on_breach=rate_limit_handler,
             storage_uri='memory://',
             headers_enabled=True,
+            swallow_errors=True,
+            in_memory_fallback_enabled=True,
         )
         app.logger.info("Rate limiter inicializado con storage: memory:// (fallback)")
         return limiter

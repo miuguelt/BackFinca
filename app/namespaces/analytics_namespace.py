@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import logging
 import decimal
 
-from app import db, cache
+from app import db
 from app.models.animals import Animals, AnimalStatus, Sex
 from app.models.treatments import Treatments
 from app.models.vaccinations import Vaccinations
@@ -19,6 +19,7 @@ from app.models.vaccines import Vaccines
 from app.models.species import Species
 
 from app.utils.response_handler import APIResponse
+from app.utils.cache_utils import safe_cached
 
 analytics_ns = Namespace(
     'analytics',
@@ -444,7 +445,7 @@ class CompleteDashboardStats(Resource):
         }
     )
     @jwt_required()
-    @cache.cached(timeout=120, key_prefix='dashboard_complete_stats')
+    @safe_cached(timeout=120, key_prefix='dashboard_complete_stats')
     def get(self):
         """Obtener estadísticas completas del dashboard con máxima optimización"""
         try:

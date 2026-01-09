@@ -13,43 +13,20 @@ services:
       - '8081:8081'
 
     environment:
-      FLASK_ENV: ${FLASK_ENV}
-      PORT: 8081
-
+      FLASK_ENV: ${FLASK_ENV:-production}
       # Base de datos
       DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
+      DB_PORT: ${DB_PORT:-3306}
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
-      SQLALCHEMY_DATABASE_URI: ${SQLALCHEMY_DATABASE_URI}
-
-      # Redis interno
+      # Redis (requerido para cache y rate limiting)
       REDIS_URL: ${REDIS_URL}
-      CACHE_REDIS_URL: ${REDIS_URL}
-      RATE_LIMIT_STORAGE_URI: ${REDIS_URL}
-      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
 
-      # JWT y cookies
+      # Seguridad
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      JWT_ACCESS_COOKIE_NAME: ${JWT_ACCESS_COOKIE_NAME:-access_token_cookie}
-      JWT_REFRESH_COOKIE_NAME: ${JWT_REFRESH_COOKIE_NAME:-refresh_token_cookie}
-      JWT_ACCESS_CSRF_COOKIE_NAME: ${JWT_ACCESS_CSRF_COOKIE_NAME:-csrf_access_token}
-      JWT_REFRESH_CSRF_COOKIE_NAME: ${JWT_REFRESH_CSRF_COOKIE_NAME:-csrf_refresh_token}
       JWT_COOKIE_DOMAIN: ${JWT_COOKIE_DOMAIN}
-      JWT_COOKIE_SECURE: ${JWT_COOKIE_SECURE:-true}
-      JWT_COOKIE_SAMESITE: ${JWT_COOKIE_SAMESITE:-None}
-      SEED_ADMIN_ENABLED: ${SEED_ADMIN_ENABLED:-false}
-      CACHE_WARMUP_ENABLED: ${CACHE_WARMUP_ENABLED:-false}
-      CACHE_WARMUP_LIMIT: ${CACHE_WARMUP_LIMIT:-10}
-
-
-      # API y comunicación
       CORS_ORIGINS: ${CORS_ORIGINS}
-      API_BASE_URL: ${API_BASE_URL}
-      API_BASE_URL_NO_VERSION: ${API_BASE_URL_NO_VERSION}
-      FRONTEND_URL: ${FRONTEND_URL}
-      BACKEND_URL: ${BACKEND_URL}
 
     # Carpeta persistente para archivos estáticos
     volumes:
@@ -69,3 +46,4 @@ networks:
     external: true
   redbd:
     external: true
+

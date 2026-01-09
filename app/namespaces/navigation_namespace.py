@@ -4,7 +4,7 @@ from flask import request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, verify_jwt_in_request
 import logging
 
-from app import cache
+from app.utils.cache_utils import safe_cached
 from app.utils.response_handler import APIResponse
 
 logger = logging.getLogger(__name__)
@@ -63,7 +63,7 @@ class NavigationStructure(Resource):
         '''
     )
     @nav_ns.marshal_with(nav_structure_model)
-    @cache.cached(timeout=3600, key_prefix='nav_structure')
+    @safe_cached(timeout=3600, key_prefix='nav_structure')
     def get(self):
         """Get navigation structure"""
         try:

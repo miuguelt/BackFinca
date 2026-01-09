@@ -223,9 +223,10 @@ def create_app(config_name='development'):
             'CACHE_TYPE': app.config.get('CACHE_TYPE', 'redis'),
             'CACHE_DEFAULT_TIMEOUT': app.config.get('CACHE_DEFAULT_TIMEOUT', 600),
             'CACHE_THRESHOLD': app.config.get('CACHE_THRESHOLD', 1000),
+            'CACHE_IGNORE_ERRORS': app.config.get('CACHE_IGNORE_ERRORS', True),
         }
         if cache_config['CACHE_TYPE'] == 'redis':
-            cache_config['CACHE_REDIS_URL'] = app.config.get('CACHE_REDIS_URL')
+            cache_config['CACHE_REDIS_URL'] = app.config.get('CACHE_REDIS_URL') or app.config.get('REDIS_URL')
         cache.init_app(app, config=cache_config)
 
         # Si se usa Redis, realizar una verificación de salud del backend de caché
@@ -239,11 +240,19 @@ def create_app(config_name='development'):
                 logger.info('Redis cache inicializado correctamente')
             except Exception as e:
                 logger.warning(f'Redis no disponible, aplicando fallback a SimpleCache: {e}')
-                cache.init_app(app, config={'CACHE_TYPE': 'simple', 'CACHE_DEFAULT_TIMEOUT': cache_config['CACHE_DEFAULT_TIMEOUT']})
+                cache.init_app(app, config={
+                    'CACHE_TYPE': 'simple',
+                    'CACHE_DEFAULT_TIMEOUT': cache_config['CACHE_DEFAULT_TIMEOUT'],
+                    'CACHE_IGNORE_ERRORS': True,
+                })
                 logger.info('SimpleCache inicializado como fallback')
     except Exception:
         logger.exception('Error inicializando caché; usando SimpleCache por seguridad')
-        cache.init_app(app, config={'CACHE_TYPE': 'simple', 'CACHE_DEFAULT_TIMEOUT': app.config.get('CACHE_DEFAULT_TIMEOUT', 600)})
+        cache.init_app(app, config={
+            'CACHE_TYPE': 'simple',
+            'CACHE_DEFAULT_TIMEOUT': app.config.get('CACHE_DEFAULT_TIMEOUT', 600),
+            'CACHE_IGNORE_ERRORS': True,
+        })
 
     migrate.init_app(app, db)
 
