@@ -1,5 +1,9 @@
 from app import db
 from werkzeug.security import generate_password_hash, check_password_hash
+try:
+    import bcrypt
+except Exception:  # pragma: no cover - optional dependency
+    bcrypt = None
 from app.models.base_model import BaseModel, ValidationError
 import enum
 
@@ -117,7 +121,25 @@ class User(BaseModel):
 
     def check_password(self, password: str) -> bool:
         """Verifica la contraseña contra el hash almacenado."""
-        return check_password_hash(self.password, password)
+        if not self.password or password is None:
+            return False
+        try:
+            if check_password_hash(self.password, password):
+                return True
+        except Exception:
+            pass
+
+        if not bcrypt:
+            return False
+        try:
+            stored_hash = self.password.encode('utf-8')
+            if stored_hash.startswith(b'$2y$'):
+                stored_hash = b'$2b$' + stored_hash[4:]
+            if stored_hash.startswith((b'$2a$', b'$2b$')):
+                return bcrypt.checkpw(password.encode('utf-8'), stored_hash)
+        except Exception:
+            return False
+        return False
 
     @classmethod
     def create(cls, **kwargs):

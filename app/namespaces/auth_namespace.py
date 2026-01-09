@@ -15,6 +15,7 @@ from app.utils.security_logger import (
     log_jwt_token_event,
     log_admin_action
 )
+from sqlalchemy import or_
 from app.utils.token_blocklist import mark_token_revoked
 from app.utils.validators import validate_password, ValidationError as ValidatorError
 from datetime import timedelta
@@ -176,26 +177,47 @@ class LoginResource(Resource):
         """Autenticar usuario y generar tokens JWT. Devuelve cookies HttpOnly y access_token en body."""
         data = request.get_json() or {}
         identifier = data.get('identifier') or data.get('identification') or data.get('email')
-        # Convertir a string si viene numérico
+        identifier_str = None
+        identifier_email = None
+        identifier_int = None
         if isinstance(identifier, (int, float)):
-            identifier = str(int(identifier))
+            try:
+                identifier_int = int(identifier)
+                identifier_str = str(identifier_int)
+            except Exception:
+                identifier_str = str(identifier)
+        elif isinstance(identifier, str):
+            identifier_str = identifier.strip()
+            if identifier_str:
+                identifier_email = identifier_str.lower()
+                if identifier_str.isdigit():
+                    try:
+                        identifier_int = int(identifier_str)
+                    except Exception:
+                        identifier_int = None
         password = data.get('password')
-        if not identifier or not password:
+        if not identifier_str or not password:
             return APIResponse.validation_error({
                 'identifier': 'Se requiere uno de: identifier | identification | email',
                 'password': 'Requerido'
             })
         try:
-            # Eliminado: Bloque de debug que exponía información sensible en consola
-            log_authentication_attempt(identifier, False)
-            user = User.query.filter(
-                (User.email == identifier) | (User.identification == identifier)
-            ).first()
+            filters = []
+            if identifier_email:
+                filters.append(User.email == identifier_email)
+            if identifier_int is not None:
+                filters.append(User.identification == identifier_int)
+            if not filters:
+                return APIResponse.validation_error({
+                    'identifier': 'Se requiere un email o numero de identificacion valido',
+                    'password': 'Requerido'
+                })
+            user = User.query.filter(or_(*filters)).first()
             if not user or not user.check_password(password):
-                log_authentication_attempt(identifier, False, {'reason': 'invalid_credentials'})
+                log_authentication_attempt(identifier_str, False, {'reason': 'invalid_credentials'})
                 return APIResponse.error('Credenciales inválidas', status_code=401)
             if not user.status:
-                log_authentication_attempt(identifier, False, {'reason': 'user_inactive'})
+                log_authentication_attempt(identifier_str, False, {'reason': 'user_inactive'})
                 return APIResponse.error('Usuario inactivo', status_code=403)
             user_claims = {
                 'id': user.id,
@@ -207,7 +229,7 @@ class LoginResource(Resource):
             identity = str(user.id)
             access_token = create_access_token(identity=identity, additional_claims=user_claims)
             refresh_token = create_refresh_token(identity=identity, additional_claims=user_claims)
-            log_authentication_attempt(identifier, True, {'user_id': user.id, 'role': user.role.value})
+            log_authentication_attempt(identifier_str, True, {'user_id': user.id, 'role': user.role.value})
             log_jwt_token_event('CREATED', user.id, {'access_token_created': True})
 
             # Respuesta optimizada y consistente
@@ -237,7 +259,7 @@ class LoginResource(Resource):
             return resp
         except Exception as e:
             logger.error(f"Error en login para '{identifier}': {e}", exc_info=True)
-            log_authentication_attempt(identifier, False, {'reason': 'server_error', 'error': str(e)})
+            log_authentication_attempt(identifier_str, False, {'reason': 'server_error', 'error': str(e)})
             return APIResponse.error('Error interno del servidor', details={'error': str(e)}, status_code=500)
 
 @auth_ns.route('/refresh')
