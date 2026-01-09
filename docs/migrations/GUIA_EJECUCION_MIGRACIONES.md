@@ -11,6 +11,7 @@ Esta guía define un flujo estándar y reproducible para crear, aplicar y verifi
   - Ejecuta `upgrade head` con Alembic.
   - Verifica índices críticos y crea los faltantes.
   - Muestra la revisión final aplicada.
+  - Re-verifica y confirma 100% de índices presentes.
 
 ## Objetivo
 - Unificar cómo se crean y ejecutan migraciones.
@@ -54,6 +55,13 @@ SQLALCHEMY_DATABASE_URI=mysql+pymysql://usuario:password@host:puerto/base
   - Un paso: `python -m flask --app wsgi db downgrade -1`
   - A revisión exacta: `python -m flask --app wsgi db downgrade <revision_id>`
 
+## Validación 100%
+- Ejecutar: `python upgrade_db.py`
+- Comprobar que el resumen indique:
+  - `Verificación de índices críticos (por columnas): 26/26 presentes`
+  - `Verificación final (por columnas): 26/26 presentes`
+- Si faltara algo, el script crea automáticamente índices críticos (MySQL) y vuelve a verificar.
+
 ## Flujo estándar para crear y aplicar una nueva migración
 1. Preparar entorno:
    - Windows PowerShell:
@@ -78,6 +86,9 @@ SQLALCHEMY_DATABASE_URI=mysql+pymysql://usuario:password@host:puerto/base
 7. Validar:
    - `python -m flask --app wsgi db current` debe mostrar la revisión en head.
    - Comprobar índices/tablas según la migración (ver sección Verificación).
+8. Validar 100% con el comando único:
+   - `python upgrade_db.py`
+   - Confirmar conteo completo 26/26 presentes.
 
 ## Verificación y rollback
 - MySQL: comprobar índices
@@ -110,12 +121,14 @@ SQLALCHEMY_DATABASE_URI=mysql+pymysql://usuario:password@host:puerto/base
   - Validar firewall y reachability.
 - Redis no disponible:
   - El backend usa fallback a SimpleCache y rate-limit en memoria; no bloquea migraciones.
+  - `upgrade_db.py` ignora problemas de Redis/cache y continúa con la migración.
 
 ## Archivos clave del flujo
 - Inicialización de Flask-Migrate: [__init__.py](file:///c:/Users/Miguel/Documents/Flask%20Projects/BackFinca/app/__init__.py#L248-L252)
 - Integración Alembic con la app: [env.py](file:///c:/Users/Miguel/Documents/Flask%20Projects/BackFinca/migrations/env.py#L11-L20) y [env.py](file:///c:/Users/Miguel/Documents/Flask%20Projects/BackFinca/migrations/env.py#L29-L41)
 - Configuración Alembic: [alembic.ini](file:///c:/Users/Miguel/Documents/Flask%20Projects/BackFinca/alembic.ini)
 - Ejemplo de migración con inspección de índices: [20260108_activity_agg_and_indexes.py](file:///c:/Users/Miguel/Documents/Flask%20Projects/BackFinca/migrations/versions/20260108_activity_agg_and_indexes.py)
+ - Comando único y verificación total: [upgrade_db.py](file:///c:/Users/Miguel/Documents/Flask%20Projects/BackFinca/upgrade_db.py)
 
 ## Ejemplo rápido (Windows PowerShell)
 ```
@@ -127,6 +140,7 @@ python -m flask --app wsgi db current
 python -m flask --app wsgi db migrate -m "Agregar indices actividad"
 python -m flask --app wsgi db upgrade
 python -m flask --app wsgi db current
+python upgrade_db.py
 ```
 
 ## Notas
