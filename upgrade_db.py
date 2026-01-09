@@ -1,6 +1,7 @@
 import os
 import sys
 import logging
+from urllib.parse import quote_plus
 from dotenv import load_dotenv
 from alembic.config import Config
 from alembic import command
@@ -16,6 +17,30 @@ def _mask_uri(uri: str) -> str:
             user = creds.split(":", 1)[0]
             return f"{scheme}://{user}:***@{hostpart}"
         return uri
+
+
+def _build_sqlalchemy_database_uri():
+    uri = os.getenv("SQLALCHEMY_DATABASE_URI")
+    if uri:
+        return uri
+
+    host = os.getenv("DB_HOST")
+    port = os.getenv("DB_PORT") or "3306"
+    name = os.getenv("DB_NAME")
+    user = os.getenv("DB_USER")
+    password = os.getenv("DB_PASSWORD")
+
+    if not all([host, name, user, password]):
+        return None
+
+    try:
+        safe_user = quote_plus(user)
+        safe_password = quote_plus(password)
+    except Exception:
+        safe_user = user
+        safe_password = password
+
+    return f"mysql+pymysql://{safe_user}:{safe_password}@{host}:{port}/{name}"
     except Exception:
         return uri
 
@@ -26,9 +51,9 @@ def main():
     os.environ["FLASK_ENV"] = flask_env
 
     jwt = os.getenv("JWT_SECRET_KEY")
-    db_uri = os.getenv("SQLALCHEMY_DATABASE_URI")
+    db_uri = _build_sqlalchemy_database_uri()
     if not jwt or not db_uri:
-        print("ERROR: Faltan variables requeridas: JWT_SECRET_KEY y/o SQLALCHEMY_DATABASE_URI")
+        print("ERROR: Faltan variables requeridas: JWT_SECRET_KEY y/o DB_* / SQLALCHEMY_DATABASE_URI")
         sys.exit(1)
 
     print(f"Entorno: {flask_env}")

@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="260" viewBox="0 0 960 260" role="img" aria-label="Auth flow with cookies and CSRF">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#7aa2ff" />
+    </marker>
+    <style>
+      .box { fill: #0f1a32; stroke: #1e2a44; stroke-width: 2; }
+      .title { fill: #e6edf3; font-family: Inter, Arial, sans-serif; font-size: 14px; font-weight: 600; }
+      .label { fill: #9fb3c8; font-family: Inter, Arial, sans-serif; font-size: 12px; }
+      .arrow { stroke: #7aa2ff; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="40" y="40" width="220" height="60" rx="12" class="box" />
+  <text x="150" y="65" text-anchor="middle" class="title">Frontend (SPA)</text>
+  <text x="150" y="83" text-anchor="middle" class="label">Browser</text>
+
+  <rect x="320" y="40" width="220" height="60" rx="12" class="box" />
+  <text x="430" y="65" text-anchor="middle" class="title">POST /auth/login</text>
+  <text x="430" y="83" text-anchor="middle" class="label">Credentials</text>
+
+  <rect x="600" y="40" width="300" height="60" rx="12" class="box" />
+  <text x="750" y="65" text-anchor="middle" class="title">Set-Cookie</text>
+  <text x="750" y="83" text-anchor="middle" class="label">access_token + csrf_access_token</text>
+
+  <path class="arrow" d="M260 70 L320 70" />
+  <path class="arrow" d="M540 70 L600 70" />
+  <path class="arrow" d="M750 100 L750 125 L190 125 L190 150" />
+
+  <rect x="40" y="150" width="300" height="60" rx="12" class="box" />
+  <text x="190" y="175" text-anchor="middle" class="title">Request API</text>
+  <text x="190" y="193" text-anchor="middle" class="label">credentials + X-CSRF-TOKEN</text>
+
+  <rect x="380" y="150" width="220" height="60" rx="12" class="box" />
+  <text x="490" y="175" text-anchor="middle" class="title">/api/v1/...</text>
+  <text x="490" y="193" text-anchor="middle" class="label">Protected routes</text>
+
+  <rect x="640" y="150" width="260" height="60" rx="12" class="box" />
+  <text x="770" y="175" text-anchor="middle" class="title">JSON Response</text>
+  <text x="770" y="193" text-anchor="middle" class="label">success/data</text>
+
+  <path class="arrow" d="M340 180 L380 180" />
+  <path class="arrow" d="M600 180 L640 180" />
+</svg>

@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="520" viewBox="0 0 880 520" role="img" aria-label="Frontend testing flow">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#7aa2ff" />
+    </marker>
+    <style>
+      .box { fill: #0f1a32; stroke: #1e2a44; stroke-width: 2; }
+      .title { fill: #e6edf3; font-family: Inter, Arial, sans-serif; font-size: 14px; font-weight: 600; }
+      .label { fill: #9fb3c8; font-family: Inter, Arial, sans-serif; font-size: 12px; }
+      .arrow { stroke: #7aa2ff; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="60" y="30" width="760" height="60" rx="12" class="box" />
+  <text x="440" y="55" text-anchor="middle" class="title">1. Check /api/v1/health</text>
+  <text x="440" y="73" text-anchor="middle" class="label">Expect 200</text>
+
+  <rect x="60" y="110" width="760" height="60" rx="12" class="box" />
+  <text x="440" y="135" text-anchor="middle" class="title">2. Set Base URL + CORS</text>
+  <text x="440" y="153" text-anchor="middle" class="label">Proxy or CORS_ORIGINS</text>
+
+  <rect x="60" y="190" width="760" height="60" rx="12" class="box" />
+  <text x="440" y="215" text-anchor="middle" class="title">3. POST /auth/login</text>
+  <text x="440" y="233" text-anchor="middle" class="label">Cookies stored in browser</text>
+
+  <rect x="60" y="270" width="760" height="60" rx="12" class="box" />
+  <text x="440" y="295" text-anchor="middle" class="title">4. GET data</text>
+  <text x="440" y="313" text-anchor="middle" class="label">Lists, filters, pagination</text>
+
+  <rect x="60" y="350" width="760" height="60" rx="12" class="box" />
+  <text x="440" y="375" text-anchor="middle" class="title">5. POST/PUT/DELETE</text>
+  <text x="440" y="393" text-anchor="middle" class="label">Send X-CSRF-TOKEN</text>
+
+  <rect x="60" y="430" width="760" height="60" rx="12" class="box" />
+  <text x="440" y="455" text-anchor="middle" class="title">6. Validate UI states</text>
+  <text x="440" y="473" text-anchor="middle" class="label">Loading, empty, error, success</text>
+
+  <path class="arrow" d="M440 90 L440 110" />
+  <path class="arrow" d="M440 170 L440 190" />
+  <path class="arrow" d="M440 250 L440 270" />
+  <path class="arrow" d="M440 330 L440 350" />
+  <path class="arrow" d="M440 410 L440 430" />
+</svg>
