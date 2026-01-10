@@ -1,6 +1,8 @@
 import os
 import sys
 import logging
+import subprocess
+from datetime import datetime, timezone
 from urllib.parse import quote_plus
 from dotenv import load_dotenv
 from alembic.config import Config
@@ -17,6 +19,96 @@ def _mask_uri(uri: str) -> str:
             user = creds.split(":", 1)[0]
             return f"{scheme}://{user}:***@{hostpart}"
         return uri
+    except Exception:
+        return uri
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return str(raw).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _backup_has_data(backup_path: str) -> bool:
+    try:
+        with open(backup_path, "r", encoding="utf-8", errors="ignore") as fh:
+            for line in fh:
+                if line.lstrip().startswith("INSERT INTO"):
+                    return True
+    except Exception:
+        return False
+    return False
+
+
+def _backup_database(host: str, port: str, name: str, user: str, password: str) -> str | None:
+    if not _env_bool("DB_BACKUP_ENABLED", True):
+        print("DB_BACKUP_ENABLED=false; backup omitido")
+        return None
+    if not all([host, port, name, user]):
+        msg = "ERROR: DB_* incompletos; no se pudo crear backup"
+        print(msg)
+        if _env_bool("DB_BACKUP_REQUIRED", True):
+            sys.exit(1)
+        return None
+
+    backup_dir = os.getenv("DB_BACKUP_DIR") or "backups"
+    os.makedirs(backup_dir, exist_ok=True)
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    filename = f"{name}_pre_migration_{timestamp}.sql"
+    backup_path = os.path.join(backup_dir, filename)
+
+    cmd = [
+        "mysqldump",
+        f"--host={host}",
+        f"--port={port}",
+        f"--user={user}",
+        "--single-transaction",
+        "--routines",
+        "--events",
+        "--triggers",
+        "--hex-blob",
+        "--set-gtid-purged=OFF",
+        name,
+    ]
+
+    env = os.environ.copy()
+    if password:
+        env["MYSQL_PWD"] = password
+
+    try:
+        with open(backup_path, "w", encoding="utf-8") as fh:
+            result = subprocess.run(cmd, stdout=fh, stderr=subprocess.PIPE, text=True, env=env)
+    except FileNotFoundError:
+        msg = "ERROR: mysqldump no encontrado en PATH; no se pudo crear backup"
+        print(msg)
+        if _env_bool("DB_BACKUP_REQUIRED", True):
+            sys.exit(1)
+        return None
+
+    if result.returncode != 0:
+        try:
+            os.remove(backup_path)
+        except Exception:
+            pass
+        msg = f"ERROR: backup fallo (exit {result.returncode}): {result.stderr.strip()}"
+        print(msg)
+        if _env_bool("DB_BACKUP_REQUIRED", True):
+            sys.exit(1)
+        return None
+
+    if _env_bool("DB_BACKUP_VERIFY_DATA", True):
+        has_data = _backup_has_data(backup_path)
+        if not has_data:
+            msg = "ERROR: backup generado sin datos (no se encontraron INSERT INTO)"
+            print(msg)
+            if _env_bool("DB_BACKUP_REQUIRE_DATA", True):
+                sys.exit(1)
+        else:
+            print("Backup contiene datos (INSERT INTO detectado)")
+
+    print(f"Backup creado: {backup_path}")
+    return backup_path
 
 
 def _build_sqlalchemy_database_uri():
@@ -41,8 +133,6 @@ def _build_sqlalchemy_database_uri():
         safe_password = password
 
     return f"mysql+pymysql://{safe_user}:{safe_password}@{host}:{port}/{name}"
-    except Exception:
-        return uri
 
 def main():
     load_dotenv(override=True)
@@ -69,6 +159,19 @@ def main():
         except Exception as e:
             print(f"ERROR: Conexión a la base de datos falló: {e}")
             sys.exit(1)
+
+        try:
+            _backup_database(
+                host=os.getenv("DB_HOST"),
+                port=os.getenv("DB_PORT") or "3306",
+                name=os.getenv("DB_NAME"),
+                user=os.getenv("DB_USER"),
+                password=os.getenv("DB_PASSWORD"),
+            )
+        except Exception as e:
+            print(f"ERROR: backup previo a migracion fallo: {e}")
+            if _env_bool("DB_BACKUP_REQUIRED", True):
+                sys.exit(1)
 
         cfg = Config(os.path.join(os.path.dirname(__file__), "alembic.ini"))
         try:

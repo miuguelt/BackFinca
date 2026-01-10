@@ -203,3 +203,4 @@ test_images_endpoint.py
 test_public_endpoint.py
 test_public_images.py
 test_upload.html
+/backups
