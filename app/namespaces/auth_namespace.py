@@ -7,6 +7,7 @@ from flask_jwt_extended import (
     decode_token
 )
 from flask_jwt_extended.exceptions import CSRFError, JWTExtendedException
+from jwt.exceptions import ExpiredSignatureError
 from app import db
 from app.models.user import User
 from app.utils.response_handler import APIResponse
@@ -278,6 +279,25 @@ class RefreshTokenResource(Resource):
                 error_code='CSRF_ERROR',
                 details={'error': str(e)}
             )
+        
+        except ExpiredSignatureError as e:
+            logger.warning('Expired refresh token during refresh: %s', e)
+            payload, status_code = APIResponse.error(
+                'Token expirado',
+                status_code=401,
+                error_code='TOKEN_EXPIRED',
+                details={
+                    'error': str(e),
+                    'client_action': 'CLEAR_AUTH_AND_RELOGIN',
+                    'should_clear_auth': True,
+                    'logout_url': '/api/v1/auth/logout'
+                }
+            )
+            resp = jsonify(payload)
+            unset_jwt_cookies(resp)
+            resp.status_code = status_code
+            resp.headers['Cache-Control'] = 'no-store'
+            return resp
         except JWTExtendedException as e:
             logger.warning('JWT error during refresh: %s', e)
             return APIResponse.error(

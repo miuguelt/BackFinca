@@ -3,7 +3,7 @@ Middlewares de seguridad y utilidades asociadas.
 """
 import logging
 from flask import request, jsonify
-from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity, unset_access_cookies
 
 
 def init_security_middlewares(app):
@@ -96,7 +96,7 @@ def init_security_middlewares(app):
             logger.debug('JWT verification failed for path: %s', raw_path)
             # Expiracin de token: estandarizar respuesta para que el frontend pueda actuar
             if err_cls == 'ExpiredSignatureError':
-                return APIResponse.error(
+                payload, status_code = APIResponse.error(
                     'Token expirado',
                     status_code=401,
                     error_code='TOKEN_EXPIRED',
@@ -109,6 +109,11 @@ def init_security_middlewares(app):
                         'logout_url': '/api/v1/auth/logout'
                     }
                 )
+                resp = jsonify(payload)
+                unset_access_cookies(resp)
+                resp.status_code = status_code
+                resp.headers['Cache-Control'] = 'no-store'
+                return resp
             return APIResponse.error(
                 human_msg,
                 status_code=401,

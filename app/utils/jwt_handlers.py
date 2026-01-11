@@ -3,7 +3,8 @@ Handlers y utilidades para JWT (flask_jwt_extended).
 """
 from datetime import timezone, datetime
 import logging
-from flask import current_app
+from flask import current_app, jsonify
+from flask_jwt_extended import unset_jwt_cookies, unset_access_cookies
 
 from app.utils.token_blocklist import is_token_revoked
 
@@ -12,6 +13,12 @@ def configure_jwt_handlers(jwt):
     """Configura los handlers para errores de JWT usando APIResponse estándar."""
     from app.utils.response_handler import APIResponse
     logger = logging.getLogger(__name__)
+    def _clear_jwt_cookies(resp, token_type):
+        if token_type == 'refresh':
+            unset_jwt_cookies(resp)
+        else:
+            unset_access_cookies(resp)
+
 
     @jwt.expired_token_loader
     def expired_token_callback(jwt_header, jwt_payload):
@@ -31,12 +38,17 @@ def configure_jwt_handlers(jwt):
             'should_clear_auth': True,
             'logout_url': '/api/v1/auth/logout'
         }
-        return APIResponse.error(
+        payload, status_code = APIResponse.error(
             "Token expirado",
             status_code=401,
             error_code="TOKEN_EXPIRED",
             details=details,
         )
+        resp = jsonify(payload)
+        _clear_jwt_cookies(resp, jwt_payload.get('type'))
+        resp.status_code = status_code
+        resp.headers['Cache-Control'] = 'no-store'
+        return resp
 
     @jwt.invalid_token_loader
     def invalid_token_callback(error):
@@ -83,12 +95,17 @@ def configure_jwt_handlers(jwt):
             'should_clear_auth': True,
             'logout_url': '/api/v1/auth/logout'
         }
-        return APIResponse.error(
+        payload, status_code = APIResponse.error(
             "Token revocado",
             status_code=401,
             error_code="TOKEN_REVOKED",
             details=details
         )
+        resp = jsonify(payload)
+        _clear_jwt_cookies(resp, jwt_payload.get('type'))
+        resp.status_code = status_code
+        resp.headers['Cache-Control'] = 'no-store'
+        return resp
 
     @jwt.additional_claims_loader
     def add_claims_to_jwt(identity):
