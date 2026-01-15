@@ -222,7 +222,23 @@ class Config:
     # -----------------------
     # Permite habilitar la creación pública de usuarios incluso si ya existen
     # usuarios en la base de datos. Úsese con precaución.
-    PUBLIC_USER_CREATION_ENABLED = os.getenv('PUBLIC_USER_CREATION_ENABLED') == 'true'
+    PUBLIC_USER_CREATION_ENABLED = os.getenv('PUBLIC_USER_CREATION_ENABLED', 'true').lower() == 'true'
+
+    # -----------------------
+    # Email (SMTP)
+    # -----------------------
+    EMAIL_ENABLED = _env_bool('EMAIL_ENABLED', default=True)
+    SMTP_HOST = os.getenv('SMTP_HOST')
+    SMTP_PORT = int(os.getenv('SMTP_PORT') or 587)
+    SMTP_USERNAME = os.getenv('SMTP_USERNAME') or os.getenv('SMTP_USER')
+    SMTP_PASSWORD = os.getenv('SMTP_PASSWORD')
+    SMTP_USE_TLS = _env_bool('SMTP_USE_TLS', default=True)
+    SMTP_USE_SSL = _env_bool('SMTP_USE_SSL', default=False)
+    SMTP_FROM_EMAIL = os.getenv('SMTP_FROM_EMAIL') or SMTP_USERNAME
+    SMTP_FROM_NAME = os.getenv('SMTP_FROM_NAME') or ''
+    SMTP_TIMEOUT = int(os.getenv('SMTP_TIMEOUT') or 10)
+    PASSWORD_RESET_URL = os.getenv('PASSWORD_RESET_URL')
+    FRONTEND_PASSWORD_RESET_PATH = os.getenv('FRONTEND_PASSWORD_RESET_PATH') or '/reset-password'
 
     # -----------------------
     # URLs

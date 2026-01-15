@@ -4,6 +4,9 @@ from app.models.base_model import BaseModel
 class TreatmentVaccines(BaseModel):
     """Modelo de relación entre tratamientos y vacunas"""
     __tablename__ = 'treatment_vaccines'
+    __table_args__ = (
+        db.UniqueConstraint('treatment_id', 'vaccine_id', name='uq_treatment_vaccines_treatment_vaccine'),
+    )
     
     id = db.Column(db.Integer, autoincrement=True, primary_key=True)
     treatment_id = db.Column(db.Integer, db.ForeignKey('treatments.id'), nullable=False)

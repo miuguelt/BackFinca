@@ -30,6 +30,39 @@ La API usa JWT en cookies y proteccion CSRF.
 - Para metodos POST/PUT/PATCH/DELETE, añade el header `X-CSRF-TOKEN` con el valor de la cookie `csrf_access_token`.
 - En fetch usa `credentials: 'include'` para enviar cookies.
 
+## Registro publico de usuarios
+
+Endpoint:
+
+- `POST /api/v1/users/public`
+
+Campos requeridos:
+
+- `identification`, `fullname`, `password`, `email`, `phone`, `role`
+
+Roles permitidos (enum):
+
+- `Aprendiz`, `Instructor`, `Administrador`
+
+Ejemplo:
+
+```json
+{
+  "identification": 12345678,
+  "fullname": "Juan Perez",
+  "password": "Testpass123",
+  "email": "juan.perez@example.com",
+  "phone": "3001112222",
+  "role": "Instructor",
+  "address": "Calle 123 #45-67"
+}
+```
+
+Notas:
+
+- Si `PUBLIC_USER_CREATION_ENABLED=false`, el endpoint responde `403`.
+- Si faltan campos requeridos, responde `400` o `422` con detalle por campo.
+
 ## Probar con Swagger UI
 
 - Abre `https://finca.enlinea.sbs/api/v1/docs/`.
@@ -87,13 +120,13 @@ async function createAnimal(payload) {
 Flujo soportado por los nuevos endpoints de auth:
 
 - `POST /api/v1/auth/change-password` (requiere JWT): `{ "current_password": "", "new_password": "" }`. Responde `should_clear_auth=true` para forzar re-login.
-- `POST /api/v1/auth/recover` (publico): `{ "identifier": "" }` o `{ "email": "" }` o `{ "identification": "" }`. Devuelve `reset_token`, `expires_in` y `email_hint`.
+- `POST /api/v1/auth/recover` (publico): `{ "identifier": "" }` o `{ "email": "" }` o `{ "identification": "" }`. Envia un correo con el enlace de recuperacion y responde confirmacion + `expires_in` + `email_hint` + `email_sent`.
 - `POST /api/v1/auth/reset-password`: `{ "reset_token": "", "new_password": "" }`. Responde `should_clear_auth=true`.
 
 Notas del backend:
 
 - `identifier` acepta email o numero de identificacion (string o number).
-- `reset_token` es un token JWT temporal con proposito `password_reset`.
+- El enlace del correo incluye `reset_token`, un JWT temporal con proposito `password_reset`.
 - Validaciones: `new_password` debe cumplir las reglas de complejidad; el backend rechaza si es igual a la actual.
 - Errores comunes: `404` usuario no existe, `403` usuario inactivo, `401` token invalido/expirado, `422` validacion.
 - Rate limit por IP en recover/reset (ver configuracion `RATE_LIMIT_CONFIG`).
@@ -245,7 +278,7 @@ async function requestReset(identifier) {
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message);
-  return data.data.reset_token; // guardar temporalmente
+  return data.message || 'Correo enviado';
 }
 
 async function resetPassword(resetToken, newPassword) {
@@ -262,6 +295,8 @@ async function resetPassword(resetToken, newPassword) {
   return data;
 }
 ```
+
+Nota: en la pantalla de reset, lee el query param `token` de la URL y pasalo como `reset_token`.
 
 Recomendaciones:
 

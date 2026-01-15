@@ -4,6 +4,9 @@ from app.models.base_model import BaseModel
 class AnimalFields(BaseModel):
     """Modelo para asignaciones de animales a campos/potreros"""
     __tablename__ = 'animal_fields'
+    __table_args__ = (
+        db.UniqueConstraint('animal_id', 'field_id', 'assignment_date', name='uq_animal_fields_animal_field_date'),
+    )
     
     id = db.Column(db.Integer, autoincrement=True, primary_key=True)
     animal_id = db.Column(db.Integer, db.ForeignKey('animals.id'), nullable=False)

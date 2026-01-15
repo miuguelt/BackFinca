@@ -58,8 +58,8 @@ def init_security_middlewares(app):
         ):
             return
 
-        # Permitir la creación de usuarios sin JWT (rutas públicas controladas)
-        if request.method == 'POST' and path in ('/api/v1/users', '/api/v1/users/public'):
+        # Permitir la creación de usuarios sin JWT solo en ruta pública dedicada
+        if request.method == 'POST' and path == '/api/v1/users/public':
             return
             
         # Permitir rutas públicas sin JWT
@@ -67,8 +67,8 @@ def init_security_middlewares(app):
             return
         try:
             verify_jwt_in_request()
-            # Autorización por rol: solo Administrador puede hacer PUT/DELETE
-            if request.method in ('PUT', 'DELETE'):
+            # Autorización por rol: solo Administrador puede hacer PUT/PATCH/DELETE
+            if request.method in ('PUT', 'PATCH', 'DELETE'):
                 from flask_jwt_extended import get_jwt
                 user_id = get_jwt_identity()
                 user_claims = get_jwt() if user_id else {}

@@ -19,6 +19,7 @@ from app.utils.security_logger import (
 from sqlalchemy import or_
 from app.utils.token_blocklist import mark_token_revoked
 from app.utils.validators import validate_password, ValidationError as ValidatorError
+from app.utils.email_service import build_password_reset_link, send_email
 from datetime import timedelta
 import logging
 
@@ -505,7 +506,7 @@ class ChangePasswordResource(Resource):
 
 @auth_ns.route('/recover')
 class PasswordRecoverResource(Resource):
-    @auth_ns.doc('recover_password', description='Generar token temporal para recuperar la contrasena por email o identificacion.')
+    @auth_ns.doc('recover_password', description='Enviar correo con enlace de recuperacion y generar token temporal para recuperar la contrasena.')
     @auth_ns.expect(password_recover_model)
     def post(self):
         data = request.get_json() or {}
@@ -539,17 +540,57 @@ class PasswordRecoverResource(Resource):
             expires_delta=expires_delta
         )
 
+        reset_link = build_password_reset_link(reset_token)
+        if not reset_link:
+            logger.error("No se pudo construir enlace de recuperacion para usuario %s", user.id)
+            return APIResponse.error('No se pudo generar enlace de recuperacion', status_code=500)
+
+        expires_in = int(expires_delta.total_seconds())
+        minutes_value = max(int(expires_in / 60), 1)
+        display_name = user.fullname or 'usuario'
+        email_subject = 'Recuperacion de contrasena'
+        email_text = (
+            f"Hola {display_name},\n\n"
+            "Recibimos una solicitud para restablecer tu contrasena.\n"
+            f"Abre este enlace para continuar:\n{reset_link}\n\n"
+            f"Este enlace expira en {minutes_value} minutos.\n"
+            "Si no solicitaste este cambio, puedes ignorar este correo.\n"
+        )
+        email_html = (
+            f"<p>Hola {display_name},</p>"
+            "<p>Recibimos una solicitud para restablecer tu contrasena.</p>"
+            f"<p><a href=\"{reset_link}\">Restablecer contrasena</a></p>"
+            f"<p>Este enlace expira en {minutes_value} minutos.</p>"
+            "<p>Si no solicitaste este cambio, puedes ignorar este correo.</p>"
+        )
+
+        sent, send_err = send_email(
+            to_email=user.email,
+            subject=email_subject,
+            body_text=email_text,
+            body_html=email_html
+        )
+        if not sent:
+            logger.error("No se pudo enviar correo de recuperacion: %s", send_err)
+            return APIResponse.error('No se pudo enviar el correo de recuperacion', status_code=500)
+
         try:
-            log_admin_action(user.id, 'PASSWORD_RESET_REQUEST', 'User', user.id, changes={'via': 'recover_endpoint'})
+            log_admin_action(
+                user.id,
+                'PASSWORD_RESET_REQUEST',
+                'User',
+                user.id,
+                changes={'via': 'recover_endpoint', 'email_sent': True}
+            )
         except Exception:
             logger.debug("No se pudo registrar log de solicitud de recuperacion", exc_info=True)
 
         return APIResponse.success(
-            message='Token de recuperacion generado',
+            message='Correo de recuperacion enviado',
             data={
-                'reset_token': reset_token,
-                'expires_in': int(expires_delta.total_seconds()),
-                'email_hint': _mask_email(user.email)
+                'expires_in': expires_in,
+                'email_hint': _mask_email(user.email),
+                'email_sent': True
             }
         )
 
