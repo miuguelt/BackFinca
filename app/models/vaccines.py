@@ -41,7 +41,10 @@ class Vaccines(BaseModel):
     # Configuración específica para namespaces
     _namespace_fields = ['id', 'name', 'dosis', 'route_administration_id', 'vaccination_interval', 'type', 'national_plan', 'target_disease_id', 'created_at']
     # Reducir carga automática de relaciones pesadas para listados por defecto
-    _namespace_relations = {}
+    _namespace_relations = {
+        'diseases': {'fields': ['id', 'name'], 'depth': 1},
+        'route_administration_rel': {'fields': ['id', 'name'], 'depth': 1},
+    }
     _searchable_fields = ['name', 'national_plan']
     _filterable_fields = ['target_disease_id', 'type', 'route_administration_id', 'created_at']
     _sortable_fields = ['id', 'name', 'created_at', 'updated_at']

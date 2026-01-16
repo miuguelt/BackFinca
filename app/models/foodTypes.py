@@ -7,13 +7,12 @@ class FoodTypes(BaseModel):
     
     id = db.Column(db.Integer, autoincrement=True, primary_key=True)
     food_type = db.Column(db.String(255), nullable=False, unique=True)
-    # Nullable fields: relaxed to accept minimal test payloads. These are metadata and safe to keep optional
-    # but review before enforcing stricter production constraints.
-    sowing_date = db.Column(db.Date, nullable=True)  # nullable for tests
-    harvest_date = db.Column(db.Date, nullable=True)  # nullable for tests
-    area = db.Column(db.Integer, nullable=True)  # nullable for tests
-    handlings = db.Column(db.String(255), nullable=True)  # nullable for tests
-    gauges = db.Column(db.String(255), nullable=True)  # nullable for tests
+    # NOTE: DB schema enforces NOT NULL for several columns; keep model aligned to avoid 409 IntegrityErrors.
+    sowing_date = db.Column(db.Date, nullable=False)
+    harvest_date = db.Column(db.Date, nullable=True)
+    area = db.Column(db.Integer, nullable=False)
+    handlings = db.Column(db.String(255), nullable=False)
+    gauges = db.Column(db.String(255), nullable=False)
 
     # Configuración específica para namespaces
     _namespace_fields = ['id', 'food_type', 'sowing_date', 'harvest_date', 'area', 'handlings', 'gauges', 'created_at']
@@ -23,8 +22,8 @@ class FoodTypes(BaseModel):
     _searchable_fields = ['food_type', 'handlings']
     _filterable_fields = ['sowing_date', 'harvest_date', 'area', 'created_at']
     _sortable_fields = ['id', 'food_type', 'sowing_date', 'harvest_date', 'area', 'created_at', 'updated_at']
-    # For test convenience allow minimal payloads; only food_type is strictly required
-    _required_fields = ['food_type']
+    # Required fields aligned with DB NOT NULL constraints
+    _required_fields = ['food_type', 'sowing_date', 'area', 'handlings', 'gauges']
     _unique_fields = ['food_type']
     # Aliases to accept legacy/frontend field names (tests use 'name' and 'description')
     _input_aliases = {

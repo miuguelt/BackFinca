@@ -254,15 +254,15 @@ class UserPublicCreate(Resource):
     @users_ns.doc('public_create_user', description='Crear un usuario sin autenticacion (habilitado por defecto; se puede desactivar con PUBLIC_USER_CREATION_ENABLED=false).')
     def post(self):
         try:
-            allow_public_creation = bool(current_app.config.get('PUBLIC_USER_CREATION_ENABLED', True))
-            if not allow_public_creation:
-                return APIResponse.error('Creacion publica deshabilitada', status_code=403)
             data = request.get_json() or {}
             missing = [f for f in ['identification','fullname','password','email','phone','role'] if f not in data]
             if missing:
                 return APIResponse.validation_error({m: 'Requerido' for m in missing})
             # Forzar hashing de contraseña usando método del modelo
             password_raw = data.pop('password')
+            password_confirmation = data.pop('password_confirmation', None)
+            if password_confirmation is not None and password_confirmation != password_raw:
+                return APIResponse.validation_error({'password_confirmation': 'No coincide'})
             user = User(**data)
             user.set_password(password_raw)
             db.session.add(user)

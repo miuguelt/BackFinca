@@ -1,0 +1,61 @@
+# Frontend ↔ Backend Endpoint Map
+- Backend swagger: `http://127.0.0.1:8081/api/v1/swagger.json`
+- Frontend dir: `C:\Users\Miguel\Documents\Flask Projects\Front_finca`
+- Total swagger endpoints: **250**
+- Unused by frontend (best-effort): **137**
+
+## Unused endpoints (first 50)
+- `DELETE /animal-images/image/{image_id}`
+- `DELETE /animals/{animal_id}/delete-with-check`
+- `DELETE /preferences/favorites`
+- `DELETE /preferences/favorites/{favorite_id}`
+- `GET /activity`
+- `GET /activity/filters`
+- `GET /activity/me`
+- `GET /activity/me/stats`
+- `GET /activity/me/summary`
+- `GET /activity/stats`
+- `GET /analytics/alerts`
+- `GET /analytics/animals/statistics`
+- `GET /analytics/animals/{animal_id}/medical-history`
+- `GET /analytics/dashboard`
+- `GET /analytics/dashboard/complete`
+- `GET /analytics/health/statistics`
+- `GET /analytics/production/statistics`
+- `GET /animal-diseases/metadata`
+- `GET /animal-diseases/stats`
+- `GET /animal-fields/metadata`
+- `GET /animal-fields/stats`
+- `GET /animal-images/{animal_id}`
+- `GET /animals/metadata`
+- `GET /animals/stats`
+- `GET /animals/tree/ancestors`
+- `GET /animals/tree/descendants`
+- `GET /animals/{animal_id}/dependencies`
+- `GET /auth/me`
+- `GET /auth/refresh`
+- `GET /breeds/by-species/{species_id}`
+- `GET /breeds/metadata`
+- `GET /breeds/stats`
+- `GET /controls/metadata`
+- `GET /controls/stats`
+- `GET /diseases/metadata`
+- `GET /diseases/stats`
+- `GET /fields/metadata`
+- `GET /fields/stats`
+- `GET /fields/{id}/animals`
+- `GET /food_types/metadata`
+- `GET /food_types/stats`
+- `GET /genetic-improvements/metadata`
+- `GET /genetic-improvements/stats`
+- `GET /medications/metadata`
+- `GET /medications/stats`
+- `GET /navigation/quick-access`
+- `GET /navigation/structure`
+- `GET /preferences/favorites`
+- `GET /preferences/history`
+- `GET /route-administrations/active`
+
+## Notes
+- Matching is heuristic: it scans `Front_finca/src/services` for `api.<method>(...)` calls and compares by method + normalized path.
+- If an endpoint is marked unused but has a UI, confirm by running the app and checking real traffic.

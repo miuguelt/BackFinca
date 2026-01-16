@@ -68,6 +68,12 @@ def register_api(app, limiter=None):
         catch_all_404s=True,
     )
 
+    # Expose the Api instance for internal endpoints (e.g. dynamic navigation generation)
+    try:
+        app.extensions["restx_api"] = api
+    except Exception:
+        pass
+
     # UI de documentación personalizada con enlace visible a la guía
     @api.documentation
     def custom_swagger_ui():

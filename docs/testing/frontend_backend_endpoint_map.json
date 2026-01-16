@@ -1,0 +1,2771 @@
+{
+  "base_url": "http://127.0.0.1:8081/api/v1",
+  "frontend_dir": "C:\\Users\\Miguel\\Documents\\Flask Projects\\Front_finca",
+  "swagger_endpoint_count": 250,
+  "frontend_service_call_count": 113,
+  "swagger_endpoints_unused_by_frontend": 137,
+  "endpoints": [
+    {
+      "method": "DELETE",
+      "path": "/animal-diseases/{record_id}",
+      "normalized": "/animal-diseases/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/animalDiseasesService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/all/diseaseAnimal.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/apprentice/home.tsx",
+        "src/pages/dashboard/instructor/home.tsx"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/animal-fields/{record_id}",
+      "normalized": "/animal-fields/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/animalFieldsServices.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/animalFields.tsx",
+        "src/pages/dashboard/all/forms/animalFieldForm.tsx"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/animal-images/image/{image_id}",
+      "normalized": "/animal-images/image/{}",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/animals/{animal_id}/delete-with-check",
+      "normalized": "/animals/{}/delete-with-check",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/animals/{record_id}",
+      "normalized": "/animals/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/animalService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/all/animals.tsx",
+        "src/pages/dashboard/all/forms/animalFieldForm.tsx",
+        "src/pages/dashboard/all/forms/animalForm.tsx",
+        "src/pages/dashboard/all/forms/controlForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/improvedAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/treatmentForm.tsx",
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/dashboard/all/treatments.tsx",
+        "src/pages/dashboard/apprentice/home.tsx",
+        "src/pages/dashboard/instructor/home.tsx"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/breeds/{record_id}",
+      "normalized": "/breeds/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/breedsService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/animalForm.tsx",
+        "src/pages/dashboard/all/forms/breedForm.tsx",
+        "src/pages/dashboard/all/speciesAndBreeds.tsx"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/controls/{record_id}",
+      "normalized": "/controls/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/controlService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/controls.tsx",
+        "src/pages/dashboard/all/forms/controlForm.tsx"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/diseases/{record_id}",
+      "normalized": "/diseases/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/diseaseService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/diseases.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseForm.tsx",
+        "src/pages/dashboard/all/forms/vaccineForm.tsx"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/fields/{record_id}",
+      "normalized": "/fields/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/fieldService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/fields.tsx",
+        "src/pages/dashboard/all/forms/animalFieldForm.tsx",
+        "src/pages/dashboard/all/forms/fieldForm.tsx"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/food_types/{record_id}",
+      "normalized": "/food_types/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/foodTypeServices.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/foodTypes.tsx",
+        "src/pages/dashboard/all/forms/fieldForm.tsx",
+        "src/pages/dashboard/all/forms/foodTypeForm.tsx"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/genetic-improvements/{record_id}",
+      "normalized": "/genetic-improvements/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/geneticImprovementsService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/improvedAnimalForm.tsx",
+        "src/pages/dashboard/all/geneticImprovements.tsx"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/medications/{record_id}",
+      "normalized": "/medications/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/medicationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/medicineForm.tsx",
+        "src/pages/dashboard/all/medications.tsx",
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/preferences/favorites",
+      "normalized": "/preferences/favorites",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/preferences/favorites/{favorite_id}",
+      "normalized": "/preferences/favorites/{}",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/route-administrations/{record_id}",
+      "normalized": "/route-administrations/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/routeAdministrationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/medicineForm.tsx",
+        "src/pages/dashboard/all/forms/vaccineForm.tsx"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/species/{record_id}",
+      "normalized": "/species/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/speciesService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/breedForm.tsx",
+        "src/pages/dashboard/all/forms/specieForm.tsx",
+        "src/pages/dashboard/all/speciesAndBreeds.tsx"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/treatment-medications/{record_id}",
+      "normalized": "/treatment-medications/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/treatmentMedicationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/treatment-vaccines/{record_id}",
+      "normalized": "/treatment-vaccines/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/treatmentVaccinesService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/treatments/{record_id}",
+      "normalized": "/treatments/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/treatmentService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/treatmentForm.tsx",
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/users/{record_id}",
+      "normalized": "/users/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/userService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/admin/user.tsx",
+        "src/pages/dashboard/admin/userForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/signUp/index.tsx"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/vaccinations/{record_id}",
+      "normalized": "/vaccinations/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/vaccinationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/dashboard/all/vaccinations.tsx"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/vaccines/{record_id}",
+      "normalized": "/vaccines/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/vaccineServices.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/dashboard/all/forms/vaccineForm.tsx",
+        "src/pages/dashboard/all/treatments.tsx",
+        "src/pages/dashboard/all/vaccines.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/activity",
+      "normalized": "/activity",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/activity/filters",
+      "normalized": "/activity/filters",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/activity/me",
+      "normalized": "/activity/me",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/activity/me/stats",
+      "normalized": "/activity/me/stats",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/activity/me/summary",
+      "normalized": "/activity/me/summary",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/activity/stats",
+      "normalized": "/activity/stats",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/alerts",
+      "normalized": "/analytics/alerts",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/animals/statistics",
+      "normalized": "/analytics/animals/statistics",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/animals/{animal_id}/medical-history",
+      "normalized": "/analytics/animals/{}/medical-history",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/dashboard",
+      "normalized": "/analytics/dashboard",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/dashboard/complete",
+      "normalized": "/analytics/dashboard/complete",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/health/statistics",
+      "normalized": "/analytics/health/statistics",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/production/statistics",
+      "normalized": "/analytics/production/statistics",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/animal-diseases/",
+      "normalized": "/animal-diseases",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/animalDiseasesService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/all/diseaseAnimal.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/apprentice/home.tsx",
+        "src/pages/dashboard/instructor/home.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/animal-diseases/metadata",
+      "normalized": "/animal-diseases/metadata",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/animal-diseases/stats",
+      "normalized": "/animal-diseases/stats",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/animal-diseases/{record_id}",
+      "normalized": "/animal-diseases/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/animalDiseasesService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/all/diseaseAnimal.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/apprentice/home.tsx",
+        "src/pages/dashboard/instructor/home.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/animal-fields/",
+      "normalized": "/animal-fields",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/animalFieldsServices.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/animalFields.tsx",
+        "src/pages/dashboard/all/forms/animalFieldForm.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/animal-fields/metadata",
+      "normalized": "/animal-fields/metadata",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/animal-fields/stats",
+      "normalized": "/animal-fields/stats",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/animal-fields/{record_id}",
+      "normalized": "/animal-fields/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/animalFieldsServices.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/animalFields.tsx",
+        "src/pages/dashboard/all/forms/animalFieldForm.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/animal-images/{animal_id}",
+      "normalized": "/animal-images/{}",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/animals/",
+      "normalized": "/animals",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/animalService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/all/animals.tsx",
+        "src/pages/dashboard/all/forms/animalFieldForm.tsx",
+        "src/pages/dashboard/all/forms/animalForm.tsx",
+        "src/pages/dashboard/all/forms/controlForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/improvedAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/treatmentForm.tsx",
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/dashboard/all/treatments.tsx",
+        "src/pages/dashboard/apprentice/home.tsx",
+        "src/pages/dashboard/instructor/home.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/animals/metadata",
+      "normalized": "/animals/metadata",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/animals/stats",
+      "normalized": "/animals/stats",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/animals/status",
+      "normalized": "/animals/status",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/animalService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/all/animals.tsx",
+        "src/pages/dashboard/all/forms/animalFieldForm.tsx",
+        "src/pages/dashboard/all/forms/animalForm.tsx",
+        "src/pages/dashboard/all/forms/controlForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/improvedAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/treatmentForm.tsx",
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/dashboard/all/treatments.tsx",
+        "src/pages/dashboard/apprentice/home.tsx",
+        "src/pages/dashboard/instructor/home.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/animals/tree/ancestors",
+      "normalized": "/animals/tree/ancestors",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/animals/tree/descendants",
+      "normalized": "/animals/tree/descendants",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/animals/{animal_id}/dependencies",
+      "normalized": "/animals/{}/dependencies",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/animals/{record_id}",
+      "normalized": "/animals/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/animalService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/all/animals.tsx",
+        "src/pages/dashboard/all/forms/animalFieldForm.tsx",
+        "src/pages/dashboard/all/forms/animalForm.tsx",
+        "src/pages/dashboard/all/forms/controlForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/improvedAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/treatmentForm.tsx",
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/dashboard/all/treatments.tsx",
+        "src/pages/dashboard/apprentice/home.tsx",
+        "src/pages/dashboard/instructor/home.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/auth/me",
+      "normalized": "/auth/me",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/auth/refresh",
+      "normalized": "/auth/refresh",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/breeds/",
+      "normalized": "/breeds",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/breedsService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/animalForm.tsx",
+        "src/pages/dashboard/all/forms/breedForm.tsx",
+        "src/pages/dashboard/all/speciesAndBreeds.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/breeds/by-species/{species_id}",
+      "normalized": "/breeds/by-species/{}",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/breeds/metadata",
+      "normalized": "/breeds/metadata",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/breeds/stats",
+      "normalized": "/breeds/stats",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/breeds/{record_id}",
+      "normalized": "/breeds/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/breedsService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/animalForm.tsx",
+        "src/pages/dashboard/all/forms/breedForm.tsx",
+        "src/pages/dashboard/all/speciesAndBreeds.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/controls/",
+      "normalized": "/controls",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/controlService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/controls.tsx",
+        "src/pages/dashboard/all/forms/controlForm.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/controls/metadata",
+      "normalized": "/controls/metadata",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/controls/stats",
+      "normalized": "/controls/stats",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/controls/{record_id}",
+      "normalized": "/controls/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/controlService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/controls.tsx",
+        "src/pages/dashboard/all/forms/controlForm.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/diseases/",
+      "normalized": "/diseases",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/diseaseService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/diseases.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseForm.tsx",
+        "src/pages/dashboard/all/forms/vaccineForm.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/diseases/metadata",
+      "normalized": "/diseases/metadata",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/diseases/stats",
+      "normalized": "/diseases/stats",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/diseases/{record_id}",
+      "normalized": "/diseases/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/diseaseService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/diseases.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseForm.tsx",
+        "src/pages/dashboard/all/forms/vaccineForm.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/fields/",
+      "normalized": "/fields",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/fieldService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/fields.tsx",
+        "src/pages/dashboard/all/forms/animalFieldForm.tsx",
+        "src/pages/dashboard/all/forms/fieldForm.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/fields/metadata",
+      "normalized": "/fields/metadata",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/fields/stats",
+      "normalized": "/fields/stats",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/fields/{id}/animals",
+      "normalized": "/fields/{}/animals",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/fields/{record_id}",
+      "normalized": "/fields/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/fieldService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/fields.tsx",
+        "src/pages/dashboard/all/forms/animalFieldForm.tsx",
+        "src/pages/dashboard/all/forms/fieldForm.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/food_types/",
+      "normalized": "/food_types",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/foodTypeServices.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/foodTypes.tsx",
+        "src/pages/dashboard/all/forms/fieldForm.tsx",
+        "src/pages/dashboard/all/forms/foodTypeForm.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/food_types/metadata",
+      "normalized": "/food_types/metadata",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/food_types/stats",
+      "normalized": "/food_types/stats",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/food_types/{record_id}",
+      "normalized": "/food_types/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/foodTypeServices.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/foodTypes.tsx",
+        "src/pages/dashboard/all/forms/fieldForm.tsx",
+        "src/pages/dashboard/all/forms/foodTypeForm.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/genetic-improvements/",
+      "normalized": "/genetic-improvements",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/geneticImprovementsService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/improvedAnimalForm.tsx",
+        "src/pages/dashboard/all/geneticImprovements.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/genetic-improvements/metadata",
+      "normalized": "/genetic-improvements/metadata",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/genetic-improvements/stats",
+      "normalized": "/genetic-improvements/stats",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/genetic-improvements/{record_id}",
+      "normalized": "/genetic-improvements/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/geneticImprovementsService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/improvedAnimalForm.tsx",
+        "src/pages/dashboard/all/geneticImprovements.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/medications/",
+      "normalized": "/medications",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/medicationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/medicineForm.tsx",
+        "src/pages/dashboard/all/medications.tsx",
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/medications/metadata",
+      "normalized": "/medications/metadata",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/medications/stats",
+      "normalized": "/medications/stats",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/medications/{record_id}",
+      "normalized": "/medications/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/medicationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/medicineForm.tsx",
+        "src/pages/dashboard/all/medications.tsx",
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/navigation/quick-access",
+      "normalized": "/navigation/quick-access",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/navigation/structure",
+      "normalized": "/navigation/structure",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/preferences/favorites",
+      "normalized": "/preferences/favorites",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/preferences/history",
+      "normalized": "/preferences/history",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/route-administrations/",
+      "normalized": "/route-administrations",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/routeAdministrationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/medicineForm.tsx",
+        "src/pages/dashboard/all/forms/vaccineForm.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/route-administrations/active",
+      "normalized": "/route-administrations/active",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/route-administrations/metadata",
+      "normalized": "/route-administrations/metadata",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/route-administrations/search",
+      "normalized": "/route-administrations/search",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/route-administrations/stats",
+      "normalized": "/route-administrations/stats",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/route-administrations/{record_id}",
+      "normalized": "/route-administrations/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/routeAdministrationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/medicineForm.tsx",
+        "src/pages/dashboard/all/forms/vaccineForm.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/security/alerts",
+      "normalized": "/security/alerts",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/security/metrics",
+      "normalized": "/security/metrics",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/species/",
+      "normalized": "/species",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/speciesService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/breedForm.tsx",
+        "src/pages/dashboard/all/forms/specieForm.tsx",
+        "src/pages/dashboard/all/speciesAndBreeds.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/species/metadata",
+      "normalized": "/species/metadata",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/species/stats",
+      "normalized": "/species/stats",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/species/{record_id}",
+      "normalized": "/species/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/speciesService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/breedForm.tsx",
+        "src/pages/dashboard/all/forms/specieForm.tsx",
+        "src/pages/dashboard/all/speciesAndBreeds.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/treatment-medications/",
+      "normalized": "/treatment-medications",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/treatmentMedicationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/treatment-medications/metadata",
+      "normalized": "/treatment-medications/metadata",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/treatment-medications/stats",
+      "normalized": "/treatment-medications/stats",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/treatment-medications/{record_id}",
+      "normalized": "/treatment-medications/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/treatmentMedicationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/treatment-vaccines/",
+      "normalized": "/treatment-vaccines",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/treatmentVaccinesService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/treatment-vaccines/metadata",
+      "normalized": "/treatment-vaccines/metadata",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/treatment-vaccines/stats",
+      "normalized": "/treatment-vaccines/stats",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/treatment-vaccines/{record_id}",
+      "normalized": "/treatment-vaccines/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/treatmentVaccinesService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/treatments/",
+      "normalized": "/treatments",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/treatmentService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/treatmentForm.tsx",
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/treatments/metadata",
+      "normalized": "/treatments/metadata",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/treatments/stats",
+      "normalized": "/treatments/stats",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/treatments/{record_id}",
+      "normalized": "/treatments/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/treatmentService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/treatmentForm.tsx",
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/users/",
+      "normalized": "/users",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/userService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/admin/user.tsx",
+        "src/pages/dashboard/admin/userForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/signUp/index.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/users/metadata",
+      "normalized": "/users/metadata",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/users/roles",
+      "normalized": "/users/roles",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/userService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/admin/user.tsx",
+        "src/pages/dashboard/admin/userForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/signUp/index.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/users/statistics",
+      "normalized": "/users/statistics",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/users/stats",
+      "normalized": "/users/stats",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/users/status",
+      "normalized": "/users/status",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/userService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/admin/user.tsx",
+        "src/pages/dashboard/admin/userForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/signUp/index.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/users/{record_id}",
+      "normalized": "/users/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/userService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/admin/user.tsx",
+        "src/pages/dashboard/admin/userForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/signUp/index.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/users/{user_id}/activity",
+      "normalized": "/users/{}/activity",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/vaccinations/",
+      "normalized": "/vaccinations",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/vaccinationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/dashboard/all/vaccinations.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/vaccinations/metadata",
+      "normalized": "/vaccinations/metadata",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/vaccinations/stats",
+      "normalized": "/vaccinations/stats",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/vaccinations/{record_id}",
+      "normalized": "/vaccinations/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/vaccinationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/dashboard/all/vaccinations.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/vaccines/",
+      "normalized": "/vaccines",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/vaccineServices.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/dashboard/all/forms/vaccineForm.tsx",
+        "src/pages/dashboard/all/treatments.tsx",
+        "src/pages/dashboard/all/vaccines.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/vaccines/by-route/{route_id}",
+      "normalized": "/vaccines/by-route/{}",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/vaccines/metadata",
+      "normalized": "/vaccines/metadata",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/vaccines/stats",
+      "normalized": "/vaccines/stats",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/vaccines/with-route-administration",
+      "normalized": "/vaccines/with-route-administration",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "GET",
+      "path": "/vaccines/{record_id}",
+      "normalized": "/vaccines/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/vaccineServices.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/dashboard/all/forms/vaccineForm.tsx",
+        "src/pages/dashboard/all/treatments.tsx",
+        "src/pages/dashboard/all/vaccines.tsx"
+      ]
+    },
+    {
+      "method": "HEAD",
+      "path": "/animal-diseases/",
+      "normalized": "/animal-diseases",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/animal-diseases/{record_id}",
+      "normalized": "/animal-diseases/{}",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/animals/",
+      "normalized": "/animals",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/animals/{record_id}",
+      "normalized": "/animals/{}",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/breeds/",
+      "normalized": "/breeds",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/breeds/{record_id}",
+      "normalized": "/breeds/{}",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/controls/",
+      "normalized": "/controls",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/controls/{record_id}",
+      "normalized": "/controls/{}",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/diseases/",
+      "normalized": "/diseases",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/diseases/{record_id}",
+      "normalized": "/diseases/{}",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/fields/",
+      "normalized": "/fields",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/fields/{record_id}",
+      "normalized": "/fields/{}",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/food_types/",
+      "normalized": "/food_types",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/food_types/{record_id}",
+      "normalized": "/food_types/{}",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/genetic-improvements/",
+      "normalized": "/genetic-improvements",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/genetic-improvements/{record_id}",
+      "normalized": "/genetic-improvements/{}",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/medications/",
+      "normalized": "/medications",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/medications/{record_id}",
+      "normalized": "/medications/{}",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/route-administrations/",
+      "normalized": "/route-administrations",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/route-administrations/{record_id}",
+      "normalized": "/route-administrations/{}",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/species/",
+      "normalized": "/species",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/species/{record_id}",
+      "normalized": "/species/{}",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/treatment-medications/",
+      "normalized": "/treatment-medications",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/treatment-medications/{record_id}",
+      "normalized": "/treatment-medications/{}",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/treatment-vaccines/",
+      "normalized": "/treatment-vaccines",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/treatment-vaccines/{record_id}",
+      "normalized": "/treatment-vaccines/{}",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/treatments/",
+      "normalized": "/treatments",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/treatments/{record_id}",
+      "normalized": "/treatments/{}",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/users/",
+      "normalized": "/users",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/users/{record_id}",
+      "normalized": "/users/{}",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/vaccinations/",
+      "normalized": "/vaccinations",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/vaccinations/{record_id}",
+      "normalized": "/vaccinations/{}",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/vaccines/",
+      "normalized": "/vaccines",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "HEAD",
+      "path": "/vaccines/{record_id}",
+      "normalized": "/vaccines/{}",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/animal-diseases/{record_id}",
+      "normalized": "/animal-diseases/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/animalDiseasesService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/all/diseaseAnimal.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/apprentice/home.tsx",
+        "src/pages/dashboard/instructor/home.tsx"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/animal-fields/{record_id}",
+      "normalized": "/animal-fields/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/animalFieldsServices.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/animalFields.tsx",
+        "src/pages/dashboard/all/forms/animalFieldForm.tsx"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/animals/{record_id}",
+      "normalized": "/animals/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/animalService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/all/animals.tsx",
+        "src/pages/dashboard/all/forms/animalFieldForm.tsx",
+        "src/pages/dashboard/all/forms/animalForm.tsx",
+        "src/pages/dashboard/all/forms/controlForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/improvedAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/treatmentForm.tsx",
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/dashboard/all/treatments.tsx",
+        "src/pages/dashboard/apprentice/home.tsx",
+        "src/pages/dashboard/instructor/home.tsx"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/breeds/{record_id}",
+      "normalized": "/breeds/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/breedsService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/animalForm.tsx",
+        "src/pages/dashboard/all/forms/breedForm.tsx",
+        "src/pages/dashboard/all/speciesAndBreeds.tsx"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/controls/{record_id}",
+      "normalized": "/controls/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/controlService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/controls.tsx",
+        "src/pages/dashboard/all/forms/controlForm.tsx"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/diseases/{record_id}",
+      "normalized": "/diseases/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/diseaseService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/diseases.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseForm.tsx",
+        "src/pages/dashboard/all/forms/vaccineForm.tsx"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/fields/{record_id}",
+      "normalized": "/fields/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/fieldService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/fields.tsx",
+        "src/pages/dashboard/all/forms/animalFieldForm.tsx",
+        "src/pages/dashboard/all/forms/fieldForm.tsx"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/food_types/{record_id}",
+      "normalized": "/food_types/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/foodTypeServices.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/foodTypes.tsx",
+        "src/pages/dashboard/all/forms/fieldForm.tsx",
+        "src/pages/dashboard/all/forms/foodTypeForm.tsx"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/genetic-improvements/{record_id}",
+      "normalized": "/genetic-improvements/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/geneticImprovementsService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/improvedAnimalForm.tsx",
+        "src/pages/dashboard/all/geneticImprovements.tsx"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/medications/{record_id}",
+      "normalized": "/medications/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/medicationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/medicineForm.tsx",
+        "src/pages/dashboard/all/medications.tsx",
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/route-administrations/{record_id}",
+      "normalized": "/route-administrations/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/routeAdministrationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/medicineForm.tsx",
+        "src/pages/dashboard/all/forms/vaccineForm.tsx"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/species/{record_id}",
+      "normalized": "/species/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/speciesService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/breedForm.tsx",
+        "src/pages/dashboard/all/forms/specieForm.tsx",
+        "src/pages/dashboard/all/speciesAndBreeds.tsx"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/treatment-medications/{record_id}",
+      "normalized": "/treatment-medications/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/treatmentMedicationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/treatment-vaccines/{record_id}",
+      "normalized": "/treatment-vaccines/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/treatmentVaccinesService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/treatments/{record_id}",
+      "normalized": "/treatments/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/treatmentService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/treatmentForm.tsx",
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/users/{record_id}",
+      "normalized": "/users/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/userService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/admin/user.tsx",
+        "src/pages/dashboard/admin/userForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/signUp/index.tsx"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/vaccinations/{record_id}",
+      "normalized": "/vaccinations/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/vaccinationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/dashboard/all/vaccinations.tsx"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/vaccines/{record_id}",
+      "normalized": "/vaccines/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/vaccineServices.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/dashboard/all/forms/vaccineForm.tsx",
+        "src/pages/dashboard/all/treatments.tsx",
+        "src/pages/dashboard/all/vaccines.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/analytics/reports/custom",
+      "normalized": "/analytics/reports/custom",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/animal-diseases/",
+      "normalized": "/animal-diseases",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/animalDiseasesService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/all/diseaseAnimal.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/apprentice/home.tsx",
+        "src/pages/dashboard/instructor/home.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/animal-diseases/bulk",
+      "normalized": "/animal-diseases/bulk",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/animal-fields/",
+      "normalized": "/animal-fields",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/animalFieldsServices.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/animalFields.tsx",
+        "src/pages/dashboard/all/forms/animalFieldForm.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/animal-fields/bulk",
+      "normalized": "/animal-fields/bulk",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/animal-images/upload",
+      "normalized": "/animal-images/upload",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/animals/",
+      "normalized": "/animals",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/animalService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/all/animals.tsx",
+        "src/pages/dashboard/all/forms/animalFieldForm.tsx",
+        "src/pages/dashboard/all/forms/animalForm.tsx",
+        "src/pages/dashboard/all/forms/controlForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/improvedAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/treatmentForm.tsx",
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/dashboard/all/treatments.tsx",
+        "src/pages/dashboard/apprentice/home.tsx",
+        "src/pages/dashboard/instructor/home.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/animals/batch-dependencies",
+      "normalized": "/animals/batch-dependencies",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/animals/bulk",
+      "normalized": "/animals/bulk",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/auth/change-password",
+      "normalized": "/auth/change-password",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/auth/login",
+      "normalized": "/auth/login",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/auth/logout",
+      "normalized": "/auth/logout",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/auth/recover",
+      "normalized": "/auth/recover",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/auth/refresh",
+      "normalized": "/auth/refresh",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/authService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/admin/user.tsx",
+        "src/pages/dashboard/admin/userForm.tsx",
+        "src/pages/dashboard/all/animalFields.tsx",
+        "src/pages/dashboard/all/animals.tsx",
+        "src/pages/dashboard/all/controls.tsx",
+        "src/pages/dashboard/all/diseaseAnimal.tsx",
+        "src/pages/dashboard/all/diseases.tsx",
+        "src/pages/dashboard/all/fields.tsx",
+        "src/pages/dashboard/all/foodTypes.tsx",
+        "src/pages/dashboard/all/forms/animalFieldForm.tsx",
+        "src/pages/dashboard/all/forms/animalForm.tsx",
+        "src/pages/dashboard/all/forms/breedForm.tsx",
+        "src/pages/dashboard/all/forms/controlForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseForm.tsx",
+        "src/pages/dashboard/all/forms/fieldForm.tsx",
+        "src/pages/dashboard/all/forms/foodTypeForm.tsx",
+        "src/pages/dashboard/all/forms/improvedAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/medicineForm.tsx",
+        "src/pages/dashboard/all/forms/specieForm.tsx",
+        "src/pages/dashboard/all/forms/treatmentForm.tsx",
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/dashboard/all/forms/vaccineForm.tsx",
+        "src/pages/dashboard/all/geneticImprovements.tsx",
+        "src/pages/dashboard/all/medications.tsx",
+        "src/pages/dashboard/all/speciesAndBreeds.tsx",
+        "src/pages/dashboard/all/treatments.tsx",
+        "src/pages/dashboard/all/vaccinations.tsx",
+        "src/pages/dashboard/all/vaccines.tsx",
+        "src/pages/dashboard/apprentice/home.tsx",
+        "src/pages/dashboard/instructor/home.tsx",
+        "src/pages/signUp/index.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/auth/reset-password",
+      "normalized": "/auth/reset-password",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/breeds/",
+      "normalized": "/breeds",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/breedsService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/animalForm.tsx",
+        "src/pages/dashboard/all/forms/breedForm.tsx",
+        "src/pages/dashboard/all/speciesAndBreeds.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/breeds/bulk",
+      "normalized": "/breeds/bulk",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/controls/",
+      "normalized": "/controls",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/controlService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/controls.tsx",
+        "src/pages/dashboard/all/forms/controlForm.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/controls/bulk",
+      "normalized": "/controls/bulk",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/diseases/",
+      "normalized": "/diseases",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/diseaseService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/diseases.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseForm.tsx",
+        "src/pages/dashboard/all/forms/vaccineForm.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/diseases/bulk",
+      "normalized": "/diseases/bulk",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/fields/",
+      "normalized": "/fields",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/fieldService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/fields.tsx",
+        "src/pages/dashboard/all/forms/animalFieldForm.tsx",
+        "src/pages/dashboard/all/forms/fieldForm.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/fields/bulk",
+      "normalized": "/fields/bulk",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/food_types/",
+      "normalized": "/food_types",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/foodTypeServices.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/foodTypes.tsx",
+        "src/pages/dashboard/all/forms/fieldForm.tsx",
+        "src/pages/dashboard/all/forms/foodTypeForm.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/food_types/bulk",
+      "normalized": "/food_types/bulk",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/genetic-improvements/",
+      "normalized": "/genetic-improvements",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/geneticImprovementsService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/improvedAnimalForm.tsx",
+        "src/pages/dashboard/all/geneticImprovements.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/genetic-improvements/bulk",
+      "normalized": "/genetic-improvements/bulk",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/medications/",
+      "normalized": "/medications",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/medicationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/medicineForm.tsx",
+        "src/pages/dashboard/all/medications.tsx",
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/medications/bulk",
+      "normalized": "/medications/bulk",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/preferences/favorites",
+      "normalized": "/preferences/favorites",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/preferences/history",
+      "normalized": "/preferences/history",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/route-administrations/",
+      "normalized": "/route-administrations",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/routeAdministrationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/medicineForm.tsx",
+        "src/pages/dashboard/all/forms/vaccineForm.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/route-administrations/bulk",
+      "normalized": "/route-administrations/bulk",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/security/scan",
+      "normalized": "/security/scan",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/species/",
+      "normalized": "/species",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/speciesService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/breedForm.tsx",
+        "src/pages/dashboard/all/forms/specieForm.tsx",
+        "src/pages/dashboard/all/speciesAndBreeds.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/species/bulk",
+      "normalized": "/species/bulk",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/treatment-medications/",
+      "normalized": "/treatment-medications",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/treatmentMedicationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/treatment-medications/bulk",
+      "normalized": "/treatment-medications/bulk",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/treatment-vaccines/",
+      "normalized": "/treatment-vaccines",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/treatmentVaccinesService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/treatment-vaccines/bulk",
+      "normalized": "/treatment-vaccines/bulk",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/treatments/",
+      "normalized": "/treatments",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/treatmentService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/treatmentForm.tsx",
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/treatments/bulk",
+      "normalized": "/treatments/bulk",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/users/",
+      "normalized": "/users",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/userService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/admin/user.tsx",
+        "src/pages/dashboard/admin/userForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/signUp/index.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/users/bulk",
+      "normalized": "/users/bulk",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/users/public",
+      "normalized": "/users/public",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/userService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/admin/user.tsx",
+        "src/pages/dashboard/admin/userForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/signUp/index.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/vaccinations/",
+      "normalized": "/vaccinations",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/vaccinationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/dashboard/all/vaccinations.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/vaccinations/bulk",
+      "normalized": "/vaccinations/bulk",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "POST",
+      "path": "/vaccines/",
+      "normalized": "/vaccines",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/vaccineServices.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/dashboard/all/forms/vaccineForm.tsx",
+        "src/pages/dashboard/all/treatments.tsx",
+        "src/pages/dashboard/all/vaccines.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/vaccines/bulk",
+      "normalized": "/vaccines/bulk",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "PUT",
+      "path": "/animal-diseases/{record_id}",
+      "normalized": "/animal-diseases/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/animalDiseasesService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/all/diseaseAnimal.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/apprentice/home.tsx",
+        "src/pages/dashboard/instructor/home.tsx"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/animal-fields/{record_id}",
+      "normalized": "/animal-fields/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/animalFieldsServices.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/animalFields.tsx",
+        "src/pages/dashboard/all/forms/animalFieldForm.tsx"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/animal-images/image/{image_id}/set-primary",
+      "normalized": "/animal-images/image/{}/set-primary",
+      "used_in_frontend": false,
+      "frontend_service_files": [],
+      "frontend_pages": []
+    },
+    {
+      "method": "PUT",
+      "path": "/animals/{record_id}",
+      "normalized": "/animals/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/animalService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/all/animals.tsx",
+        "src/pages/dashboard/all/forms/animalFieldForm.tsx",
+        "src/pages/dashboard/all/forms/animalForm.tsx",
+        "src/pages/dashboard/all/forms/controlForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/improvedAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/treatmentForm.tsx",
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/dashboard/all/treatments.tsx",
+        "src/pages/dashboard/apprentice/home.tsx",
+        "src/pages/dashboard/instructor/home.tsx"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/breeds/{record_id}",
+      "normalized": "/breeds/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/breedsService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/animalForm.tsx",
+        "src/pages/dashboard/all/forms/breedForm.tsx",
+        "src/pages/dashboard/all/speciesAndBreeds.tsx"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/controls/{record_id}",
+      "normalized": "/controls/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/controlService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/controls.tsx",
+        "src/pages/dashboard/all/forms/controlForm.tsx"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/diseases/{record_id}",
+      "normalized": "/diseases/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/diseaseService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/diseases.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseForm.tsx",
+        "src/pages/dashboard/all/forms/vaccineForm.tsx"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/fields/{record_id}",
+      "normalized": "/fields/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/fieldService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/fields.tsx",
+        "src/pages/dashboard/all/forms/animalFieldForm.tsx",
+        "src/pages/dashboard/all/forms/fieldForm.tsx"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/food_types/{record_id}",
+      "normalized": "/food_types/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/foodTypeServices.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/foodTypes.tsx",
+        "src/pages/dashboard/all/forms/fieldForm.tsx",
+        "src/pages/dashboard/all/forms/foodTypeForm.tsx"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/genetic-improvements/{record_id}",
+      "normalized": "/genetic-improvements/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/geneticImprovementsService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/improvedAnimalForm.tsx",
+        "src/pages/dashboard/all/geneticImprovements.tsx"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/medications/{record_id}",
+      "normalized": "/medications/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/medicationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/medicineForm.tsx",
+        "src/pages/dashboard/all/medications.tsx",
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/route-administrations/{record_id}",
+      "normalized": "/route-administrations/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/routeAdministrationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/medicineForm.tsx",
+        "src/pages/dashboard/all/forms/vaccineForm.tsx"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/species/{record_id}",
+      "normalized": "/species/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/speciesService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/breedForm.tsx",
+        "src/pages/dashboard/all/forms/specieForm.tsx",
+        "src/pages/dashboard/all/speciesAndBreeds.tsx"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/treatment-medications/{record_id}",
+      "normalized": "/treatment-medications/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/treatmentMedicationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/treatment-vaccines/{record_id}",
+      "normalized": "/treatment-vaccines/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/treatmentVaccinesService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/treatments/{record_id}",
+      "normalized": "/treatments/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/treatmentService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/treatmentForm.tsx",
+        "src/pages/dashboard/all/treatments.tsx"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/users/{record_id}",
+      "normalized": "/users/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/userService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/admin/home.tsx",
+        "src/pages/dashboard/admin/user.tsx",
+        "src/pages/dashboard/admin/userForm.tsx",
+        "src/pages/dashboard/all/forms/diseaseAnimalForm.tsx",
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/signUp/index.tsx"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/vaccinations/{record_id}",
+      "normalized": "/vaccinations/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/vaccinationService.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/dashboard/all/vaccinations.tsx"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/vaccines/{record_id}",
+      "normalized": "/vaccines/{}",
+      "used_in_frontend": true,
+      "frontend_service_files": [
+        "src/services/vaccineServices.ts"
+      ],
+      "frontend_pages": [
+        "src/pages/dashboard/all/forms/vaccinationForm.tsx",
+        "src/pages/dashboard/all/forms/vaccineForm.tsx",
+        "src/pages/dashboard/all/treatments.tsx",
+        "src/pages/dashboard/all/vaccines.tsx"
+      ]
+    }
+  ]
+}

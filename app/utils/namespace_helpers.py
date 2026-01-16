@@ -47,14 +47,29 @@ MAX_TOTAL_CACHE_SIZE_MB = 100  # Límite total de 100MB para todo el caché
 
 def _field_definitions_for_model(model_class, exclude: List[str]) -> Dict[str, fields.Raw]:
     defs = {}
+    model_required = set(getattr(model_class, '_required_fields', []) or [])
     for column in model_class.__table__.columns:
         if column.name in exclude:
             continue
         kwargs = {
             'description': column.name.replace('_', ' ').title(),
-            'required': not column.nullable and column.default is None and column.name not in ('id',),
+            # Align swagger required fields with BaseModel validations when models define _required_fields.
+            'required': (column.name in model_required) or (
+                not column.nullable and column.default is None and column.name not in ('id',)
+            ),
         }
         py_type = getattr(column.type, 'python_type', None)
+        # Ensure SQLAlchemy Date/DateTime columns are represented correctly in Swagger/OpenAPI.
+        try:
+            from sqlalchemy import Date as _SA_Date, DateTime as _SA_DateTime
+            if isinstance(column.type, _SA_Date):
+                defs[column.name] = fields.Date(**kwargs)
+                continue
+            if isinstance(column.type, _SA_DateTime):
+                defs[column.name] = fields.DateTime(**kwargs)
+                continue
+        except Exception:
+            pass
         if py_type is int:
             defs[column.name] = fields.Integer(**kwargs)
         elif py_type is float:
@@ -75,7 +90,9 @@ def _build_models(ns: Namespace, model_class: Type):
 
     # If password column exists include it as string in input (optional) but never in response
     if 'password' in model_class.__table__.columns:
-        input_fields['password'] = fields.String(description='Password (raw, will be hashed)', required=False)
+        # Respect _required_fields when present (e.g., User.password is required for creation).
+        is_required = 'password' in (getattr(model_class, '_required_fields', []) or [])
+        input_fields['password'] = fields.String(description='Password (raw, will be hashed)', required=is_required)
         # Ensure enums appear as simple string fields in swagger (adjust existing Raw)
     for fname, col in model_class.__table__.columns.items():
         # Check if it's an enum column (SQLAlchemy Enum type)
@@ -1114,6 +1131,34 @@ def create_optimized_namespace(
                 if not payload or not isinstance(payload, dict):
                     return APIResponse.validation_error({'payload': 'Se requiere un objeto JSON válido y no vacío.'})
 
+                # Normalizar payload para PUT/PATCH (paridad con POST): fechas ISO y aliases de entrada
+                try:
+                    from sqlalchemy import Date, DateTime
+                    import datetime as _dt
+                    for col in model_class.__table__.columns:
+                        cname = col.name
+                        if cname in payload and isinstance(payload[cname], str):
+                            try:
+                                if isinstance(col.type, Date):
+                                    payload[cname] = _dt.date.fromisoformat(payload[cname])
+                                elif isinstance(col.type, DateTime):
+                                    txt = payload[cname]
+                                    if txt.endswith('Z'):
+                                        txt = txt[:-1] + '+00:00'
+                                    payload[cname] = _dt.datetime.fromisoformat(txt)
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
+
+                try:
+                    aliases = getattr(model_class, '_input_aliases', {}) or {}
+                    for k in list(payload.keys()):
+                        if k in aliases and aliases[k] not in payload:
+                            payload[aliases[k]] = payload.pop(k)
+                except Exception:
+                    pass
+
                 # Actualizar (commit incluido en instance.update())
                 logger.debug(f"Updating {model_class.__name__} ID {record_id}...")
                 instance.update(**payload)
@@ -1188,6 +1233,34 @@ def create_optimized_namespace(
                     payload = request.get_json(force=True, silent=True) or {}
                     if not isinstance(payload, dict):
                         return APIResponse.validation_error({'payload': 'Se requiere un objeto JSON.'})
+
+                    # Normalizar payload para PUT/PATCH (paridad con POST): fechas ISO y aliases de entrada
+                    try:
+                        from sqlalchemy import Date, DateTime
+                        import datetime as _dt
+                        for col in model_class.__table__.columns:
+                            cname = col.name
+                            if cname in payload and isinstance(payload[cname], str):
+                                try:
+                                    if isinstance(col.type, Date):
+                                        payload[cname] = _dt.date.fromisoformat(payload[cname])
+                                    elif isinstance(col.type, DateTime):
+                                        txt = payload[cname]
+                                        if txt.endswith('Z'):
+                                            txt = txt[:-1] + '+00:00'
+                                        payload[cname] = _dt.datetime.fromisoformat(txt)
+                                except Exception:
+                                    pass
+                    except Exception:
+                        pass
+
+                    try:
+                        aliases = getattr(model_class, '_input_aliases', {}) or {}
+                        for k in list(payload.keys()):
+                            if k in aliases and aliases[k] not in payload:
+                                payload[aliases[k]] = payload.pop(k)
+                    except Exception:
+                        pass
 
                     # Actualizar parcialmente (commit incluido en instance.update())
                     logger.debug(f"Patching {model_class.__name__} ID {record_id}...")

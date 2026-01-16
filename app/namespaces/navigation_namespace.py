@@ -62,13 +62,22 @@ class NavigationStructure(Resource):
         **Cache**: 1 hora (estructura raramente cambia)
         '''
     )
-    @nav_ns.marshal_with(nav_structure_model)
     @safe_cached(timeout=3600, key_prefix='nav_structure')
     def get(self):
         """Get navigation structure"""
         try:
-            # Get current Flask app
-            from app import api
+            # Get Flask-RESTX Api instance registered in app.api.register_api
+            api = None
+            try:
+                api = (current_app.extensions or {}).get('restx_api')
+            except Exception:
+                api = None
+            if not api:
+                return APIResponse.error(
+                    message='API no inicializada para navegaci¢n',
+                    details='No se encontr¢ restx_api en current_app.extensions',
+                    status_code=500
+                )
 
             structure = {
                 'version': '1.0',

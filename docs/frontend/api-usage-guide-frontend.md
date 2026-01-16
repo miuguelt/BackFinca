@@ -36,6 +36,11 @@ Endpoint:
 
 - `POST /api/v1/users/public`
 
+Notas:
+
+- Este endpoint es **publico** (no requiere JWT ni CSRF).
+- Los roles son un enum fijo (ver lista abajo). `GET /api/v1/users/roles` es **estadistica** y requiere JWT; no usar para el select publico.
+
 Campos requeridos:
 
 - `identification`, `fullname`, `password`, `email`, `phone`, `role`
@@ -60,7 +65,6 @@ Ejemplo:
 
 Notas:
 
-- Si `PUBLIC_USER_CREATION_ENABLED=false`, el endpoint responde `403`.
 - Si faltan campos requeridos, responde `400` o `422` con detalle por campo.
 
 ## Probar con Swagger UI
@@ -107,6 +111,17 @@ async function createAnimal(payload) {
   if (!res.ok) throw new Error('Error creando animal');
   return res.json();
 }
+```
+
+### Editar animal (genealogia + fechas)
+
+- Para actualizar genealogia, puedes enviar `father_id` / `mother_id` (aliases) y el backend los mapea a `idFather` / `idMother`.
+- Para campos tipo fecha en PUT/PATCH, usa formato ISO `YYYY-MM-DD`.
+
+Ejemplo (PATCH):
+
+```json
+{ "father_id": 123, "mother_id": 124, "birth_date": "2024-01-01", "weight": 320 }
 ```
 
 ## Buenas practicas

@@ -77,6 +77,8 @@ class Animals(BaseModel):
     _required_fields = ['sex', 'birth_date', 'weight', 'record', 'breeds_id']
     _unique_fields = ['record']
     _enum_fields = {'sex': Sex, 'status': AnimalStatus}
+    # Compatibilidad con claves usadas por frontend / legacy
+    _input_aliases = {'father_id': 'idFather', 'mother_id': 'idMother'}
 
     # Relaciones optimizadas
     breed = db.relationship('Breeds', back_populates='animals', lazy='selectin')
@@ -99,6 +101,13 @@ class Animals(BaseModel):
         """
         Sobrescribe para añadir validaciones y normalizaciones específicas de Animales.
         """
+        # Compatibilidad: permitir aliases del frontend (father_id/mother_id)
+        if isinstance(data, dict):
+            if 'father_id' in data and 'idFather' not in data:
+                data['idFather'] = data.pop('father_id')
+            if 'mother_id' in data and 'idMother' not in data:
+                data['idMother'] = data.pop('mother_id')
+
         # Normalizar y validar fecha de nacimiento
         if 'birth_date' in data and data['birth_date']:
             if isinstance(data['birth_date'], str):
