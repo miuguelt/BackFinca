@@ -42,50 +42,44 @@ _APP_REGISTRY = {}
 # ====================================================================
 def configure_logging(app):
     """Configura el sistema de logging optimizado de la aplicación."""
+    # Si corremos bajo Gunicorn, usar sus handlers para evitar duplicados y centralizar logs
+    try:
+        if ('gunicorn' in sys.modules) or os.getenv('GUNICORN_CMD_ARGS') or (os.getenv('SERVER_SOFTWARE') or '').lower().startswith('gunicorn'):
+            gunicorn_error_logger = logging.getLogger('gunicorn.error')
+            root = logging.getLogger()
+            if gunicorn_error_logger and gunicorn_error_logger.handlers:
+                # Adjuntar handlers de gunicorn al root y app.logger una sola vez
+                root.handlers = gunicorn_error_logger.handlers
+                root.setLevel(gunicorn_error_logger.level)
+                app.logger.handlers = gunicorn_error_logger.handlers
+                app.logger.setLevel(gunicorn_error_logger.level)
+                # Reducir ruido de loggers verbosos
+                logging.getLogger('werkzeug').setLevel(logging.WARNING)
+                logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
+                app.logger.info("Logging integrado con Gunicorn (usando handlers del master).")
+                return
+    except Exception:
+        pass
+    # Modo standalone (flask dev server / pruebas locales): configurar logging propio
     log_level = app.config.get('LOG_LEVEL', logging.INFO)
-    
-    # Formato mejorado de logging
-    log_format = (
-        '%(asctime)s - [%(levelname)s] - %(name)s - '
-        '%(funcName)s:%(lineno)d - %(message)s'
-    )
-    
-    # Configurar handlers
+    log_format = '%(asctime)s - [%(levelname)s] - %(name)s - %(funcName)s:%(lineno)d - %(message)s'
     handlers = []
-    
-    # Handler para consola con colores
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(log_level)
-    console_formatter = logging.Formatter(log_format)
-    console_handler.setFormatter(console_formatter)
+    console_handler.setFormatter(logging.Formatter(log_format))
     handlers.append(console_handler)
-    
-    # Handler para archivo si está habilitado
     if app.config.get('LOG_FILE_ENABLED', False):
         log_file = app.config.get('LOG_FILE', 'app.log')
         file_handler = logging.FileHandler(log_file)
         file_handler.setLevel(log_level)
-        file_formatter = logging.Formatter(log_format)
-        file_handler.setFormatter(file_formatter)
+        file_handler.setFormatter(logging.Formatter(log_format))
         handlers.append(file_handler)
-    
-    # Configurar logging root
-    logging.basicConfig(
-        level=log_level,
-        format=log_format,
-        handlers=handlers,
-        force=True  # Sobrescribir configuración existente
-    )
-    
-    # Configurar loggers específicos
+    logging.basicConfig(level=log_level, format=log_format, handlers=handlers, force=True)
     logging.getLogger('werkzeug').setLevel(logging.WARNING)
     logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
-    
-    # Logger para la aplicación
     app_logger = logging.getLogger('app')
     app_logger.setLevel(log_level)
-    
-    app_logger.info("Sistema de logging configurado exitosamente")
+    app_logger.info("Logging standalone configurado (sin Gunicorn).")
 
 # (moved) configure_jwt_handlers defined in app.utils.jwt_handlers
 

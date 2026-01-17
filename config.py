@@ -314,8 +314,8 @@ class ProductionConfig(Config):
 
     # Ajustar el pool de MySQL según límites del servidor
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': 20,  # Ajustar según capacidad del servidor
-        'max_overflow': 10,  # Conexiones adicionales permitidas
+        'pool_size': 12,  # Suficiente para 3-4 workers gthread (4 threads)
+        'max_overflow': 8,  # Bursts controlados sin saturar MySQL
         'pool_timeout': 30,  # Tiempo de espera para obtener una conexión
         'pool_recycle': 1800,  # Reciclar conexiones cada 30 minutos
         'pool_pre_ping': True
