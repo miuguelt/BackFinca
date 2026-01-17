@@ -281,7 +281,8 @@ async function logout() {
   try {
     await apiFetch('/api/v1/auth/logout', { method: 'POST' });
   } catch (err) {
-    // ignorar error de red, igual limpiar estado local
+    // Ignorar error: el backend puede rechazar por red/CSRF/JWT expirado,
+    // pero igual debemos limpiar estado local para evitar loops.
   }
   // limpiar estado local y redirigir a login
 }

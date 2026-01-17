@@ -366,29 +366,42 @@ class RefreshTokenResource(Resource):
 @auth_ns.route('/logout')
 class LogoutResource(Resource):
     @auth_ns.doc('logout_user')
-    @jwt_required()
     def post(self):
         """Cerrar sesión y limpiar cookies JWT."""
         try:
-            current_user_id = get_jwt_identity()
-            decoded_access = get_jwt()
-            access_revoked = mark_token_revoked(decoded_access)
+            access_revoked = False
             refresh_revoked = False
+            current_user_id = None
+
+            access_cookie_name = current_app.config.get('JWT_ACCESS_COOKIE_NAME', 'access_token_cookie')
+            refresh_cookie_name = current_app.config.get('JWT_REFRESH_COOKIE_NAME', 'refresh_token_cookie')
+            access_token = request.cookies.get(access_cookie_name)
+            refresh_token = request.cookies.get(refresh_cookie_name)
+
+            try:
+                if access_token:
+                    decoded_access = decode_token(access_token)
+                    current_user_id = decoded_access.get('sub')
+                    access_revoked = mark_token_revoked(decoded_access)
+            except Exception as decode_err:
+                logger.warning("No se pudo revocar el access token en logout: %s", decode_err)
 
             # Intentar revocar también el refresh token si viene en la cookie
             try:
-                refresh_cookie_name = current_app.config.get('JWT_REFRESH_COOKIE_NAME', 'refresh_token_cookie')
-                refresh_token = request.cookies.get(refresh_cookie_name)
                 if refresh_token:
                     decoded_refresh = decode_token(refresh_token)
                     refresh_revoked = mark_token_revoked(decoded_refresh)
             except Exception as decode_err:
                 logger.warning("No se pudo revocar el refresh token en logout: %s", decode_err)
 
-            log_jwt_token_event('LOGOUT', current_user_id, {
-                'token_revoked': access_revoked,
-                'refresh_token_revoked': refresh_revoked
-            })
+            try:
+                log_jwt_token_event(
+                    'LOGOUT',
+                    current_user_id,
+                    {'token_revoked': access_revoked, 'refresh_token_revoked': refresh_revoked},
+                )
+            except Exception:
+                logger.exception("Fallo registrando evento LOGOUT")
             
             # Construir respuesta JSON y luego limpiar cookies sobre el objeto Response
             api_response_dict, status_code = APIResponse.success(

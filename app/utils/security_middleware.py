@@ -22,6 +22,7 @@ def init_security_middlewares(app):
         public_paths = {
             '/api/v1/auth/login',
             '/api/v1/auth/refresh',
+            '/api/v1/auth/logout',
             '/api/v1/auth/recover',
             '/api/v1/auth/reset-password',
             '/api/v1/auth/public-confirm',
@@ -90,11 +91,12 @@ def init_security_middlewares(app):
             # Diagnóstico detallado de la causa del fallo de autenticación
             err_cls = e.__class__.__name__
             msg_map = {
-                'NoAuthorizationError': 'Token ausente (header/cookie no presente)',
-                'ExpiredSignatureError': 'Token expirado',
-                'FreshTokenRequired': 'Se requiere token fresco',
-                'RevokedTokenError': 'Token revocado',
-                'UserLoadError': 'Error cargando usuario para el token'
+	                'NoAuthorizationError': 'Token ausente (header/cookie no presente)',
+	                'ExpiredSignatureError': 'Token expirado',
+	                'FreshTokenRequired': 'Se requiere token fresco',
+	                'RevokedTokenError': 'Token revocado',
+	                'UserLoadError': 'Error cargando usuario para el token',
+	                'CSRFError': 'CSRF token inválido o ausente',
             }
             human_msg = msg_map.get(err_cls, 'Token faltante o inválido')
             # Comentado: Evitar exponer información sensible en logs de JWT
@@ -124,6 +126,18 @@ def init_security_middlewares(app):
                 resp.status_code = status_code
                 resp.headers['Cache-Control'] = 'no-store'
                 return resp
+            if err_cls == 'CSRFError':
+                return APIResponse.error(
+	                    'CSRF token inválido o ausente',
+	                    status_code=401,
+	                    error_code='CSRF_ERROR',
+	                    details={
+	                        'exception_class': err_cls,
+	                        'exception': str(e),
+	                        'path': raw_path,
+	                        'client_action': 'RETRY_WITH_CSRF',
+	                    },
+	                )
             return APIResponse.error(
                 human_msg,
                 status_code=401,
