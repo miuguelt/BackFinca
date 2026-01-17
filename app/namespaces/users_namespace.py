@@ -273,7 +273,7 @@ class UserPublicCreate(Resource):
             return APIResponse.created(user.to_namespace_dict(), message='Usuario creado exitosamente')
         except IntegrityError as ie:
             db.session.rollback()
-            return APIResponse.error('Violación de unicidad', details={'error': str(ie)}, status_code=409)
+            return APIResponse.conflict('Violación de unicidad', details={'error': str(ie)})
         except Exception as e:
             db.session.rollback()
             logger.error('Error en creación pública de usuario: %s', e, exc_info=True)
