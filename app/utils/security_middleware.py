@@ -4,6 +4,7 @@ Middlewares de seguridad y utilidades asociadas.
 import logging
 from flask import request, jsonify
 from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity, unset_access_cookies
+from app.utils.response_handler import APIResponse
 
 
 def init_security_middlewares(app):
@@ -74,10 +75,19 @@ def init_security_middlewares(app):
                 user_claims = get_jwt() if user_id else {}
                 role = user_claims.get('role')
                 if role != 'Administrador':
-                    return jsonify({'msg': 'Forbidden: Admin role required'}), 403
+                    return APIResponse.error(
+                        message='Acceso prohibido: rol Administrador requerido',
+                        status_code=403,
+                        error_code='ADMIN_ROLE_REQUIRED',
+                        details={
+                            'required_role': 'Administrador',
+                            'current_role': role,
+                            'method': request.method,
+                            'path': raw_path,
+                        },
+                    )
         except Exception as e:
             # Diagnóstico detallado de la causa del fallo de autenticación
-            from app.utils.response_handler import APIResponse
             err_cls = e.__class__.__name__
             msg_map = {
                 'NoAuthorizationError': 'Token ausente (header/cookie no presente)',

@@ -130,6 +130,15 @@ Ejemplo (PATCH):
 - Valida respuestas y maneja errores (401/403 -> autenticacion/CSRF).
 - Usa dominios y cookies correctos en produccion.
 
+## Formato estandar de errores (para mostrar el motivo real)
+
+Todos los endpoints deben responder con JSON estandarizado:
+
+- Exito: `{ "success": true, "message": "...", "data": ... }`
+- Error: `{ "success": false, "message": "...", "error": { "code": "...", "details": { ... }, "trace_id": "..." } }`
+
+Regla para UI: muestra `message` como texto principal y, si existe, usa `error.details` para explicar **por que fallo** y **que hace falta** (ej: campos requeridos, CSRF, rol, rate limit).
+
 ## Recuperacion y cambio de contrasena
 
 Flujo soportado por los nuevos endpoints de auth:
@@ -208,7 +217,25 @@ async function apiFetch(url, options = {}) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(data.message || 'Error en la solicitud');
+    const code = data?.error?.code;
+    const details = data?.error?.details;
+    const traceId = data?.error?.trace_id;
+    const message = data?.message || 'Error en la solicitud';
+
+    const extra =
+      code === 'VALIDATION_ERROR' && details?.validation_errors
+        ? `Validacion: ${JSON.stringify(details.validation_errors)}`
+        : code === 'CSRF_ERROR'
+          ? 'Falta CSRF: envia X-CSRF-TOKEN (cookie csrf_access_token)'
+          : code === 'ADMIN_ROLE_REQUIRED'
+            ? 'Permisos: necesitas rol Administrador para este metodo'
+            : code === 'RATE_LIMIT_EXCEEDED'
+              ? `Rate limit: espera ${details?.retry_after_seconds ?? 60}s`
+              : details
+                ? `Detalles: ${JSON.stringify(details)}`
+                : '';
+
+    throw new Error(extra ? `${message}. ${extra}${traceId ? ` (trace_id=${traceId})` : ''}` : message);
   }
   return data;
 }
