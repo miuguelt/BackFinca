@@ -13,6 +13,8 @@ from app.utils.security_logger import log_rate_limit_exceeded
 import logging
 
 logger = logging.getLogger(__name__)
+_RATE_LIMITER_STORAGE_OK = None
+_GLOBAL_LIMITER = None
 
 
 def get_user_id():
@@ -58,7 +60,9 @@ def rate_limit_handler(request_limit):
 
 
 def init_rate_limiter(app):
-    """Inicializar y configurar el rate limiter."""
+    global _GLOBAL_LIMITER, _RATE_LIMITER_STORAGE_OK
+    if _GLOBAL_LIMITER is not None:
+        return _GLOBAL_LIMITER
     storage_uri = app.config.get("RATE_LIMIT_STORAGE_URI")
 
     if not storage_uri:
@@ -73,14 +77,20 @@ def init_rate_limiter(app):
             in_memory_fallback_enabled=True,
         )
         app.logger.info("Rate limiter inicializado con storage: memory:// (sin configuración de REDIS_URL)")
+        _GLOBAL_LIMITER = limiter
         return limiter
 
-    try:
-        from redis import Redis
+    if _RATE_LIMITER_STORAGE_OK is None:
+        try:
+            from redis import Redis
+            redis_client = Redis.from_url(storage_uri)
+            redis_client.ping()
+            _RATE_LIMITER_STORAGE_OK = True
+        except Exception as e:
+            app.logger.warning("Rate limiter Redis '%s' falló: %s. Reintentando con memory://", storage_uri, e)
+            _RATE_LIMITER_STORAGE_OK = False
 
-        redis_client = Redis.from_url(storage_uri)
-        redis_client.ping()
-
+    if _RATE_LIMITER_STORAGE_OK:
         limiter = Limiter(
             app=app,
             key_func=get_remote_address_with_forwarded,
@@ -92,9 +102,9 @@ def init_rate_limiter(app):
             in_memory_fallback_enabled=True,
         )
         app.logger.info("Rate limiter inicializado con storage Redis: %s", storage_uri)
+        _GLOBAL_LIMITER = limiter
         return limiter
-    except Exception as e:
-        app.logger.warning("Rate limiter Redis '%s' falló: %s. Reintentando con memory://", storage_uri, e)
+    else:
         limiter = Limiter(
             app=app,
             key_func=get_remote_address_with_forwarded,
@@ -106,6 +116,7 @@ def init_rate_limiter(app):
             in_memory_fallback_enabled=True,
         )
         app.logger.info("Rate limiter inicializado con storage: memory:// (fallback)")
+        _GLOBAL_LIMITER = limiter
         return limiter
 
 

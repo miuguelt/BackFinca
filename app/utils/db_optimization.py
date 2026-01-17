@@ -42,23 +42,16 @@ class DatabaseOptimizer:
     
     def configure_connection_pool(self, app):
         """Configurar connection pooling optimizado"""
-        
-        # Configuraciones de pool para producción
-        pool_config = {
-            'poolclass': QueuePool,
-            'pool_size': 20,  # Conexiones permanentes
-            'max_overflow': 30,  # Conexiones adicionales
-            'pool_timeout': 30,  # Timeout para obtener conexión
-            'pool_recycle': 3600,  # Reciclar conexiones cada hora
-            'pool_pre_ping': True,  # Verificar conexiones antes de usar
-        }
-        
-        # Aplicar configuración al engine de SQLAlchemy
-        app.config.update({
-            'SQLALCHEMY_ENGINE_OPTIONS': pool_config
-        })
-        
-        logger.info("Connection pooling configurado: pool_size=20, max_overflow=30")
+        existing = app.config.get('SQLALCHEMY_ENGINE_OPTIONS') or {}
+        pool_config = dict(existing)
+        pool_config.setdefault('poolclass', QueuePool)
+        pool_config.setdefault('pool_size', 20)
+        pool_config.setdefault('max_overflow', 10)
+        pool_config.setdefault('pool_timeout', 30)
+        pool_config.setdefault('pool_recycle', 1800)
+        pool_config.setdefault('pool_pre_ping', True)
+        app.config.update({'SQLALCHEMY_ENGINE_OPTIONS': pool_config})
+        logger.info("Connection pooling configurado: pool_size=%s, max_overflow=%s", pool_config.get('pool_size'), pool_config.get('max_overflow'))
     
     def setup_slow_query_logging(self):
         """Configurar logging de consultas lentas"""

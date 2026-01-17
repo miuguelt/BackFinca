@@ -33,6 +33,10 @@ jwt = JWTManager()
 cache = Cache()
 migrate = Migrate()
 
+_LOGGING_CONFIGURED = False
+_CACHE_HEALTHCHECK_DONE = False
+_APP_REGISTRY = {}
+
 # ====================================================================
 # 2. Funciones de ayuda y configuración modular
 # ====================================================================
@@ -95,6 +99,11 @@ def create_app(config_name='development'):
             config_name = 'testing'
     except Exception:
         pass
+    global _APP_REGISTRY
+    _key = config_name
+    _existing = _APP_REGISTRY.get(_key)
+    if _existing:
+        return _existing
 
     app = Flask(__name__)
     # Avoid automatic redirects on missing/extra trailing slashes which break CORS preflight (307 redirect not allowed)
@@ -202,8 +211,9 @@ def create_app(config_name='development'):
     except Exception:
         pass
 
-    # Configura el logging (antes de cualquier otra cosa)
-    configure_logging(app)
+    if not _LOGGING_CONFIGURED:
+        configure_logging(app)
+        globals()['_LOGGING_CONFIGURED'] = True
     logger = logging.getLogger(__name__)
 
     logger.info("Initializing Flask app...")
@@ -230,7 +240,7 @@ def create_app(config_name='development'):
         cache.init_app(app, config=cache_config)
 
         # Si se usa Redis, realizar una verificación de salud del backend de caché
-        if cache_config['CACHE_TYPE'] == 'redis':
+        if cache_config['CACHE_TYPE'] == 'redis' and not _CACHE_HEALTHCHECK_DONE:
             try:
                 _k = '__cache_health__'
                 cache.set(_k, 'ok', timeout=5)
@@ -238,6 +248,7 @@ def create_app(config_name='development'):
                 if _v != 'ok':
                     raise RuntimeError('Redis cache set/get comprobación fallida')
                 logger.info('Redis cache inicializado correctamente')
+                globals()['_CACHE_HEALTHCHECK_DONE'] = True
             except Exception as e:
                 logger.warning(f'Redis no disponible, aplicando fallback a SimpleCache: {e}')
                 cache.init_app(app, config={
@@ -496,4 +507,5 @@ def create_app(config_name='development'):
     app.config['START_TIME'] = time.time()
     
     logger.info("Flask app initialization complete.")
+    _APP_REGISTRY[_key] = app
     return app
