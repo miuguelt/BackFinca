@@ -273,7 +273,42 @@ class UserPublicCreate(Resource):
             return APIResponse.created(user.to_namespace_dict(), message='Usuario creado exitosamente')
         except IntegrityError as ie:
             db.session.rollback()
-            return APIResponse.conflict('Violación de unicidad', details={'error': str(ie)})
+            import re
+            msg = str(getattr(ie, 'orig', ie))
+            value = None
+            key_name = None
+            m = re.search(r"Duplicate entry '(.+?)' for key '(.+?)'", msg, flags=re.IGNORECASE)
+            if m:
+                value = m.group(1)
+                key_name = m.group(2)
+            else:
+                m2 = re.search(r"UNIQUE constraint failed: (.+)", msg, flags=re.IGNORECASE)
+                if m2:
+                    key_name = m2.group(1)
+            cols = []
+            if key_name:
+                try:
+                    for col in User.__table__.columns:
+                        if col.name in key_name:
+                            cols.append(col.name)
+                except Exception:
+                    pass
+            if not cols:
+                unique_fields = getattr(User, '_unique_fields', []) or []
+                for uf in unique_fields:
+                    if uf in (key_name or '') or uf in msg:
+                        cols.append(uf)
+            labels = {'email': 'correo', 'identification': 'número de identificación', 'phone': 'teléfono'}
+            if cols:
+                if len(cols) == 1:
+                    field = cols[0]
+                    label = labels.get(field, field)
+                    friendly = f"Ya existe un usuario con ese {label}. Cambia el {label}."
+                    return APIResponse.conflict(friendly, details={'conflict': {'field': field, 'label': label, 'value': value, 'key': key_name, 'suggestion': f"Cambia el {label} por otro que no esté registrado."}})
+                else:
+                    friendly = "Ya existe un usuario con esa combinación de datos. Modifica uno de esos campos."
+                    return APIResponse.conflict(friendly, details={'conflict': {'fields': cols, 'value': value, 'key': key_name, 'suggestion': "Modifica al menos uno de los campos para que la combinación sea única."}})
+            return APIResponse.conflict('Violación de unicidad', details={'error': msg})
         except Exception as e:
             db.session.rollback()
             logger.error('Error en creación pública de usuario: %s', e, exc_info=True)
