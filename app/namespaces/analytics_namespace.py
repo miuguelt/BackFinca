@@ -368,6 +368,7 @@ class DashboardStats(Resource):
         }
     )
     @jwt_required()
+    @safe_cached(timeout=60, key_prefix='dashboard_stats_basic')
     def get(self):
         """Obtener estadísticas principales del dashboard"""
         try:

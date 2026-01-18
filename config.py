@@ -263,6 +263,7 @@ class DevelopmentConfig(Config):
     """Configuración para desarrollo (localhost)."""
     DEBUG = True
     LOG_LEVEL = logging.DEBUG
+    RATE_LIMIT_ENABLED = False
     
     # JWT - Desarrollo local: usar HTTPS local para permitir Secure + SameSite=None
     JWT_COOKIE_SECURE = True  # Requerido por navegadores cuando SameSite=None

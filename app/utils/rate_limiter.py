@@ -47,7 +47,7 @@ def rate_limit_handler(request_limit):
 
     logger.warning("Rate limit exceeded for %s on %s", user_id, endpoint)
 
-    return APIResponse.error(
+    payload, status = APIResponse.error(
         message="Límite de solicitudes excedido",
         status_code=429,
         error_code="RATE_LIMIT_EXCEEDED",
@@ -57,6 +57,11 @@ def rate_limit_handler(request_limit):
             "retry_after_seconds": 60,
         },
     )
+    from flask import jsonify, make_response
+    resp = make_response(jsonify(payload), status)
+    resp.headers['Retry-After'] = '60'
+    resp.headers['RateLimit-Reset'] = '60'
+    return resp
 
 
 def init_rate_limiter(app):

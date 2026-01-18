@@ -52,23 +52,16 @@ def setup_test_data():
     
     db.session.flush()
     
-    # Crear tratamientos para algunos animales
+    # Crear tratamientos para algunos animales (campos obligatorios completos)
     for i, animal in enumerate(test_animals[:5]):
         treatment = Treatments(
-            animals_id=animal.id,
+            animal_id=animal.id,
             treatment_date="2023-01-01",
-            description=f"Tratamiento test {i}"
+            description=f"Tratamiento test {i}",
+            frequency="Diaria",
+            dosis="10mg"
         )
         db.session.add(treatment)
-    
-    # Crear vacunaciones para algunos animales
-    for i, animal in enumerate(test_animals[3:7]):
-        vaccination = Vaccinations(
-            animals_id=animal.id,
-            vaccination_date="2023-06-01",
-            description=f"Vacunación test {i}"
-        )
-        db.session.add(vaccination)
     
     db.session.commit()
     print(f"Creados {len(test_animals)} animales con dependencias")

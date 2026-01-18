@@ -14,9 +14,11 @@ LOGIN_URL = f"{BASE_URL}/auth/login"
 STATS_URL = f"{BASE_URL}/analytics/dashboard/complete"
 
 # Credenciales de prueba (ajustar según tu configuración)
+# El backend usa 'identifier' (email o identificación numérica).
+# Seed por defecto: identification=99999999, password='password123'
 TEST_USER = {
-    "username": "admin",
-    "password": "admin123"
+    "identifier": 99999999,
+    "password": "password123"
 }
 
 def login():

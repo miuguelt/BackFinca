@@ -9,6 +9,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models.animals import Animals
 from app.models.animal_images import AnimalImages
 from app.utils.response_handler import APIResponse
+from app.utils.cache_utils import safe_cached
 from app.utils.namespace_helpers import create_optimized_namespace, _cache_clear
 from app.utils.tree_builder import build_ancestor_tree, build_descendant_tree, invalidate_animal_tree_cache_for
 from app.utils.integrity_checker import OptimizedIntegrityChecker
@@ -493,10 +494,27 @@ class AnimalDescendantsTree(Resource):
 @animals_ns.route('/status')
 class AnimalStatus(Resource):
     @jwt_required()
+    @safe_cached(timeout=60, key_prefix='animals_status_stats')
     def get(self):
         try:
-            total = Animals.query.count()
-            activos = Animals.query.filter(Animals.status == 'Vivo').count()
+            rows = (
+                db.session.query(Animals.status, sa.func.count(Animals.id))
+                .group_by(Animals.status)
+                .all()
+            )
+            total = sum(cnt for _status, cnt in rows)
+            activos = 0
+            try:
+                from app.models.animals import AnimalStatus as AnimalStatusEnum
+                for status, cnt in rows:
+                    if str(status) == str(AnimalStatusEnum.Vivo) or status == 'Vivo':
+                        activos = cnt
+                        break
+            except Exception:
+                for status, cnt in rows:
+                    if status == 'Vivo':
+                        activos = cnt
+                        break
             inactivos = total - activos
             return APIResponse.success(data={'total': total, 'activos': activos, 'inactivos': inactivos})
         except Exception as e:

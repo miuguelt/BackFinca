@@ -6,6 +6,9 @@ import importlib
 import pkgutil
 import pathlib
 from datetime import datetime, timezone
+import json
+import threading
+import queue
 
 from flask import Blueprint, jsonify, request, send_file, render_template
 from flask_restx import Api
@@ -159,6 +162,159 @@ def register_api(app, limiter=None):
     api.add_namespace(nav_ns)
     api.add_namespace(animal_images_ns)
     api.add_namespace(activity_ns)
+
+    try:
+        bus_lock = threading.Lock()
+        subscribers = []
+        sse_ip_lock = threading.Lock()
+        sse_ip_counts = {}
+        class EventBus:
+            def subscribe(self):
+                q = queue.Queue(maxsize=1000)
+                with bus_lock:
+                    subscribers.append(q)
+                return q
+            def unsubscribe(self, q):
+                with bus_lock:
+                    try:
+                        subscribers.remove(q)
+                    except ValueError:
+                        pass
+            def publish(self, endpoint: str, action: str, record_id=None):
+                payload = json.dumps({"endpoint": endpoint, "action": action, "id": record_id})
+                with bus_lock:
+                    for q in list(subscribers):
+                        try:
+                            q.put_nowait(payload)
+                        except queue.Full:
+                            try:
+                                _ = q.get_nowait()
+                                q.put_nowait(payload)
+                            except Exception:
+                                pass
+        app.extensions["event_bus"] = EventBus()
+        app.extensions["sse_ip_lock"] = sse_ip_lock
+        app.extensions["sse_ip_counts"] = sse_ip_counts
+    except Exception:
+        logging.getLogger(__name__).exception('No se pudo inicializar event_bus')
+
+    @api_bp.route('/events', methods=['GET'])
+    def sse_events():
+        try:
+            bus = app.extensions.get("event_bus")
+            if not bus:
+                return APIResponse.error('Eventos no disponibles', status_code=503)
+            max_conn = int(app.config.get('SSE_MAX_CONN_PER_IP', 3))
+            ip = request.environ.get("HTTP_X_FORWARDED_FOR", request.remote_addr) or '127.0.0.1'
+            sse_ip_lock = app.extensions.get("sse_ip_lock")
+            sse_ip_counts = app.extensions.get("sse_ip_counts")
+            if sse_ip_lock and sse_ip_counts is not None:
+                with sse_ip_lock:
+                    cnt = sse_ip_counts.get(ip, 0)
+                    if cnt >= max_conn:
+                        payload, status = APIResponse.error(
+                            'Límite de conexiones SSE excedido',
+                            status_code=429,
+                            error_code='SSE_CONNECTION_LIMIT',
+                            details={'retry_after_seconds': 60, 'ip': ip}
+                        )
+                        from flask import jsonify, make_response
+                        resp = make_response(jsonify(payload), status)
+                        resp.headers['Retry-After'] = '60'
+                        resp.headers['RateLimit-Reset'] = '60'
+                        return resp
+                    sse_ip_counts[ip] = cnt + 1
+            q = bus.subscribe()
+            def _gen():
+                try:
+                    yield ': init\n\n'
+                    while True:
+                        try:
+                            payload = q.get(timeout=25)
+                            yield f'data: {payload}\n\n'
+                        except Exception:
+                            yield ': ping\n\n'
+                finally:
+                    try:
+                        bus.unsubscribe(q)
+                    except Exception:
+                        pass
+                    try:
+                        if sse_ip_lock and sse_ip_counts is not None:
+                            with sse_ip_lock:
+                                if ip in sse_ip_counts:
+                                    v = sse_ip_counts[ip]
+                                    sse_ip_counts[ip] = max(0, v - 1)
+                                    if sse_ip_counts[ip] == 0:
+                                        sse_ip_counts.pop(ip, None)
+                    except Exception:
+                        pass
+            from flask import Response, stream_with_context
+            resp = Response(stream_with_context(_gen()), mimetype='text/event-stream')
+            resp.headers['Cache-Control'] = 'no-cache'
+            resp.headers['Connection'] = 'keep-alive'
+            resp.headers['X-Accel-Buffering'] = 'no'
+            return resp
+        except Exception as e:
+            return APIResponse.error('Error de SSE', status_code=500, details={'error': str(e)})
+
+    try:
+        try:
+            from flask_sock import Sock
+            sock = Sock(app)
+            @sock.route('/ws')
+            def ws(ws):
+                try:
+                    bus = app.extensions.get("event_bus")
+                    if not bus:
+                        ws.close()
+                        return
+                    q = bus.subscribe()
+                    last_ping = time.time()
+                    while True:
+                        try:
+                            payload = q.get(timeout=25)
+                            ws.send(payload)
+                        except Exception:
+                            now = time.time()
+                            if now - last_ping >= 25:
+                                ws.send(json.dumps({"endpoint":"system","action":"ping"}))
+                                last_ping = now
+                except Exception:
+                    try:
+                        bus.unsubscribe(q)
+                    except Exception:
+                        pass
+        except Exception:
+            @api_bp.route('/ws', methods=['GET'])
+            def ws_fallback():
+                return APIResponse.error('WebSocket no disponible', status_code=501, details={'require': 'Flask-Sock'})
+    except Exception:
+        logging.getLogger(__name__).exception('No se pudo inicializar WS')
+
+    try:
+        if limiter:
+            def _exempt_ns(ns):
+                try:
+                    lr = getattr(ns, '_model_list_resource', None)
+                    if lr and hasattr(lr, 'get') and not getattr(lr.get, '_rate_limit_exempted', False):
+                        lr.get = limiter.exempt(lr.get)
+                        lr.get._rate_limit_exempted = True
+                    dr = getattr(ns, '_model_detail_resource', None)
+                    if dr and hasattr(dr, 'get') and not getattr(dr.get, '_rate_limit_exempted', False):
+                        dr.get = limiter.exempt(dr.get)
+                        dr.get._rate_limit_exempted = True
+                except Exception:
+                    logging.getLogger(__name__).exception('No se pudo eximir rate limit para namespace')
+            for _ns in [
+                animals_ns, users_ns, analytics_ns, species_ns, breeds_ns, control_ns, fields_ns,
+                diseases_ns, genetic_improvements_ns, food_types_ns, treatments_ns, vaccinations_ns,
+                vaccines_ns, medications_ns, route_admin_ns, animal_diseases_ns, animal_fields_ns,
+                treatment_medications_ns, treatment_vaccines_ns, prefs_ns, nav_ns, animal_images_ns
+            ]:
+                _exempt_ns(_ns)
+    except Exception:
+        logging.getLogger(__name__).exception('No se pudo configurar exenciones de rate limit para lectura')
 
     # Endpoint de health check público y documentado en la guía: /api/v1/health
     @api_bp.route('/health', methods=['GET', 'OPTIONS'])

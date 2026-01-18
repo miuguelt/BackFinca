@@ -970,6 +970,13 @@ def create_optimized_namespace(
                     )
                 except Exception:
                     logger.debug("No se pudo registrar activity_log en create", exc_info=True)
+                try:
+                    from flask import current_app
+                    bus = current_app.extensions.get("event_bus")
+                    if bus:
+                        bus.publish(name, "create", instance_id)
+                except Exception:
+                    pass
 
                 # Construir respuesta con datos serializados
                 from flask import make_response
@@ -1238,6 +1245,13 @@ def create_optimized_namespace(
                     )
                 except Exception:
                     logger.debug("No se pudo registrar activity_log en update", exc_info=True)
+                try:
+                    from flask import current_app
+                    bus = current_app.extensions.get("event_bus")
+                    if bus:
+                        bus.publish(name, "update", record_id)
+                except Exception:
+                    pass
 
                 # Construir respuesta
                 from flask import make_response
@@ -1342,6 +1356,13 @@ def create_optimized_namespace(
                         )
                     except Exception:
                         logger.debug("No se pudo registrar activity_log en patch", exc_info=True)
+                    try:
+                        from flask import current_app
+                        bus = current_app.extensions.get("event_bus")
+                        if bus:
+                            bus.publish(name, "update", record_id)
+                    except Exception:
+                        pass
 
                     # Construir respuesta
                     from flask import make_response
@@ -1433,6 +1454,13 @@ def create_optimized_namespace(
                 from datetime import datetime, timezone
                 now = datetime.now(timezone.utc).isoformat()
                 resp.headers['ETag'] = f'"deleted-{record_id}-{now}"'
+                try:
+                    from flask import current_app
+                    bus = current_app.extensions.get("event_bus")
+                    if bus:
+                        bus.publish(name, "delete", record_id)
+                except Exception:
+                    pass
                 return resp
             except Exception as e:
                 # Rollback explícito en caso de error
@@ -1569,6 +1597,13 @@ def create_optimized_namespace(
                         )
                     except Exception:
                         logger.debug("No se pudo registrar activity_log en bulk create", exc_info=True)
+                    try:
+                        from flask import current_app
+                        bus = current_app.extensions.get("event_bus")
+                        if bus:
+                            bus.publish(name, "bulk", None)
+                    except Exception:
+                        pass
 
                     # Construir respuesta
                     from flask import make_response

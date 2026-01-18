@@ -1,0 +1,380 @@
+{
+  "success": true,
+  "data": {
+    "usuarios_registrados": {
+      "valor": 74,
+      "cambio_porcentual": 13.8,
+      "descripcion": "Número total de usuarios en el sistema.",
+      "tendencia": {
+        "periodo_actual": 9,
+        "periodo_anterior": 11
+      }
+    },
+    "usuarios_activos": {
+      "valor": 10,
+      "cambio_porcentual": -9.1,
+      "descripcion": "Usuarios con actividad reciente o sesión activa.",
+      "tendencia": {
+        "periodo_actual": 10,
+        "periodo_anterior": 11
+      }
+    },
+    "animales_registrados": {
+      "valor": 63,
+      "cambio_porcentual": 18.9,
+      "descripcion": "Total de animales con ficha en la base de datos.",
+      "tendencia": {
+        "periodo_actual": 10,
+        "periodo_anterior": 9
+      }
+    },
+    "animales_activos": {
+      "valor": 62,
+      "cambio_porcentual": 0,
+      "descripcion": "Animales vivos en el sistema."
+    },
+    "tratamientos_activos": {
+      "valor": 1,
+      "cambio_porcentual": 0,
+      "descripcion": "Tratamientos actualmente en curso (últimos 30 días)."
+    },
+    "tratamientos_totales": {
+      "valor": 45,
+      "cambio_porcentual": 4.7,
+      "descripcion": "Cantidad histórica de tratamientos registrados.",
+      "tendencia": {
+        "periodo_actual": 2,
+        "periodo_anterior": 2
+      }
+    },
+    "tareas_pendientes": {
+      "valor": 122,
+      "cambio_porcentual": -1.6,
+      "descripcion": "Acciones que requieren atención."
+    },
+    "alertas_sistema": {
+      "valor": 121,
+      "cambio_porcentual": -0.8,
+      "descripcion": "Notificaciones y advertencias generadas por el sistema.",
+      "desglose": {
+        "animales_sin_control": 62,
+        "animales_sin_vacunacion": 59,
+        "estado_salud_critico": 0
+      }
+    },
+    "vacunas_aplicadas": {
+      "valor": 50,
+      "cambio_porcentual": 4.2,
+      "descripcion": "Vacunaciones registradas en el sistema.",
+      "tendencia": {
+        "periodo_actual": 2,
+        "periodo_anterior": 5
+      }
+    },
+    "controles_realizados": {
+      "valor": 36,
+      "cambio_porcentual": 0.0,
+      "descripcion": "Controles de producción/seguimiento ejecutados.",
+      "tendencia": {
+        "periodo_actual": 0,
+        "periodo_anterior": 3
+      }
+    },
+    "campos_registrados": {
+      "valor": 51,
+      "cambio_porcentual": 15.9,
+      "descripcion": "Número de lotes/campos administrados.",
+      "tendencia": {
+        "periodo_actual": 7,
+        "periodo_anterior": 2
+      }
+    },
+    "kpi_resumen": {
+      "ventana_dias": 30,
+      "cards": [
+        {
+          "id": "health_index",
+          "titulo": "Índice de salud del hato",
+          "valor": 51.6,
+          "unidad": "%",
+          "cambio": -48.4,
+          "tendencia": {
+            "periodo_actual": 51.6,
+            "periodo_anterior": 100.0,
+            "ventana_dias": 30
+          },
+          "descripcion": "Porcentaje de animales evaluados como Sano/Bueno/Excelente en los últimos controles.",
+          "icono": "heart-pulse",
+          "detalle": {
+            "animales_saludables": 32,
+            "animales_criticos": 0,
+            "total_activos": 62
+          }
+        },
+        {
+          "id": "vaccination_coverage",
+          "titulo": "Cobertura de vacunación",
+          "valor": 4.8,
+          "unidad": "%",
+          "cambio": 4.8,
+          "tendencia": {
+            "periodo_actual": 4.8,
+            "periodo_anterior": 0.0,
+            "ventana_dias": 30
+          },
+          "descripcion": "Animales con esquemas de vacunación actualizados (≤ 6 meses).",
+          "icono": "shield-check",
+          "detalle": {
+            "pendientes": 59,
+            "pendientes_prev": 62
+          }
+        },
+        {
+          "id": "control_compliance",
+          "titulo": "Cumplimiento de controles",
+          "valor": 0.0,
+          "unidad": "%",
+          "cambio": -3.2,
+          "tendencia": {
+            "periodo_actual": 0.0,
+            "periodo_anterior": 3.2,
+            "ventana_dias": 30
+          },
+          "descripcion": "Porcentaje de animales con chequeo veterinario en los últimos 30 días.",
+          "icono": "stethoscope",
+          "detalle": {
+            "sin_control": 62,
+            "sin_control_prev": 60
+          }
+        },
+        {
+          "id": "mortality_rate_30d",
+          "titulo": "Tasa de mortalidad 30d",
+          "valor": 0.0,
+          "unidad": "%",
+          "cambio": 0,
+          "tendencia": {
+            "periodo_actual": 0.0,
+            "periodo_anterior": 0.0,
+            "ventana_dias": 30
+          },
+          "descripcion": "Bajas registradas en los últimos 30 días sobre el total del hato.",
+          "icono": "skull",
+          "detalle": {
+            "muertes_30d": 0,
+            "muertes_previas": 0
+          }
+        },
+        {
+          "id": "sales_rate_30d",
+          "titulo": "Tasa de ventas 30d",
+          "valor": 0.0,
+          "unidad": "%",
+          "cambio": -1.6,
+          "tendencia": {
+            "periodo_actual": 0.0,
+            "periodo_anterior": 1.6,
+            "ventana_dias": 30
+          },
+          "descripcion": "Animales marcados como vendidos durante los últimos 30 días.",
+          "icono": "shopping-cart",
+          "detalle": {
+            "ventas_30d": 0,
+            "ventas_previas": 1
+          }
+        },
+        {
+          "id": "treatments_intensity",
+          "titulo": "Intensidad de tratamientos",
+          "valor": 0.02,
+          "unidad": "tratamientos/animal",
+          "cambio": -0.0,
+          "tendencia": {
+            "periodo_actual": 0.02,
+            "periodo_anterior": 0.03,
+            "ventana_dias": 30
+          },
+          "descripcion": "Promedio de tratamientos iniciados por animal en los últimos 30 días.",
+          "icono": "pill",
+          "detalle": {
+            "tratamientos_activos": 1,
+            "tratamientos_previos": 2
+          }
+        },
+        {
+          "id": "controls_frequency",
+          "titulo": "Frecuencia de controles",
+          "valor": 0,
+          "unidad": "controles/animal",
+          "cambio": -0.1,
+          "tendencia": {
+            "periodo_actual": 0,
+            "periodo_anterior": 0.05,
+            "ventana_dias": 30
+          },
+          "descripcion": "Controles clínicos realizados por animal en los últimos 30 días.",
+          "icono": "clipboard-check",
+          "detalle": {
+            "controles_30d": 0,
+            "controles_previos": 3
+          }
+        },
+        {
+          "id": "herd_growth_rate",
+          "titulo": "Crecimiento del hato 30d",
+          "valor": 15.9,
+          "unidad": "%",
+          "cambio": 1.6,
+          "tendencia": {
+            "periodo_actual": 15.9,
+            "periodo_anterior": 14.3,
+            "ventana_dias": 30
+          },
+          "descripcion": "Ingreso de nuevos animales respecto al tamaño total del hato.",
+          "icono": "trending-up",
+          "detalle": {
+            "altas_30d": 10,
+            "altas_previas": 9
+          }
+        },
+        {
+          "id": "alert_pressure",
+          "titulo": "Presión de alertas",
+          "valor": 195.2,
+          "unidad": "%",
+          "cambio": -1.6,
+          "tendencia": {
+            "periodo_actual": 195.2,
+            "periodo_anterior": 196.8,
+            "ventana_dias": 30
+          },
+          "descripcion": "Alertas activas comparadas con el número de animales en seguimiento.",
+          "icono": "alert-triangle",
+          "detalle": {
+            "alertas_actuales": 121,
+            "alertas_previas": 122
+          }
+        },
+        {
+          "id": "task_load_index",
+          "titulo": "Índice de carga operativa",
+          "valor": 196.8,
+          "unidad": "%",
+          "cambio": -3.2,
+          "tendencia": {
+            "periodo_actual": 196.8,
+            "periodo_anterior": 200.0,
+            "ventana_dias": 30
+          },
+          "descripcion": "Relación de tareas pendientes frente a la capacidad del hato activo.",
+          "icono": "list-checks",
+          "detalle": {
+            "tareas_pendientes": 122,
+            "tareas_previas": 124
+          }
+        }
+      ]
+    },
+    "catalogo_vacunas": {
+      "valor": 21,
+      "descripcion": "Catálogo de vacunas disponibles."
+    },
+    "catalogo_medicamentos": {
+      "valor": 22,
+      "descripcion": "Catálogo de medicamentos registrados."
+    },
+    "catalogo_enfermedades": {
+      "valor": 32,
+      "descripcion": "Catálogo de enfermedades administradas."
+    },
+    "catalogo_especies": {
+      "valor": 28,
+      "descripcion": "Catálogo de especies registradas."
+    },
+    "catalogo_razas": {
+      "valor": 65,
+      "descripcion": "Catálogo de razas disponibles."
+    },
+    "catalogo_tipos_alimento": {
+      "valor": 19,
+      "descripcion": "Catálogo de alimentos disponibles."
+    },
+    "animales_por_campo": {
+      "valor": 52,
+      "descripcion": "Relaciones Animal-Campo registradas."
+    },
+    "animales_por_enfermedad": {
+      "valor": 47,
+      "descripcion": "Relaciones Animal-Enfermedad registradas."
+    },
+    "mejoras_geneticas": {
+      "valor": 46,
+      "descripcion": "Intervenciones de mejora genética."
+    },
+    "tratamientos_con_medicamentos": {
+      "valor": 45,
+      "descripcion": "Registros de tratamientos con fármacos."
+    },
+    "tratamientos_con_vacunas": {
+      "valor": 45,
+      "descripcion": "Registros de tratamientos con vacunas."
+    },
+    "distribucion_sexo": {
+      "machos": 35,
+      "hembras": 27
+    },
+    "distribucion_razas_top5": [
+      {
+        "raza": "Holstein",
+        "cantidad": 4
+      },
+      {
+        "raza": "Brahma",
+        "cantidad": 4
+      },
+      {
+        "raza": "CRUD Breed 1768520276 v3",
+        "cantidad": 3
+      },
+      {
+        "raza": "Guzerat",
+        "cantidad": 2
+      },
+      {
+        "raza": "Angus",
+        "cantidad": 2
+      }
+    ],
+    "distribucion_estado": {
+      "vivos": 62,
+      "vendidos": 1,
+      "muertos": 0
+    },
+    "peso_promedio_kg": 307.85,
+    "distribucion_salud": {
+      "excelente": 4,
+      "bueno": 27,
+      "sano": 1,
+      "regular": 3,
+      "malo": 0
+    },
+    "grupos_edad": {
+      "terneros": 7,
+      "jovenes": 5,
+      "adultos": 30,
+      "maduros": 20
+    },
+    "muertes_recientes_30dias": 0,
+    "ventas_recientes_30dias": 0,
+    "promedio_tratamientos_por_animal": 0.02,
+    "promedio_controles_por_animal": 0.0,
+    "metadata": {
+      "generado_en": "2026-01-18T16:00:22.680849+00:00",
+      "version": "2.1",
+      "optimizado": true,
+      "cache_ttl": 120,
+      "estadisticas_totales": 33
+    }
+  },
+  "message": "Estadísticas completas del dashboard obtenidas exitosamente"
+}
