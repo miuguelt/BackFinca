@@ -266,7 +266,8 @@ class DevelopmentConfig(Config):
     RATE_LIMIT_ENABLED = False
     
     # JWT - Desarrollo local: usar HTTPS local para permitir Secure + SameSite=None
-    JWT_COOKIE_SECURE = True  # Requerido por navegadores cuando SameSite=None
+    from os import getenv as _getenv
+    JWT_COOKIE_SECURE = _getenv('DEV_JWT_COOKIE_SECURE', 'true').lower() == 'true'
     JWT_COOKIE_SAMESITE = 'None'
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=2)
     
@@ -278,7 +279,6 @@ class DevelopmentConfig(Config):
 
     # Plan B: permitir desactivar temporalmente la protección CSRF de cookies JWT para validar el flujo de refresh.
     # Usa DEV_JWT_COOKIE_CSRF_PROTECT=true para reactivar cuando terminemos la validación.
-    from os import getenv as _getenv
     JWT_COOKIE_CSRF_PROTECT = _getenv('DEV_JWT_COOKIE_CSRF_PROTECT') == 'true'
     # Permitir uso de JWT tanto en cookies como en encabezados para facilitar pruebas
     JWT_TOKEN_LOCATION = ['cookies', 'headers']
