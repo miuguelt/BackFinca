@@ -293,7 +293,7 @@ class DevelopmentConfig(Config):
     # CORS - Solo desde variable de entorno
     CORS_ORIGINS = _parse_cors_origins_env() or []
     # SSE: en desarrollo, reducir el límite para forzar disciplina en el cliente
-    SSE_MAX_CONN_PER_IP = int(os.getenv('SSE_MAX_CONN_PER_IP') or '1')
+    SSE_MAX_CONN_PER_IP = int(os.getenv('SSE_MAX_CONN_PER_IP') or '5')
 
 class ProductionConfig(Config):
     """Configuración para producción (HTTPS)."""

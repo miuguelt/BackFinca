@@ -22,9 +22,10 @@ def get_user_id():
     try:
         verify_jwt_in_request(optional=True)
         user_id = get_jwt_identity()
-        return user_id if user_id else get_remote_address()
+        # Fallback a IP (considerando proxy forwarding) cuando no hay usuario autenticado.
+        return user_id if user_id else get_remote_address_with_forwarded()
     except Exception:
-        return get_remote_address()
+        return get_remote_address_with_forwarded()
 
 
 def get_remote_address_with_forwarded():
@@ -40,8 +41,24 @@ def rate_limit_handler(request_limit):
     endpoint = request.endpoint or "unknown"
     user_id = get_user_id()
 
+    limit_str = ""
     try:
-        log_rate_limit_exceeded(endpoint=endpoint, limit=str(request_limit), user_identifier=user_id)
+        if request_limit is None:
+            limit_str = ""
+        else:
+            # Flask-Limiter suele pasar un objeto Limit; str() puede ser vacío en algunos casos.
+            limit_str = str(request_limit) or ""
+            if not limit_str:
+                for attr in ("limit", "limit_string", "raw", "key", "amount"):
+                    v = getattr(request_limit, attr, None)
+                    if v:
+                        limit_str = str(v)
+                        break
+    except Exception:
+        limit_str = ""
+
+    try:
+        log_rate_limit_exceeded(endpoint=endpoint, limit=limit_str, user_identifier=user_id)
     except Exception:
         logger.exception("Fallo al registrar evento de rate limit")
 
@@ -52,7 +69,7 @@ def rate_limit_handler(request_limit):
         status_code=429,
         error_code="RATE_LIMIT_EXCEEDED",
         details={
-            "limit": str(request_limit),
+            "limit": limit_str,
             "endpoint": endpoint,
             "retry_after_seconds": 60,
         },
@@ -73,7 +90,9 @@ def init_rate_limiter(app):
     if not storage_uri:
         limiter = Limiter(
             app=app,
-            key_func=get_remote_address_with_forwarded,
+            # Key por usuario autenticado cuando exista (evita colisiones detrás de NAT),
+            # con fallback a IP.
+            key_func=get_user_id,
             default_limits=["10000 per day", "1000 per hour"],
             on_breach=rate_limit_handler,
             storage_uri="memory://",
@@ -98,7 +117,7 @@ def init_rate_limiter(app):
     if _RATE_LIMITER_STORAGE_OK:
         limiter = Limiter(
             app=app,
-            key_func=get_remote_address_with_forwarded,
+            key_func=get_user_id,
             default_limits=["10000 per day", "1000 per hour"],
             on_breach=rate_limit_handler,
             storage_uri=storage_uri,
@@ -112,7 +131,7 @@ def init_rate_limiter(app):
     else:
         limiter = Limiter(
             app=app,
-            key_func=get_remote_address_with_forwarded,
+            key_func=get_user_id,
             default_limits=["10000 per day", "1000 per hour"],
             on_breach=rate_limit_handler,
             storage_uri="memory://",

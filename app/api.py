@@ -11,6 +11,7 @@ import threading
 import queue
 
 from flask import Blueprint, jsonify, request, send_file, render_template
+from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from flask_restx import Api
 from sqlalchemy import text
 
@@ -205,25 +206,36 @@ def register_api(app, limiter=None):
             if not bus:
                 return APIResponse.error('Eventos no disponibles', status_code=503)
             max_conn = int(app.config.get('SSE_MAX_CONN_PER_IP', 3))
-            ip = request.environ.get("HTTP_X_FORWARDED_FOR", request.remote_addr) or '127.0.0.1'
+
+            # Límite de conexiones SSE por "cliente". En localhost varias pestañas/recargas
+            # comparten IP, así que preferimos agrupar por usuario autenticado cuando exista.
+            user_key = None
+            try:
+                verify_jwt_in_request(optional=True)
+                user_key = get_jwt_identity()
+            except Exception:
+                user_key = None
+
+            ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "127.0.0.1").split(",")[0].strip()
+            client_key = f"user:{user_key}" if user_key else f"ip:{ip}"
             sse_ip_lock = app.extensions.get("sse_ip_lock")
             sse_ip_counts = app.extensions.get("sse_ip_counts")
             if sse_ip_lock and sse_ip_counts is not None:
                 with sse_ip_lock:
-                    cnt = sse_ip_counts.get(ip, 0)
+                    cnt = sse_ip_counts.get(client_key, 0)
                     if cnt >= max_conn:
                         payload, status = APIResponse.error(
                             'Límite de conexiones SSE excedido',
                             status_code=429,
                             error_code='SSE_CONNECTION_LIMIT',
-                            details={'retry_after_seconds': 60, 'ip': ip}
+                            details={'retry_after_seconds': 60, 'client_key': client_key}
                         )
                         from flask import jsonify, make_response
                         resp = make_response(jsonify(payload), status)
                         resp.headers['Retry-After'] = '60'
                         resp.headers['RateLimit-Reset'] = '60'
                         return resp
-                    sse_ip_counts[ip] = cnt + 1
+                    sse_ip_counts[client_key] = cnt + 1
             q = bus.subscribe()
             def _gen():
                 try:
@@ -242,11 +254,11 @@ def register_api(app, limiter=None):
                     try:
                         if sse_ip_lock and sse_ip_counts is not None:
                             with sse_ip_lock:
-                                if ip in sse_ip_counts:
-                                    v = sse_ip_counts[ip]
-                                    sse_ip_counts[ip] = max(0, v - 1)
-                                    if sse_ip_counts[ip] == 0:
-                                        sse_ip_counts.pop(ip, None)
+                                if client_key in sse_ip_counts:
+                                    v = sse_ip_counts[client_key]
+                                    sse_ip_counts[client_key] = max(0, v - 1)
+                                    if sse_ip_counts[client_key] == 0:
+                                        sse_ip_counts.pop(client_key, None)
                     except Exception:
                         pass
             from flask import Response, stream_with_context
@@ -294,16 +306,26 @@ def register_api(app, limiter=None):
 
     try:
         if limiter:
+            def _exempt_endpoint(endpoint_name: str):
+                try:
+                    vf = app.view_functions.get(endpoint_name)
+                    if not vf or getattr(vf, "_rate_limit_exempted", False):
+                        return
+                    app.view_functions[endpoint_name] = limiter.exempt(vf)
+                    app.view_functions[endpoint_name]._rate_limit_exempted = True
+                except Exception:
+                    logging.getLogger(__name__).exception("No se pudo eximir rate limit para endpoint %s", endpoint_name)
+
             def _exempt_ns(ns):
                 try:
-                    lr = getattr(ns, '_model_list_resource', None)
-                    if lr and hasattr(lr, 'get') and not getattr(lr.get, '_rate_limit_exempted', False):
-                        lr.get = limiter.exempt(lr.get)
-                        lr.get._rate_limit_exempted = True
-                    dr = getattr(ns, '_model_detail_resource', None)
-                    if dr and hasattr(dr, 'get') and not getattr(dr.get, '_rate_limit_exempted', False):
-                        dr.get = limiter.exempt(dr.get)
-                        dr.get._rate_limit_exempted = True
+                    # Flask-RESTX registra endpoints por Resource con nombres estables.
+                    # Ej: api.treatment-medications_model_list_resource
+                    base = f"{api_bp.name}.{getattr(ns, 'name', '')}"
+                    if base.endswith(".") or base == api_bp.name + ".":
+                        return
+                    _exempt_endpoint(f"{base}_model_list_resource")
+                    _exempt_endpoint(f"{base}_model_detail_resource")
+                    _exempt_endpoint(f"{base}_model_stats_resource")
                 except Exception:
                     logging.getLogger(__name__).exception('No se pudo eximir rate limit para namespace')
             for _ns in [
