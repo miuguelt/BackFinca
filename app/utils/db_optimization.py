@@ -92,12 +92,7 @@ class DatabaseOptimizer:
 
         @event.listens_for(Engine, "connect")
         def log_connection_and_set_mysql_pragma(dbapi_connection, connection_record):
-            """Imprimir URI de conexión y configurar variables de sesión MySQL para optimización"""
             try:
-                # Imprimir URI de conexión antes de establecerla
-                db_uri = self.app.config.get('SQLALCHEMY_DATABASE_URI', 'No URI configurada')
-                logger.info(f"Estableciendo conexión a la base de datos: {db_uri}")
-                
                 cursor = dbapi_connection.cursor()
                 try:
                     # Optimizaciones de MySQL

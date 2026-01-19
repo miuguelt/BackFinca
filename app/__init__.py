@@ -19,6 +19,7 @@ from .utils.db_optimization import init_db_optimizations
 from .utils.logging_config import configure_logging
 from .utils.jwt_handlers import configure_jwt_handlers
 from app.utils.response_handler import APIResponse
+from app.extensions.db import init_db_session_management, get_db
 
 # Importar módulos de seguridad
 from .utils.security_logger import setup_security_logging, log_authentication_attempt, log_jwt_token_event
@@ -211,6 +212,7 @@ def create_app(config_name='development'):
     # Inicializa y enlaza las extensiones con la app
     db.init_app(app)
     jwt.init_app(app)
+    init_db_session_management(app, db)
     
     # Inicializar caché con fallback robusto si Redis no está disponible
     try:
@@ -473,6 +475,15 @@ def create_app(config_name='development'):
             'version': app.config.get('APP_VERSION', app.config.get('VERSION', '1.0.0')),
         }
         return jsonify(payload), status_code
+    
+    @app.route('/db-check-session', methods=['GET'])
+    def app_db_check_session():
+        try:
+            with get_db() as session:
+                session.execute(text('SELECT 1'))
+            return jsonify({'success': True, 'status': 'healthy'}), 200
+        except Exception as e:
+            return jsonify({'success': False, 'status': f'unhealthy: {str(e)}'}), 503
     
     # ====================================================================
     # DOCUMENTACIÓN: Flask-RESTX genera automáticamente la documentación

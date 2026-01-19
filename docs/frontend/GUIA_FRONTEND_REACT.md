@@ -1227,3 +1227,78 @@ Si tienes dudas:
 3. Revisa `RESUMEN_IMPLEMENTACION_ANALYTICS.md` para contexto general
 
 **¡Todo el backend está listo! Solo necesitas consumir los endpoints.** 🎉
+
+---
+
+## 🔌 Tiempo Real (SSE/WS)
+
+- Endpoints:
+  - SSE: GET /api/v1/events
+  - WebSocket: /ws
+- Referencias:
+  - [api.py: SSE](file:///c:/Users/Miguel/Documents/Flask%20Projects/BackFinca/app/api.py#L201-L260)
+  - [api.py: WebSocket](file:///c:/Users/Miguel/Documents/Flask%20Projects/BackFinca/app/api.py#L261-L294)
+  - [namespace_helpers.py: eventos](file:///c:/Users/Miguel/Documents/Flask%20Projects/BackFinca/app/utils/namespace_helpers.py#L970-L1608)
+
+### Hook useEventBus
+
+```javascript
+import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+
+export function useEventBus() {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const es = new EventSource('/api/v1/events', { withCredentials: true });
+    const onMessage = (e) => {
+      const { endpoint, action } = JSON.parse(e.data);
+      const keys = {
+        animals: ['animals'],
+        fields: ['fields'],
+        treatments: ['treatments'],
+        vaccinations: ['vaccinations'],
+        activity: ['activity'],
+      }[endpoint];
+      if (keys) {
+        queryClient.invalidateQueries({ queryKey: keys });
+      }
+    };
+    es.addEventListener('message', onMessage);
+    return () => {
+      es.removeEventListener('message', onMessage);
+      es.close();
+    };
+  }, [queryClient]);
+}
+```
+
+### Uso en un componente
+
+```jsx
+import React from 'react';
+import { useEventBus } from '../hooks/useEventBus';
+
+export default function DashboardExecutive() {
+  useEventBus();
+  return (
+    <div>
+      <h1>Dashboard Ejecutivo</h1>
+    </div>
+  );
+}
+```
+
+### Alternativa WebSocket
+
+```javascript
+const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
+const ws = new WebSocket(`${scheme}://${location.host}/ws`);
+ws.onmessage = (e) => {
+  const msg = JSON.parse(e.data);
+};
+ws.onclose = () => {
+  setTimeout(() => {
+    const ws2 = new WebSocket(`${scheme}://${location.host}/ws`);
+  }, 1500);
+};
+```

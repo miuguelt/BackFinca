@@ -1101,6 +1101,106 @@ const { stats, loading, error, loadStats } = useDashboardStats();
 
 | Campo en Respuesta | Tipo | Descripción | Mostrar Como |
 |-------------------|------|-------------|--------------|
+
+---
+
+## 🔌 9. Tiempo Real (Sockets: SSE y WebSocket)
+
+- Endpoints:
+  - SSE: GET /api/v1/events
+  - WebSocket: /ws
+- Referencias:
+  - [api.py: SSE](file:///c:/Users/Miguel/Documents/Flask%20Projects/BackFinca/app/api.py#L201-L260)
+  - [api.py: WebSocket](file:///c:/Users/Miguel/Documents/Flask%20Projects/BackFinca/app/api.py#L261-L294)
+  - [namespace_helpers.py: create](file:///c:/Users/Miguel/Documents/Flask%20Projects/BackFinca/app/utils/namespace_helpers.py#L970-L985)
+  - [namespace_helpers.py: update](file:///c:/Users/Miguel/Documents/Flask%20Projects/BackFinca/app/utils/namespace_helpers.py#L1245-L1265)
+  - [namespace_helpers.py: delete](file:///c:/Users/Miguel/Documents/Flask%20Projects/BackFinca/app/utils/namespace_helpers.py#L1455-L1465)
+  - [namespace_helpers.py: bulk](file:///c:/Users/Miguel/Documents/Flask%20Projects/BackFinca/app/utils/namespace_helpers.py#L1598-L1608)
+
+### Formato de eventos
+
+```json
+{ "endpoint": "animals", "action": "update", "id": 123 }
+```
+
+### Opción A: SSE (recomendado)
+
+```javascript
+const url = '/api/v1/events';
+const es = new EventSource(url, { withCredentials: true });
+es.onmessage = (e) => {
+  const msg = JSON.parse(e.data);
+  handleEvent(msg);
+};
+es.onerror = () => {
+  es.close();
+  setTimeout(() => {
+    const retry = new EventSource(url, { withCredentials: true });
+  }, 1500);
+};
+function handleEvent({ endpoint, action, id }) {
+  // actualizar UI o invalidar caché
+}
+```
+
+### Opción B: WebSocket
+
+```javascript
+const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
+const ws = new WebSocket(`${scheme}://${location.host}/ws`);
+ws.onmessage = (e) => {
+  const msg = JSON.parse(e.data);
+  handleEvent(msg);
+};
+ws.onclose = () => {
+  setTimeout(() => {
+    const ws2 = new WebSocket(`${scheme}://${location.host}/ws`);
+  }, 1500);
+};
+function handleEvent({ endpoint, action, id }) {
+  // actualizar UI o invalidar caché
+}
+```
+
+### Integración en React con React Query
+
+```javascript
+import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+
+export function useEventBus() {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const es = new EventSource('/api/v1/events', { withCredentials: true });
+    const onMessage = (e) => {
+      const { endpoint, action } = JSON.parse(e.data);
+      const keys = {
+        animals: ['animals'],
+        fields: ['fields'],
+        treatments: ['treatments'],
+        vaccinations: ['vaccinations'],
+        activity: ['activity'],
+      }[endpoint];
+      if (keys) {
+        queryClient.invalidateQueries({ queryKey: keys });
+      }
+    };
+    es.addEventListener('message', onMessage);
+    return () => {
+      es.removeEventListener('message', onMessage);
+      es.close();
+    };
+  }, [queryClient]);
+}
+```
+
+### Buenas prácticas
+
+- Mantener una única conexión por aplicación.
+- Cerrar conexiones al desmontar componentes.
+- Usar SSE para simplicidad; WS para necesidades bidireccionales.
+- Respetar límite SSE por IP (por defecto 3).
+|-------------------|------|-------------|--------------|
 | `usuarios_registrados.valor` | number | Total usuarios | Tarjeta grande |
 | `usuarios_activos.valor` | number | Usuarios activos | Tarjeta grande |
 | `animales_registrados.valor` | number | Total animales | Tarjeta grande |
