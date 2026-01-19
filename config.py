@@ -128,6 +128,8 @@ class Config:
     QUERY_CACHE_ENABLED = True
     QUERY_CACHE_TIMEOUT = 600
     QUERY_CACHE_MAX_SIZE = 500
+    # SSE: límite de conexiones por IP (el endpoint /api/v1/events respeta este valor)
+    SSE_MAX_CONN_PER_IP = int(os.getenv('SSE_MAX_CONN_PER_IP') or '3')
 
     # Activity feed caching (perfil/analytics)
     ACTIVITY_SUMMARY_CACHE_TTL = int(os.getenv('ACTIVITY_SUMMARY_CACHE_TTL', '60'))
@@ -290,6 +292,8 @@ class DevelopmentConfig(Config):
     
     # CORS - Solo desde variable de entorno
     CORS_ORIGINS = _parse_cors_origins_env() or []
+    # SSE: en desarrollo, reducir el límite para forzar disciplina en el cliente
+    SSE_MAX_CONN_PER_IP = int(os.getenv('SSE_MAX_CONN_PER_IP') or '1')
 
 class ProductionConfig(Config):
     """Configuración para producción (HTTPS)."""
