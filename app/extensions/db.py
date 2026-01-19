@@ -14,7 +14,7 @@ def init_db_session_management(app, db):
     if _initialized:
         return
     with app.app_context():
-        engine = db.get_engine(app)
+        engine = db.engine
         SessionLocal = scoped_session(sessionmaker(bind=engine, autocommit=False, autoflush=False))
         @app.teardown_appcontext
         def remove_scoped_session(exception=None):
@@ -23,11 +23,6 @@ def init_db_session_management(app, db):
                     SessionLocal.remove()
             except Exception:
                 pass
-        try:
-            with engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
-        except Exception:
-            pass
         try:
             pool = getattr(engine, "pool", None)
             pool_size = getattr(pool, "size", lambda: None)()
