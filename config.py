@@ -130,6 +130,10 @@ class Config:
     QUERY_CACHE_MAX_SIZE = 500
     # SSE: límite de conexiones por IP (el endpoint /api/v1/events respeta este valor)
     SSE_MAX_CONN_PER_IP = int(os.getenv('SSE_MAX_CONN_PER_IP') or '3')
+    SSE_MAX_CONN_PER_USER = int(os.getenv('SSE_MAX_CONN_PER_USER') or str(SSE_MAX_CONN_PER_IP))
+    SSE_RETRY_MS = int(os.getenv('SSE_RETRY_MS') or '5000')
+    SSE_COOLDOWN_SECONDS = int(os.getenv('SSE_COOLDOWN_SECONDS') or '15')
+    SSE_PING_INTERVAL_SECONDS = int(os.getenv('SSE_PING_INTERVAL_SECONDS') or '25')
 
     # Activity feed caching (perfil/analytics)
     ACTIVITY_SUMMARY_CACHE_TTL = int(os.getenv('ACTIVITY_SUMMARY_CACHE_TTL', '60'))
@@ -294,6 +298,7 @@ class DevelopmentConfig(Config):
     CORS_ORIGINS = _parse_cors_origins_env() or []
     # SSE: en desarrollo, reducir el límite para forzar disciplina en el cliente
     SSE_MAX_CONN_PER_IP = int(os.getenv('SSE_MAX_CONN_PER_IP') or '5')
+    SSE_MAX_CONN_PER_USER = int(os.getenv('SSE_MAX_CONN_PER_USER') or str(SSE_MAX_CONN_PER_IP))
 
 class ProductionConfig(Config):
     """Configuración para producción (HTTPS)."""

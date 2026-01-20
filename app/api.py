@@ -169,6 +169,7 @@ def register_api(app, limiter=None):
         subscribers = []
         sse_ip_lock = threading.Lock()
         sse_ip_counts = {}
+        sse_ip_cooldowns = {}
         class EventBus:
             def subscribe(self):
                 q = queue.Queue(maxsize=1000)
@@ -196,6 +197,7 @@ def register_api(app, limiter=None):
         app.extensions["event_bus"] = EventBus()
         app.extensions["sse_ip_lock"] = sse_ip_lock
         app.extensions["sse_ip_counts"] = sse_ip_counts
+        app.extensions["sse_ip_cooldowns"] = sse_ip_cooldowns
     except Exception:
         logging.getLogger(__name__).exception('No se pudo inicializar event_bus')
 
@@ -205,7 +207,11 @@ def register_api(app, limiter=None):
             bus = app.extensions.get("event_bus")
             if not bus:
                 return APIResponse.error('Eventos no disponibles', status_code=503)
-            max_conn = int(app.config.get('SSE_MAX_CONN_PER_IP', 3))
+            max_conn_ip = int(app.config.get('SSE_MAX_CONN_PER_IP', 3))
+            max_conn_user = int(app.config.get('SSE_MAX_CONN_PER_USER', max_conn_ip))
+            retry_ms = max(1000, int(app.config.get('SSE_RETRY_MS', 5000)))
+            cooldown_seconds = int(app.config.get('SSE_COOLDOWN_SECONDS', 15))
+            ping_interval = max(5, int(app.config.get('SSE_PING_INTERVAL_SECONDS', 25)))
 
             # Límite de conexiones SSE por "cliente". En localhost varias pestañas/recargas
             # comparten IP, así que preferimos agrupar por usuario autenticado cuando exista.
@@ -217,55 +223,97 @@ def register_api(app, limiter=None):
                 user_key = None
 
             ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "127.0.0.1").split(",")[0].strip()
-            client_key = f"user:{user_key}" if user_key else f"ip:{ip}"
+            if user_key is not None:
+                try:
+                    user_key_str = str(user_key)
+                except Exception:
+                    user_key_str = "unknown"
+                client_key = f"user:{user_key_str}"
+                max_conn = max_conn_user
+            else:
+                client_key = f"ip:{ip}"
+                max_conn = max_conn_ip
             sse_ip_lock = app.extensions.get("sse_ip_lock")
             sse_ip_counts = app.extensions.get("sse_ip_counts")
+            sse_ip_cooldowns = app.extensions.get("sse_ip_cooldowns")
             if sse_ip_lock and sse_ip_counts is not None:
+                now = time.time()
+                cooldown_seconds = max(0, cooldown_seconds)
                 with sse_ip_lock:
+                    if sse_ip_cooldowns is not None:
+                        cooldown_until = sse_ip_cooldowns.get(client_key, 0)
+                        if cooldown_until and cooldown_until > now:
+                            retry_after = max(1, int(cooldown_until - now))
+                            payload, status = APIResponse.error(
+                                'Limite de conexiones SSE excedido',
+                                status_code=429,
+                                error_code='SSE_CONNECTION_LIMIT',
+                                details={'retry_after_seconds': retry_after, 'client_key': client_key}
+                            )
+                            from flask import jsonify, make_response
+                            resp = make_response(jsonify(payload), status)
+                            resp.headers['Retry-After'] = str(retry_after)
+                            resp.headers['RateLimit-Reset'] = str(retry_after)
+                            return resp
+                        elif cooldown_until:
+                            sse_ip_cooldowns.pop(client_key, None)
                     cnt = sse_ip_counts.get(client_key, 0)
                     if cnt >= max_conn:
+                        retry_after = max(1, int(cooldown_seconds))
+                        if sse_ip_cooldowns is not None and retry_after:
+                            sse_ip_cooldowns[client_key] = now + retry_after
                         payload, status = APIResponse.error(
-                            'Límite de conexiones SSE excedido',
+                            'Limite de conexiones SSE excedido',
                             status_code=429,
                             error_code='SSE_CONNECTION_LIMIT',
-                            details={'retry_after_seconds': 60, 'client_key': client_key}
+                            details={'retry_after_seconds': retry_after, 'client_key': client_key}
                         )
                         from flask import jsonify, make_response
                         resp = make_response(jsonify(payload), status)
-                        resp.headers['Retry-After'] = '60'
-                        resp.headers['RateLimit-Reset'] = '60'
+                        resp.headers['Retry-After'] = str(retry_after)
+                        resp.headers['RateLimit-Reset'] = str(retry_after)
                         return resp
                     sse_ip_counts[client_key] = cnt + 1
             q = bus.subscribe()
+            released = False
+            def _release():
+                nonlocal released
+                if released:
+                    return
+                released = True
+                try:
+                    bus.unsubscribe(q)
+                except Exception:
+                    pass
+                try:
+                    if sse_ip_lock and sse_ip_counts is not None:
+                        with sse_ip_lock:
+                            if client_key in sse_ip_counts:
+                                v = sse_ip_counts[client_key]
+                                if v <= 1:
+                                    sse_ip_counts.pop(client_key, None)
+                                else:
+                                    sse_ip_counts[client_key] = v - 1
+                except Exception:
+                    pass
             def _gen():
                 try:
+                    yield f'retry: {retry_ms}\n\n'
                     yield ': init\n\n'
                     while True:
                         try:
-                            payload = q.get(timeout=25)
+                            payload = q.get(timeout=ping_interval)
                             yield f'data: {payload}\n\n'
                         except Exception:
                             yield ': ping\n\n'
                 finally:
-                    try:
-                        bus.unsubscribe(q)
-                    except Exception:
-                        pass
-                    try:
-                        if sse_ip_lock and sse_ip_counts is not None:
-                            with sse_ip_lock:
-                                if client_key in sse_ip_counts:
-                                    v = sse_ip_counts[client_key]
-                                    sse_ip_counts[client_key] = max(0, v - 1)
-                                    if sse_ip_counts[client_key] == 0:
-                                        sse_ip_counts.pop(client_key, None)
-                    except Exception:
-                        pass
+                    _release()
             from flask import Response, stream_with_context
             resp = Response(stream_with_context(_gen()), mimetype='text/event-stream')
             resp.headers['Cache-Control'] = 'no-cache'
             resp.headers['Connection'] = 'keep-alive'
             resp.headers['X-Accel-Buffering'] = 'no'
+            resp.call_on_close(_release)
             return resp
         except Exception as e:
             return APIResponse.error('Error de SSE', status_code=500, details={'error': str(e)})
