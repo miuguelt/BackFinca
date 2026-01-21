@@ -38,6 +38,7 @@ Guia extendida (repositorio): `docs/frontend/api-usage-guide-frontend.md`.
 | Local | `http://127.0.0.1:8081/api/v1` | Backend local (ajusta el puerto) |
 
 Notas:
+
 - En desarrollo, puedes usar un proxy del dev server para evitar CORS.
 - Si usas Vite, una opcion comun es `VITE_PROXY_TARGET=http://127.0.0.1:8081` y `VITE_API_BASE_URL=/api/v1`.
 - Si haces llamadas directas al backend, agrega tu origen a `CORS_ORIGINS` en el `.env` del backend (ej: `http://localhost:5173`).
@@ -60,6 +61,7 @@ Body JSON:
 ```
 
 Notas:
+
 - `identifier` acepta email o numero de identificacion.
 - En entornos de demo puede existir el usuario admin anterior; cambia estas credenciales en produccion.
 
@@ -71,36 +73,93 @@ En el frontend usa `credentials: 'include'` para que el navegador envie cookies.
 
 Para `POST/PUT/PATCH/DELETE`, agrega `X-CSRF-TOKEN` con el valor de la cookie `csrf_access_token`.
 
-### 4) Helper base para requests
+### 4) Helper base para requests con Refresh Token
+
+El backend devuelve detalles en el error 401 para indicar si se debe intentar un refresh.
 
 ```javascript
-const API_BASE_URL = '/api/v1'; // con proxy en desarrollo
-// const API_BASE_URL = 'https://finca.enlinea.sbs/api/v1';
+/* 
+ Estructura del error 401 desde el backend:
+ {
+   "success": false,
+   "error": {
+     "code": "TOKEN_EXPIRED",
+     "details": {
+       "client_action": "ATTEMPT_REFRESH" // o "CLEAR_AUTH_AND_RELOGIN"
+     }
+   }
+ }
+*/
 
-function getCookie(name) {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop().split(';').shift();
-  return '';
-}
+const API_BASE_URL = '/api/v1';
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) prom.reject(error);
+    else prom.resolve(token);
+  });
+  failedQueue = [];
+};
 
 async function apiFetch(path, options = {}) {
-  const method = (options.method || 'GET').toUpperCase();
-  const headers = { ...(options.headers || {}) };
-
-  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-    headers['X-CSRF-TOKEN'] = getCookie('csrf_access_token');
-    headers['Content-Type'] = headers['Content-Type'] || 'application/json';
-  }
-
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    credentials: 'include',
+  const url = `${API_BASE_URL}${path}`;
+  const response = await fetch(url, {
     ...options,
-    headers,
+    headers: {
+      ...options.headers,
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include'
   });
 
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || 'Error en la solicitud');
+  // Manejo de 401 con lógica de refresh backend-driven
+  if (response.status === 401) {
+    const data = await response.json().catch(() => ({}));
+    
+    // Si el backend sugiere refrescar y no es un reintento
+    const shouldRefresh = data.error?.details?.client_action === 'ATTEMPT_REFRESH';
+    
+    if (shouldRefresh && !options._retry) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then(() => {
+          return apiFetch(path, { ...options, _retry: true });
+        }).catch(err => Promise.reject(err));
+      }
+
+      options._retry = true;
+      isRefreshing = true;
+
+      try {
+        const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include'
+        });
+
+        if (!refreshRes.ok) throw new Error('Refresh failed');
+        
+        processQueue(null, true);
+        isRefreshing = false;
+        return apiFetch(path, options);
+      } catch (err) {
+        processQueue(err, null);
+        isRefreshing = false;
+        // Si falla el refresh, redirigir a login
+        window.location.href = '/login';
+        return Promise.reject(err);
+      }
+    }
+    
+    // Si no es para refrescar (ej: token revocado o refresh expirado), lanzar error
+    throw new Error(data.message || 'Sesión expirada');
+  }
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.message || 'Error en la solicitud');
   return data;
 }
 ```

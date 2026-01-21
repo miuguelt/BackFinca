@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -77,8 +78,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .error {
@@ -278,6 +284,7 @@
         }
     </style>
 </head>
+
 <body>
     <!-- Login Form (initially hidden if token exists) -->
     <div id="loginForm" class="login-form" style="display: none;">
@@ -392,7 +399,9 @@
         const CACHE_TTL = 120000; // 2 minutos
 
         // Verificar si hay token al cargar la página
-        window.onload = function() {
+        window.onload = function () {
+            // Intentar cargar stats directamente. Si falla auth, el interceptor manejará el refresh.
+            // Si no hay token en storage, mostrar login.
             if (authToken) {
                 showDashboard();
                 loadStats();
@@ -423,14 +432,21 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username, password }) // Ajusta según tu API (identifier)
+                    // Nota: El backend espera 'identifier' o 'email', o 'identification'. 
+                    // Si tu backend usa 'username' mapéalo aquí si es necesario, 
+                    // o cambia el body a: { identifier: username, password }
                 });
 
                 const result = await response.json();
 
                 if (response.ok && result.success) {
+                    // El backend setea cookies HttpOnly.
+                    // Adicionalmente puede devolver access_token en el body.
                     authToken = result.data.access_token || result.access_token;
-                    localStorage.setItem('token', authToken);
+                    if (authToken) {
+                        localStorage.setItem('token', authToken);
+                    }
                     showDashboard();
                     loadStats();
                 } else {
@@ -451,6 +467,9 @@
         }
 
         // Funciones de carga de estadísticas
+        // Variable para controlar el refresh
+        let isRefreshing = false;
+
         async function loadStats(forceRefresh = false) {
             // Verificar caché
             if (!forceRefresh && statsCache && lastLoadTime) {
@@ -471,7 +490,7 @@
             try {
                 console.log('🔄 Cargando estadísticas del servidor...');
 
-                const response = await fetch(`${API_BASE_URL}/analytics/dashboard/complete`, {
+                let response = await fetch(`${API_BASE_URL}/analytics/dashboard/complete`, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${authToken}`,
@@ -479,11 +498,66 @@
                     }
                 });
 
-                if (!response.ok) {
-                    if (response.status === 401) {
+                // Manejo de token expirado (401)
+                if (response.status === 401) {
+                    // Clonar respuesta para leer el body y no afectar flujos futuros si fuera necesario
+                    const errorData = await response.clone().json().catch(() => ({}));
+
+                    // Verificar si el backend sugiere intentar refrescar
+                    const shouldRefresh = errorData.error?.details?.client_action === 'ATTEMPT_REFRESH';
+
+                    if (shouldRefresh) {
+                        console.warn('⚠️ Token expirado (401) - Backend solicita refresh. Intentando...');
+
+                        if (!isRefreshing) {
+                            isRefreshing = true;
+                            try {
+                                const refreshResp = await fetch(`${API_BASE_URL}/auth/refresh`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    credentials: 'include'
+                                });
+
+                                if (refreshResp.ok) {
+                                    const refreshData = await refreshResp.json();
+                                    const newToken = refreshData.data?.access_token || refreshData.access_token;
+                                    if (newToken) {
+                                        authToken = newToken;
+                                        localStorage.setItem('token', newToken);
+                                        console.log('✅ Token renovado exitosamente');
+
+                                        // Reintentar la petición original
+                                        response = await fetch(`${API_BASE_URL}/analytics/dashboard/complete`, {
+                                            method: 'GET',
+                                            headers: {
+                                                'Authorization': `Bearer ${authToken}`,
+                                                'Content-Type': 'application/json'
+                                            }
+                                        });
+                                    }
+                                } else {
+                                    throw new Error('Refresh failed (Backend rechazó la renovación)');
+                                }
+                            } catch (refreshErr) {
+                                console.error('❌ Error renovando token:', refreshErr);
+                                logout();
+                                throw new Error('Sesión expirada. Por favor, inicie sesión nuevamente.');
+                            } finally {
+                                isRefreshing = false;
+                            }
+                        } else {
+                            // Si ya se está refrescando, lanzamos error para evitar loops o concurrencia no manejada en este ejemplo simple.
+                            throw new Error('Refrescando sesión...');
+                        }
+                    } else {
+                        // 401 pero no es refreshable (e.g. token revocado, o refresh token expirado)
+                        console.warn('⚠️ 401 recibido sin accion de refresh. Cerrando sesion.');
                         logout();
-                        throw new Error('Sesión expirada. Por favor, inicie sesión nuevamente.');
+                        throw new Error(errorData.message || 'Sesión expirada. Por favor, inicie sesión nuevamente.');
                     }
+                }
+
+                if (!response.ok) {
                     throw new Error(`Error HTTP: ${response.status}`);
                 }
 
@@ -499,7 +573,9 @@
                 }
             } catch (error) {
                 console.error('❌ Error:', error);
-                showError(error.message);
+                if (error.message !== 'Refrescando sesión...') {
+                    showError(error.message);
+                }
             } finally {
                 document.getElementById('loadingState').style.display = 'none';
                 document.getElementById('btnRefresh').disabled = false;
@@ -627,4 +703,5 @@
         }, 120000);
     </script>
 </body>
+
 </html>

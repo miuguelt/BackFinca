@@ -29,13 +29,23 @@ def configure_jwt_handlers(jwt):
         # Comentado: Evitar exponer payload del token en logs
         # logger.warning(f"Expired token: expired {seconds_ago} seconds ago. Payload: {jwt_payload}")
         logger.warning(f"Expired token: expired {seconds_ago} seconds ago")
+        token_type = jwt_payload.get('type', 'access')
+        
+        # Determine client action based on token type
+        if token_type == 'access':
+            client_action = 'ATTEMPT_REFRESH'
+            should_clear = False
+        else:
+            client_action = 'CLEAR_AUTH_AND_RELOGIN'
+            should_clear = True
+
         details = {
             'expired_at_utc': exp_utc.isoformat(),
             'current_time_utc': now_utc.isoformat(),
             'seconds_expired': seconds_ago,
-            # Instrucciones estandarizadas para el cliente
-            'client_action': 'CLEAR_AUTH_AND_RELOGIN',
-            'should_clear_auth': True,
+            'token_type': token_type,
+            'client_action': client_action,
+            'should_clear_auth': should_clear,
             'logout_url': '/api/v1/auth/logout'
         }
         payload, status_code = APIResponse.error(
