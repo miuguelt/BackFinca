@@ -41,6 +41,7 @@ def init_security_middlewares(app):
             '/swagger.json',
             # Rutas raíz de conveniencia para UI
             '/docs',
+            '/api/v1/events',
             # Permitir assets de Swagger UI sin JWT
             '/api/v1/swaggerui',
             '/api/v1/swaggerui/',
