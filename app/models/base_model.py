@@ -90,10 +90,11 @@ class BaseModel(db.Model):
                 dropped_fields.append(key)
 
         if dropped_fields:
-            logger.debug(
-                "%s: ignorando campos no soportados en payload -> %s",
+            logger.warning(
+                "DROPPED_FIELDS: %s is dropping fields from payload -> %s. Valid fields are: %s",
                 cls.__name__,
-                ', '.join(sorted(dropped_fields))
+                ', '.join(sorted(dropped_fields)),
+                list(allowed_fields)
             )
 
         data = cleaned_data

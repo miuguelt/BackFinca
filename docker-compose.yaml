@@ -5,7 +5,7 @@ services:
     image: python:3.12-alpine
     container_name: finca_app
     build:
-      context: ./  # o puedes usar tu repo remoto si prefieres
+      context: ./ # o puedes usar tu repo remoto si prefieres
       dockerfile: Dockerfile
     restart: unless-stopped
 
@@ -27,6 +27,7 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       JWT_COOKIE_DOMAIN: ${JWT_COOKIE_DOMAIN}
       CORS_ORIGINS: ${CORS_ORIGINS}
+      CACHE_WARMUP_ENABLED: 'false'
 
     # Carpeta persistente para archivos estáticos
     volumes:
@@ -46,4 +47,3 @@ networks:
     external: true
   redbd:
     external: true
-

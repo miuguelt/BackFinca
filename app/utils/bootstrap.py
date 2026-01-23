@@ -84,7 +84,7 @@ def warmup_initial_caches(app, logger: Optional[logging.Logger] = None) -> None:
     # Configuración con valores por defecto seguros para evitar bloqueos
     async_enabled = bool(app.config.get('CACHE_WARMUP_ASYNC', True))
     include_relations_enabled = bool(app.config.get('CACHE_WARMUP_INCLUDE_RELATIONS', False))
-    per_page_default = int(app.config.get('CACHE_WARMUP_LIMIT', 10))  # reducir lote para warmup
+    per_page_default = int(app.config.get('CACHE_WARMUP_LIMIT', 5))  # reducir lote para warmup
     max_seconds = float(app.config.get('CACHE_WARMUP_MAX_SECONDS', 8.0))
 
     def _do_warmup():

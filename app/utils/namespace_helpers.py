@@ -918,6 +918,7 @@ def create_optimized_namespace(
 
                 # Crear registro (commit incluido en model_class.create())
                 logger.debug(f"Creating {model_class.__name__} instance...")
+                logger.info(f"POST payload keys for {model_class.__name__}: {list(payload.keys())}")
                 instance = model_class.create(**payload)
                 logger.debug(f"Instance created with ID: {instance.id}")
 
