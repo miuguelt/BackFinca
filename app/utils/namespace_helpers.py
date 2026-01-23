@@ -1480,7 +1480,7 @@ def create_optimized_namespace(
                     return '', resp[1]
             return '', 200
 
-    ns.add_resource(ModelListResource, '/')
+    ns.add_resource(ModelListResource, '/', '')
     ns.add_resource(ModelDetailResource, '/<int:record_id>')
     ns._model_list_resource = ModelListResource
     ns._model_detail_resource = ModelDetailResource
