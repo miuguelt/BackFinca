@@ -100,13 +100,12 @@ def init_security_middlewares(app):
 	                'CSRFError': 'CSRF token inválido o ausente',
             }
             human_msg = msg_map.get(err_cls, 'Token faltante o inválido')
-            # Comentado: Evitar exponer información sensible en logs de JWT
             # logger.debug(
             #     'JWT verification failed: %s -> %s path=%s auth_header_present=%s cookies=%s',
             #     err_cls, str(e), raw_path, bool(request.headers.get('Authorization')),
             #     list(request.cookies.keys()) if request.cookies else []
             # )
-            logger.debug('JWT verification failed for path: %s', raw_path)
+            logger.debug('JWT verification failed for %s %s: %s', request.method, raw_path, err_cls)
             # Expiracin de token: estandarizar respuesta para que el frontend pueda actuar
             if err_cls == 'ExpiredSignatureError':
                 payload, status_code = APIResponse.error(
@@ -146,7 +145,8 @@ def init_security_middlewares(app):
                 details={
                     'exception_class': err_cls,
                     'exception': str(e),
-                    'path': raw_path
+                    'path': raw_path,
+                    'method': request.method
                 }
             )
 

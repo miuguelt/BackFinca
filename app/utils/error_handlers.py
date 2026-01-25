@@ -53,22 +53,26 @@ def register_error_handlers(app):
 
     @app.errorhandler(404)
     def not_found(error):
-        logger.info(f"Resource not found: {error}")
+        path = request.path
+        method = request.method
+        logger.info(f"Resource not found: {method} {path} - {error}")
         return APIResponse.error(
             message='Recurso no encontrado',
             status_code=404,
             error_code='NOT_FOUND',
-            details={'error': 'El recurso solicitado no existe'}
+            details={'error': 'El recurso solicitado no existe', 'path': path, 'method': method}
         )
 
     @app.errorhandler(405)
     def method_not_allowed(error):
-        logger.warning(f"Method not allowed: {error}")
+        path = request.path
+        method = request.method
+        logger.warning(f"Method not allowed: {method} {path} - {error}")
         return APIResponse.error(
             message='Método no permitido',
             status_code=405,
             error_code='METHOD_NOT_ALLOWED',
-            details={'error': 'El método HTTP usado no está permitido para este endpoint'}
+            details={'error': 'El método HTTP usado no está permitido para este endpoint', 'path': path, 'method': method}
         )
 
     @app.errorhandler(409)

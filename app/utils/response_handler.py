@@ -94,7 +94,10 @@ class APIResponse:
             Tuple con (response_json, status_code)
         """
         trace_id = str(uuid.uuid4())
-        logger.error(f"Error response: {status_code} - {message} (Trace ID: {trace_id})")
+        # Log error with path and method for better diagnostics
+        path = request.path if request else 'N/A'
+        method = request.method if request else 'N/A'
+        logger.error(f"Error response: {status_code} - {method} {path} - {message} (Trace ID: {trace_id})")
 
         response = {
             "success": False,
