@@ -2,6 +2,7 @@
 import sys
 import os
 from datetime import date
+import logging
 
 # Add app to path
 sys.path.append(os.getcwd())
@@ -10,6 +11,9 @@ from flask import Flask
 from app import db
 from app.models.treatments import Treatments
 from app.models.base_model import ValidationError
+
+# Configurar logging para ver warnings
+logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
 # Configure minimal DB (sqlite in memory)
@@ -24,16 +28,16 @@ def test_validation():
 
         from datetime import date
         
-        # Valid payload matching the user logs (approx), using proper types provided by namespace_helpers
+        # INVALID payload (missing description)
         payload = {
             'treatment_date': date(2026, 1, 22), 
-            'description': 'Treatment 1', 
+            'description': '',  # Empty
             'frequency': 'Daily', 
             'dosis': '10ml',
             'animal_id': 1
         }
         
-        print(f"Testing with payload: {payload}")
+        print(f"Testing with INVALID payload: {payload}")
         
         try:
             # Check model columns
@@ -41,15 +45,17 @@ def test_validation():
             print(f"Required fields: {Treatments._required_fields}")
             
             instance = Treatments.create(**payload)
-            print("Validation successful!")
+            print("Validation successful! (Unexpected)")
             print(f"Instance created: {instance}")
         except ValidationError as e:
-            print("Caught ValidationError:")
+            print("Caught ValidationError (Expected):")
             print(e.message)
             if hasattr(e, 'errors'):
                 print(f"Errors: {e.errors}")
         except Exception as e:
             print(f"Caught unexpected exception: {e}")
+            import traceback
+            traceback.print_exc()
 
 if __name__ == "__main__":
     test_validation()
