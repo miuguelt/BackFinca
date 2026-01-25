@@ -348,15 +348,12 @@ class ProductionConfig(Config):
 
     # Allow a small leeway for token decoding to tolerate minor clock skew.
     # Production servers should have accurate time (NTP) configured.
-    JWT_DECODE_LEEWAY = 30
-
-    # CORS - Solo desde variable de entorno
-    CORS_ORIGINS = _parse_cors_origins_env() or []
-
 class TestingConfig(Config):
-    """Configuración específica para pruebas."""
+    """Configuración específica para pruebas (aislada de producción)."""
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI')
+    # Forzar uso de SQLite en memoria para pruebas si no se especifica una URI de test explícita
+    # para evitar borrar la base de datos de producción por accidente.
+    SQLALCHEMY_DATABASE_URI = os.getenv('TEST_SQLALCHEMY_DATABASE_URI') or 'sqlite:///:memory:'
     JWT_COOKIE_CSRF_PROTECT = False
     SQLALCHEMY_ENGINE_OPTIONS = {}
     DEBUG = False
@@ -369,6 +366,7 @@ class TestingConfig(Config):
     CACHE_REDIS_URL = os.getenv('TEST_CACHE_REDIS_URL') or REDIS_URL
     CACHE_TYPE = 'redis' if CACHE_REDIS_URL else 'simple'
     RATE_LIMIT_STORAGE_URI = os.getenv('TEST_RATE_LIMIT_STORAGE_URI')
+
 
 # Diccionario de configuración final
 config = {

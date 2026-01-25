@@ -25,6 +25,7 @@ from app.extensions.db import init_db_session_management, get_db
 from .utils.security_logger import setup_security_logging, log_authentication_attempt, log_jwt_token_event
 from .utils.error_handlers import register_error_handlers
 from .utils.rate_limiter import init_rate_limiter
+from .utils.db_protector import init_db_protector
 
 # ====================================================================
 # 1. Inicialización de extensiones (sin enlazarlas a la app aún)
@@ -213,6 +214,9 @@ def create_app(config_name='development'):
     db.init_app(app)
     jwt.init_app(app)
     init_db_session_management(app, db)
+    
+    # Inicializar protector de base de datos (seguridad proactiva)
+    init_db_protector(app, db)
     
     # Inicializar caché con fallback robusto si Redis no está disponible
     try:
