@@ -26,4 +26,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD curl -f http://localhost:8081/api/v1/health || exit 1
 
 # Comando por defecto
-CMD ["gunicorn", "--preload", "--workers", "2", "--threads", "2", "--timeout", "60", "--max-requests", "1000", "--max-requests-jitter", "100", "--bind", "0.0.0.0:8081", "wsgi:app"]
+CMD ["gunicorn", "--preload", "--worker-class", "gevent", "--workers", "2", "--worker-connections", "1000", "--timeout", "60", "--bind", "0.0.0.0:8081", "wsgi:app"]
