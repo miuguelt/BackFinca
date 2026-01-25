@@ -2,7 +2,7 @@
 Manejo centralizado de errores para la aplicación Flask
 """
 
-from flask import jsonify, current_app
+from flask import jsonify, current_app, request
 from werkzeug.exceptions import HTTPException
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from flask_jwt_extended.exceptions import JWTExtendedException, CSRFError
