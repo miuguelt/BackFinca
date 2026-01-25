@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, current_app, json, redirect, send_from_directory
+from flask import Flask, request, jsonify, current_app, json, redirect, send_from_directory, g
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager, unset_jwt_cookies
 from flask_cors import CORS
@@ -110,6 +110,31 @@ def create_app(config_name='development'):
     
     # Usar nuestro encoder personalizado para toda la aplicación
     app.json_encoder = EnumJSONEncoder
+
+    @app.before_request
+    def _start_request_timer():
+        # Cheap per-request timing for diagnosing "slow connection" reports.
+        g._req_start_time = time.perf_counter()
+
+    @app.after_request
+    def _attach_request_timing(response):
+        try:
+            start = getattr(g, "_req_start_time", None)
+            if start is not None:
+                elapsed_ms = (time.perf_counter() - start) * 1000.0
+                response.headers["X-Response-Time-ms"] = f"{elapsed_ms:.1f}"
+
+                slow_ms = float(app.config.get("SLOW_REQUEST_MS", 1000))
+                if elapsed_ms >= slow_ms:
+                    app.logger.warning(
+                        "Slow request %.1fms %s %s",
+                        elapsed_ms,
+                        request.method,
+                        request.path,
+                    )
+        except Exception:
+            pass
+        return response
     
     # Forzar respuestas JSON (sin sobrescribir exportaciones CSV u otros binarios)
     @app.after_request
@@ -134,6 +159,14 @@ def create_app(config_name='development'):
         Esto permite que el frontend lo persista en localStorage y el interceptor lo envíe en Authorization.
         """
         try:
+            # Avoid parsing every JSON response (frontend typically sends Authorization on every request).
+            # Keep this behavior only for auth endpoints where the frontend needs the token in the body.
+            path = request.path or ""
+            if not path.startswith("/api/v1/auth/"):
+                return response
+            if response.status_code >= 400:
+                return response
+
             # Detectar si es JSON o contiene JSON serializado
             data_bytes = response.get_data(as_text=False) or b''
             is_json_like = (response.mimetype and response.mimetype.startswith('application/json')) or (data_bytes[:1] in (b'{', b'['))

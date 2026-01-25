@@ -1,12 +1,14 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from sqlalchemy import func, extract, desc, literal, and_
+from sqlalchemy import func, extract, desc, literal, and_, select
+from sqlalchemy.orm import aliased
 from datetime import datetime, timedelta, timezone
 import logging
 import decimal
 
 from app import db
+from app import cache as app_cache
 from app.models.animals import Animals, AnimalStatus, Sex
 from app.models.treatments import Treatments
 from app.models.vaccinations import Vaccinations
@@ -19,7 +21,7 @@ from app.models.vaccines import Vaccines
 from app.models.species import Species
 
 from app.utils.response_handler import APIResponse
-from app.utils.cache_utils import safe_cached
+from app.utils.cache_utils import safe_cached, build_cache_key
 
 analytics_ns = Namespace(
     'analytics',
@@ -1209,259 +1211,356 @@ class SystemAlerts(Resource):
     def get(self):
         """Obtener alertas y notificaciones del sistema"""
         try:
+            user_id = get_jwt_identity()
             priority_filter = request.args.get('priority')
             type_filter = request.args.get('type')
-            limit = int(request.args.get('limit', 50))
-            
-            alerts = []
+            try:
+                limit = int(request.args.get('limit', 50))
+            except Exception:
+                limit = 50
+            limit = max(1, min(limit, 200))
+
+            cache_key = build_cache_key(
+                "analytics:alerts:v2",
+                {"u": user_id, "priority": priority_filter, "type": type_filter, "limit": limit},
+            )
+
+            try:
+                cached_payload = app_cache.get(cache_key)
+            except Exception:
+                cached_payload = None
+
+            if isinstance(cached_payload, dict):
+                return cached_payload, 200, {"X-Cache": "HIT"}
+
+            alerts: list[dict] = []
             current_date = datetime.now().date()
-            
-            # 1. Alertas de salud - Animales sin control reciente
+            min_date = datetime(1900, 1, 1).date()
+
+            # 1) Salud: controles vencidos (>30 dias) - limitar resultados en SQL
             if not type_filter or type_filter == 'health':
                 thirty_days_ago = current_date - timedelta(days=30)
-                
-                animals_without_control = db.session.query(
-                    Animals.id,
-                    Animals.record,
-                    func.max(Control.checkup_date).label('last_control')
-                ).outerjoin(Control).filter(
-                    Animals.status == AnimalStatus.Vivo
-                ).group_by(
-                    Animals.id, Animals.record
-                ).having(
-                    func.coalesce(func.max(Control.checkup_date), '1900-01-01') < thirty_days_ago
-                ).all()
-                
-                for animal in animals_without_control:
-                    days_without_control = (current_date - (animal.last_control or datetime(1900, 1, 1).date())).days
-                    
+
+                last_control_sq = (
+                    db.session.query(
+                        Animals.id.label("animal_id"),
+                        Animals.record.label("record"),
+                        func.max(Control.checkup_date).label("last_control"),
+                    )
+                    .outerjoin(Control, Control.animal_id == Animals.id)
+                    .filter(Animals.status == AnimalStatus.Vivo)
+                    .group_by(Animals.id, Animals.record)
+                    .subquery()
+                )
+                last_control_coalesced = func.coalesce(last_control_sq.c.last_control, min_date)
+                overdue = (
+                    db.session.query(
+                        last_control_sq.c.animal_id,
+                        last_control_sq.c.record,
+                        last_control_sq.c.last_control,
+                    )
+                    .filter(last_control_coalesced < thirty_days_ago)
+                    .order_by(last_control_coalesced.asc())
+                    .limit(limit)
+                    .all()
+                )
+
+                for animal in overdue:
+                    last_date = animal.last_control or min_date
+                    days_without_control = (current_date - last_date).days
                     priority = 'high' if days_without_control > 60 else 'medium'
-                    
-                    alerts.append({
-                        'id': f'health_{animal.id}',
-                        'type': 'health',
-                        'priority': priority,
-                        'title': f'Control vencido - {animal.record}',
-                        'message': f'Animal sin control hace {days_without_control} días',
-                        'animal_id': animal.id,
-                        'animal_record': animal.record,
-                        'action_required': 'Programar control de salud',
-                        'created_at': current_date.isoformat(),
-                        'icon': '⚠️',
-                        'color': 'orange' if priority == 'medium' else 'red'
-                    })
-            
-            # 2. Alertas de estado de salud crítico
-            if not type_filter or type_filter == 'health':
-                critical_health = db.session.query(
-                    Animals.id,
-                    Animals.record,
-                    Control.health_status,
-                    Control.checkup_date
-                ).join(Control).filter(
-                    Animals.status == AnimalStatus.Vivo,
-                    Control.health_status.in_([HealthStatus.Malo, HealthStatus.Regular]),
-                    Control.checkup_date >= current_date - timedelta(days=30)
-                ).order_by(desc(Control.checkup_date)).all()
-                
+                    alerts.append(
+                        {
+                            'id': f'health_{animal.animal_id}',
+                            'type': 'health',
+                            'priority': priority,
+                            'title': f'Control vencido - {animal.record}',
+                            'message': f'Animal sin control hace {days_without_control} días',
+                            'animal_id': animal.animal_id,
+                            'animal_record': animal.record,
+                            'action_required': 'Programar control de salud',
+                            'created_at': current_date.isoformat(),
+                            'icon': '⚠️',
+                            'color': 'orange' if priority == 'medium' else 'red',
+                        }
+                    )
+
+                # 2) Salud: controles recientes con estado Malo/Regular (ultimos 30 dias)
+                critical_health = (
+                    db.session.query(
+                        Animals.id,
+                        Animals.record,
+                        Control.health_status,
+                        Control.checkup_date,
+                    )
+                    .join(Control, Control.animal_id == Animals.id)
+                    .filter(
+                        Animals.status == AnimalStatus.Vivo,
+                        Control.health_status.in_([HealthStatus.Malo, HealthStatus.Regular]),
+                        Control.checkup_date >= current_date - timedelta(days=30),
+                    )
+                    .order_by(desc(Control.checkup_date))
+                    .limit(limit)
+                    .all()
+                )
+
                 for animal in critical_health:
                     priority = 'high' if animal.health_status == HealthStatus.Malo else 'medium'
-                    
-                    alerts.append({
-                        'id': f'critical_health_{animal.id}',
-                        'type': 'health',
-                        'priority': priority,
-                        'title': f'Estado crítico - {animal.record}',
-                        'message': f'Estado de salud: {animal.health_status.value}',
-                        'animal_id': animal.id,
-                        'animal_record': animal.record,
-                        'action_required': 'Evaluación veterinaria urgente',
-                        'created_at': animal.checkup_date.isoformat() if getattr(animal, 'checkup_date', None) else current_date.isoformat(),
-                        'icon': '🚨',
-                        'color': 'red'
-                    })
-            
-            # 3. Alertas de vacunación - Animales que necesitan vacunas
+                    alerts.append(
+                        {
+                            'id': f'critical_health_{animal.id}',
+                            'type': 'health',
+                            'priority': priority,
+                            'title': f'Estado crítico - {animal.record}',
+                            'message': f'Estado de salud: {animal.health_status.value}',
+                            'animal_id': animal.id,
+                            'animal_record': animal.record,
+                            'action_required': 'Evaluación veterinaria urgente',
+                            'created_at': animal.checkup_date.isoformat()
+                            if getattr(animal, 'checkup_date', None)
+                            else current_date.isoformat(),
+                            'icon': '🚨',
+                            'color': 'red',
+                        }
+                    )
+
+            # 3) Vacunacion: sin vacunacion reciente (>180 dias) - limitar resultados en SQL
             if not type_filter or type_filter == 'vaccination':
-                # Animales sin vacunación reciente (más de 6 meses)
                 six_months_ago = current_date - timedelta(days=180)
-                
-                animals_need_vaccination = db.session.query(
-                    Animals.id,
-                    Animals.record,
-                    func.max(Vaccinations.vaccination_date).label('last_vaccination')
-                ).outerjoin(Vaccinations).filter(
-                    Animals.status == AnimalStatus.Vivo
-                ).group_by(
-                    Animals.id, Animals.record
-                ).having(
-                    func.coalesce(func.max(Vaccinations.vaccination_date), '1900-01-01') < six_months_ago
-                ).all()
-                
-                for animal in animals_need_vaccination:
-                    days_without_vaccination = (current_date - (animal.last_vaccination or datetime(1900, 1, 1).date())).days
-                    
-                    alerts.append({
-                        'id': f'vaccination_{animal.id}',
-                        'type': 'vaccination',
-                        'priority': 'medium',
-                        'title': f'Vacunación pendiente - {animal.record}',
-                        'message': f'Sin vacunación hace {days_without_vaccination} días',
-                        'animal_id': animal.id,
-                        'animal_record': animal.record,
-                        'action_required': 'Programar vacunación',
-                        'created_at': current_date.isoformat(),
-                        'icon': '💉',
-                        'color': 'yellow'
-                    })
-            
-            # 4. Alertas de crecimiento - Animales con crecimiento anómalo
+
+                last_vacc_sq = (
+                    db.session.query(
+                        Animals.id.label("animal_id"),
+                        Animals.record.label("record"),
+                        func.max(Vaccinations.vaccination_date).label("last_vaccination"),
+                    )
+                    .outerjoin(Vaccinations, Vaccinations.animal_id == Animals.id)
+                    .filter(Animals.status == AnimalStatus.Vivo)
+                    .group_by(Animals.id, Animals.record)
+                    .subquery()
+                )
+                last_vacc_coalesced = func.coalesce(last_vacc_sq.c.last_vaccination, min_date)
+                need_vacc = (
+                    db.session.query(
+                        last_vacc_sq.c.animal_id,
+                        last_vacc_sq.c.record,
+                        last_vacc_sq.c.last_vaccination,
+                    )
+                    .filter(last_vacc_coalesced < six_months_ago)
+                    .order_by(last_vacc_coalesced.asc())
+                    .limit(limit)
+                    .all()
+                )
+
+                for animal in need_vacc:
+                    last_date = animal.last_vaccination or min_date
+                    days_without_vaccination = (current_date - last_date).days
+                    alerts.append(
+                        {
+                            'id': f'vaccination_{animal.animal_id}',
+                            'type': 'vaccination',
+                            'priority': 'medium',
+                            'title': f'Vacunación pendiente - {animal.record}',
+                            'message': f'Sin vacunación hace {days_without_vaccination} días',
+                            'animal_id': animal.animal_id,
+                            'animal_record': animal.record,
+                            'action_required': 'Programar vacunación',
+                            'created_at': current_date.isoformat(),
+                            'icon': '💉',
+                            'color': 'yellow',
+                        }
+                    )
+
+            # 4) Crecimiento: perdida de peso >5% entre ultimo control y el anterior (ultimos 90 dias)
             if not type_filter or type_filter == 'growth':
-                # Animales con pérdida de peso reciente
-                recent_controls = db.session.query(
-                    Animals.id,
-                    Animals.record,
-                    Control.id.label('control_id'),
-                    Animals.weight,
-                    Control.checkup_date,
-                    func.lag(Animals.weight).over(
-                        partition_by=Animals.id,
-                        order_by=Control.checkup_date
-                    ).label('previous_weight')
-                ).join(Control).filter(
-                    Animals.status == AnimalStatus.Vivo,
-                    Control.checkup_date >= current_date - timedelta(days=90)
-                ).subquery()
-                
-                weight_loss_animals = db.session.query(
-                    recent_controls.c.id,
-                    recent_controls.c.record,
-                    recent_controls.c.weight,
-                    recent_controls.c.previous_weight,
-                    recent_controls.c.checkup_date
-                ).filter(
-                    recent_controls.c.previous_weight.isnot(None),
-                    recent_controls.c.weight < recent_controls.c.previous_weight * 0.95  # Pérdida > 5%
-                ).all()
-                
-                for animal in weight_loss_animals:
-                    weight_loss = animal.previous_weight - animal.weight
-                    loss_percentage = (weight_loss / animal.previous_weight) * 100
-                    
-                    alerts.append({
-                        'id': f'weight_loss_{animal.id}',
-                        'type': 'growth',
-                        'priority': 'high',
-                        'title': f'Pérdida de peso - {animal.record}',
-                        'message': f'Perdió {weight_loss:.1f}kg ({loss_percentage:.1f}%)',
-                        'animal_id': animal.id,
-                        'animal_record': animal.record,
-                        'action_required': 'Revisar alimentación y salud',
-                        'created_at': animal.checkup_date.isoformat() if getattr(animal, 'checkup_date', None) else current_date.isoformat(),
-                        'icon': '📉',
-                        'color': 'red'
-                    })
-            
-            # 5. Alertas de productividad - Rendimiento bajo del hato
-            if not type_filter or type_filter == 'productivity':
-                # Calcular promedio de ganancia diaria del último mes
-                last_month = current_date - timedelta(days=30)
-                
-                # Cálculo de ganancia diaria promedio (versión compatible con MySQL)
-                # Usamos una subquery para evitar problemas con funciones de ventana
-                try:
-                    # Subquery para obtener controles anteriores por animal
-                    prev_control = db.session.query(
-                        Control.animal_id,
-                        Control.checkup_date.label('prev_date'),
-                        Control.weight.label('prev_weight')
-                    ).subquery()
-                    
-                    # Join para obtener control actual y anterior
-                    weight_gains = db.session.query(
-                        Control.animal_id,
-                        Control.weight.label('current_weight'),
-                        Control.checkup_date.label('current_date'),
-                        prev_control.c.prev_weight,
-                        prev_control.c.prev_date
-                    ).join(
-                        prev_control,
-                        (Control.animal_id == prev_control.c.animal_id) &
-                        (Control.checkup_date > prev_control.c.prev_date)
-                    ).join(
-                        Animals, Animals.id == Control.animal_id
-                    ).filter(
+                ninety_days_ago = current_date - timedelta(days=90)
+
+                last_ctrl_sq = (
+                    db.session.query(
+                        Control.animal_id.label("animal_id"),
+                        func.max(Control.checkup_date).label("last_date"),
+                    )
+                    .join(Animals, Animals.id == Control.animal_id)
+                    .filter(
                         Animals.status == AnimalStatus.Vivo,
-                        Control.checkup_date >= last_month,
+                        Control.checkup_date >= ninety_days_ago,
                         Control.weight.isnot(None),
-                        prev_control.c.prev_weight.isnot(None)
-                    ).subquery()
-                    
-                    # Calcular ganancia diaria
-                    avg_daily_gain = db.session.query(
-                        func.avg(
-                            (weight_gains.c.current_weight - weight_gains.c.prev_weight) /
-                            func.datediff(weight_gains.c.current_date, weight_gains.c.prev_date)
-                        ).label('daily_gain')
-                    ).scalar()
-                    
+                    )
+                    .group_by(Control.animal_id)
+                    .subquery()
+                )
+
+                cur = aliased(Control)
+                prev = aliased(Control)
+                prev_weight = (
+                    select(prev.weight)
+                    .where(
+                        prev.animal_id == cur.animal_id,
+                        prev.checkup_date < cur.checkup_date,
+                        prev.weight.isnot(None),
+                    )
+                    .order_by(prev.checkup_date.desc())
+                    .limit(1)
+                    .scalar_subquery()
+                )
+
+                weight_loss_animals = (
+                    db.session.query(
+                        Animals.id.label("animal_id"),
+                        Animals.record.label("record"),
+                        cur.weight.label("current_weight"),
+                        cur.checkup_date.label("checkup_date"),
+                        prev_weight.label("previous_weight"),
+                    )
+                    .join(last_ctrl_sq, last_ctrl_sq.c.animal_id == Animals.id)
+                    .join(
+                        cur,
+                        and_(
+                            cur.animal_id == last_ctrl_sq.c.animal_id,
+                            cur.checkup_date == last_ctrl_sq.c.last_date,
+                        ),
+                    )
+                    .filter(prev_weight.isnot(None), cur.weight < (prev_weight * 0.95))
+                    .order_by((prev_weight - cur.weight).desc())
+                    .limit(limit)
+                    .all()
+                )
+
+                for animal in weight_loss_animals:
+                    weight_loss = float(animal.previous_weight) - float(animal.current_weight)
+                    loss_percentage = (weight_loss / float(animal.previous_weight)) * 100.0
+                    alerts.append(
+                        {
+                            'id': f'weight_loss_{animal.animal_id}',
+                            'type': 'growth',
+                            'priority': 'high',
+                            'title': f'Pérdida de peso - {animal.record}',
+                            'message': f'Perdió {weight_loss:.1f}kg ({loss_percentage:.1f}%)',
+                            'animal_id': animal.animal_id,
+                            'animal_record': animal.record,
+                            'action_required': 'Revisar alimentación y salud',
+                            'created_at': animal.checkup_date.isoformat()
+                            if getattr(animal, 'checkup_date', None)
+                            else current_date.isoformat(),
+                            'icon': '📉',
+                            'color': 'red',
+                        }
+                    )
+
+            # 5) Productividad: ganancia diaria promedio del ultimo mes
+            if not type_filter or type_filter == 'productivity':
+                last_month = current_date - timedelta(days=30)
+
+                cur = aliased(Control)
+                prev = aliased(Control)
+                prev_weight = (
+                    select(prev.weight)
+                    .where(
+                        prev.animal_id == cur.animal_id,
+                        prev.checkup_date < cur.checkup_date,
+                        prev.weight.isnot(None),
+                    )
+                    .order_by(prev.checkup_date.desc())
+                    .limit(1)
+                    .scalar_subquery()
+                )
+                prev_date = (
+                    select(prev.checkup_date)
+                    .where(
+                        prev.animal_id == cur.animal_id,
+                        prev.checkup_date < cur.checkup_date,
+                        prev.weight.isnot(None),
+                    )
+                    .order_by(prev.checkup_date.desc())
+                    .limit(1)
+                    .scalar_subquery()
+                )
+                days_between = func.datediff(cur.checkup_date, prev_date)
+                daily_gain = (cur.weight - prev_weight) / days_between
+
+                avg_daily_gain = None
+                try:
+                    avg_daily_gain = (
+                        db.session.query(func.avg(daily_gain).label("daily_gain"))
+                        .join(Animals, Animals.id == cur.animal_id)
+                        .filter(
+                            Animals.status == AnimalStatus.Vivo,
+                            cur.checkup_date >= last_month,
+                            cur.weight.isnot(None),
+                            prev_weight.isnot(None),
+                            prev_date.isnot(None),
+                            days_between.isnot(None),
+                            days_between > 0,
+                        )
+                        .scalar()
+                    )
                 except Exception as calc_err:
                     logger.debug(f"No se pudo calcular avg_daily_gain: {calc_err}")
-                    avg_daily_gain = None
-                
-                if avg_daily_gain and avg_daily_gain < 0.5:  # Menos de 500g diarios
-                    alerts.append({
-                        'id': 'low_productivity',
-                        'type': 'productivity',
-                        'priority': 'medium',
-                        'title': 'Productividad baja del hato',
-                        'message': f'Ganancia diaria promedio: {avg_daily_gain:.3f}kg',
-                        'action_required': 'Revisar programa nutricional',
-                        'created_at': current_date.isoformat(),
-                        'icon': '📊',
-                        'color': 'orange'
-                    })
-            
+
+                if avg_daily_gain is not None and float(avg_daily_gain) < 0.5:
+                    alerts.append(
+                        {
+                            'id': 'low_productivity',
+                            'type': 'productivity',
+                            'priority': 'medium',
+                            'title': 'Productividad baja del hato',
+                            'message': f'Ganancia diaria promedio: {float(avg_daily_gain):.3f}kg',
+                            'action_required': 'Revisar programa nutricional',
+                            'created_at': current_date.isoformat(),
+                            'icon': '📊',
+                            'color': 'orange',
+                        }
+                    )
+
             # Filtrar por prioridad si se especifica
             if priority_filter:
-                alerts = [alert for alert in alerts if alert['priority'] == priority_filter]
-            
+                alerts = [alert for alert in alerts if alert.get('priority') == priority_filter]
+
             # Ordenar por prioridad y fecha
             priority_order = {'high': 0, 'medium': 1, 'low': 2}
-            alerts.sort(key=lambda x: (priority_order.get(x['priority'], 3), x['created_at']), reverse=True)
-            
-            # Limitar resultados
+            alerts.sort(
+                key=lambda x: (priority_order.get(x.get('priority'), 3), x.get('created_at', '')),
+                reverse=True,
+            )
+
             alerts = alerts[:limit]
-            
-            # Estadísticas de alertas
+
             alert_stats = {
                 'total': len(alerts),
                 'by_priority': {
-                    'high': len([a for a in alerts if a['priority'] == 'high']),
-                    'medium': len([a for a in alerts if a['priority'] == 'medium']),
-                    'low': len([a for a in alerts if a['priority'] == 'low'])
+                    'high': len([a for a in alerts if a.get('priority') == 'high']),
+                    'medium': len([a for a in alerts if a.get('priority') == 'medium']),
+                    'low': len([a for a in alerts if a.get('priority') == 'low']),
                 },
                 'by_type': {
-                    'health': len([a for a in alerts if a['type'] == 'health']),
-                    'vaccination': len([a for a in alerts if a['type'] == 'vaccination']),
-                    'growth': len([a for a in alerts if a['type'] == 'growth']),
-                    'productivity': len([a for a in alerts if a['type'] == 'productivity'])
-                }
-            }
-            
-            return APIResponse.success(
-                data={
-                    'alerts': alerts,
-                    'statistics': alert_stats,
-                    'generated_at': current_date.isoformat(),
-                    'filters_applied': {
-                        'priority': priority_filter,
-                        'type': type_filter,
-                        'limit': limit
-                    }
+                    'health': len([a for a in alerts if a.get('type') == 'health']),
+                    'vaccination': len([a for a in alerts if a.get('type') == 'vaccination']),
+                    'growth': len([a for a in alerts if a.get('type') == 'growth']),
+                    'productivity': len([a for a in alerts if a.get('type') == 'productivity']),
                 },
-                message=f"Se generaron {len(alerts)} alertas del sistema"
-            )
+            }
+
+            payload = {
+                "success": True,
+                "data": {
+                    "alerts": alerts,
+                    "statistics": alert_stats,
+                    "generated_at": current_date.isoformat(),
+                    "filters_applied": {
+                        "priority": priority_filter,
+                        "type": type_filter,
+                        "limit": limit,
+                    },
+                },
+                "message": f"Se generaron {len(alerts)} alertas del sistema",
+            }
+
+            try:
+                app_cache.set(cache_key, payload, timeout=30)
+            except Exception:
+                pass
+
+            return payload, 200, {"X-Cache": "MISS"}
             
         except Exception as e:
             logger.error("Error generando alertas del sistema")
