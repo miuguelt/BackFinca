@@ -133,8 +133,12 @@ def register_error_handlers(app):
         
         # Rollback de transacciones en caso de error
         try:
-            from app import db
-            db.session.rollback()
+            # Intentar obtener db de extensiones para evitar ciclos
+            db = current_app.extensions.get('sqlalchemy')
+            if not db:
+                from app import db
+            if db:
+                db.session.rollback()
         except Exception as rollback_error:
             logger.error(f"Error during rollback: {rollback_error}")
 
@@ -180,8 +184,12 @@ def register_error_handlers(app):
         logger.warning(f"Database integrity error: {error.orig}")
         
         try:
-            from app import db
-            db.session.rollback()
+            # Intentar obtener db de extensiones para evitar ciclos
+            db = current_app.extensions.get('sqlalchemy')
+            if not db:
+                from app import db
+            if db:
+                db.session.rollback()
         except Exception as rollback_error:
             logger.error(f"Error during rollback: {rollback_error}")
 
@@ -213,8 +221,12 @@ def register_error_handlers(app):
         logger.error(f"SQLAlchemy error: {error}", exc_info=True)
         
         try:
-            from app import db
-            db.session.rollback()
+            # Intentar obtener db de extensiones para evitar ciclos
+            db = current_app.extensions.get('sqlalchemy')
+            if not db:
+                from app import db
+            if db:
+                db.session.rollback()
         except Exception as rollback_error:
             logger.error(f"Error during rollback: {rollback_error}")
 
