@@ -70,6 +70,35 @@ docker compose up --build
 ```
 El servicio publica en `8081`. Asegúrate de tener listas las redes externas configuradas en `docker-compose.yaml` o ajústalas a tu entorno.
 
+## Disponibilidad y reinicio (playbook)
+Objetivo: que el backend se reinicie automaticamente ante caidas y tenga chequeos de salud claros.
+
+Opciones recomendadas (elige una):
+1) Docker Compose (ya configurado):
+   - `docker-compose.yaml` usa `restart: unless-stopped`.
+   - `Dockerfile` incluye `HEALTHCHECK` contra `/api/v1/health`.
+   - Sugerencia: si el orquestador soporta, vincula healthcheck a reinicio automatico.
+2) systemd (VM o bare metal):
+   - Crea un servicio `backfinca.service` con:
+     - `Restart=always`, `RestartSec=5`
+     - `ExecStart=gunicorn --preload --workers 2 --threads 2 --bind 0.0.0.0:8081 wsgi:app`
+     - `EnvironmentFile=/ruta/.env`
+   - Agrega `StartLimitIntervalSec` y `StartLimitBurst` para evitar bucles de reinicio.
+3) Supervisor (alternativa ligera):
+   - `autorestart=true`, `startretries=3`, `stderr_logfile` y `stdout_logfile` habilitados.
+
+Recomendaciones de resiliencia:
+- Mantener `/health` y `/api/v1/health` como checks de liveness y readiness.
+- Usar `pool_pre_ping` en SQLAlchemy (ya habilitado) para recuperar conexiones caidas.
+- Evitar `--preload` si haces tareas pesadas al iniciar (warmup/seed).
+- Configurar `--max-requests` y `--max-requests-jitter` en Gunicorn (ya en Dockerfile) para mitigar leaks.
+
+Alertas y observabilidad:
+- Centraliza logs de Gunicorn + app (stdout/stderr).
+- Usa `trace_id` de las respuestas de error para diagnostico.
+
+Sugerencia: no reiniciar el proceso desde el propio Flask. La supervision debe hacerla el orquestador (Docker, systemd o Supervisor).
+
 ## Migraciones y scripts útiles
 - Migraciones ORM: `flask --app wsgi db upgrade` / `flask --app wsgi db migrate -m "mensaje"`.
 - Índices de rendimiento adicionales: `python run_migration.py` (usa `add_performance_indexes.sql`).

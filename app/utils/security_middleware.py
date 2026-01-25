@@ -2,7 +2,7 @@
 Middlewares de seguridad y utilidades asociadas.
 """
 import logging
-from flask import request, jsonify
+from flask import request, jsonify, redirect
 from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity, unset_access_cookies
 from app.utils.response_handler import APIResponse
 
@@ -16,8 +16,14 @@ def init_security_middlewares(app):
         # Permitir preflight CORS
         if request.method == 'OPTIONS':
             return
-        # Normalizar path quitando barra final para comparar correctamente
+        # Normalizar doble prefijo "/api/v1/api/v1" que puede venir del frontend
         raw_path = request.path or ''
+        if raw_path.startswith('/api/v1/api/v1/'):
+            normalized_path = '/api/v1/' + raw_path[len('/api/v1/api/v1/'):]
+            return redirect(normalized_path, code=308)
+        if raw_path == '/api/v1/api/v1':
+            return redirect('/api/v1', code=308)
+        # Normalizar path quitando barra final para comparar correctamente
         path = raw_path.rstrip('/') or '/'
         public_paths = {
             '/api/v1/auth/login',
@@ -116,8 +122,10 @@ def init_security_middlewares(app):
                         'exception_class': err_cls,
                         'exception': str(e),
                         'path': raw_path,
-                        'client_action': 'CLEAR_AUTH_AND_RELOGIN',
-                        'should_clear_auth': True,
+                        'token_type': 'access',
+                        'client_action': 'ATTEMPT_REFRESH',
+                        'should_clear_auth': False,
+                        'refresh_url': '/api/v1/auth/refresh',
                         'logout_url': '/api/v1/auth/logout'
                     }
                 )

@@ -292,14 +292,29 @@ def register_error_handlers(app):
     @app.errorhandler(Exception)
     def handle_generic_exception(error):
         logger.error(f"Unhandled exception: {error}", exc_info=True)
-        
-        # Log como actividad sospechosa si no es un error HTTP conocido
-        if not isinstance(error, HTTPException):
-            log_suspicious_activity(
-                f"Excepción no manejada: {type(error).__name__}",
-                severity='HIGH',
-                additional_data={'error': str(error)}
+
+        # Si es un HTTPException no capturado por handlers específicos, respetar su status code
+        if isinstance(error, HTTPException):
+            status_code = error.code or 500
+            description = getattr(error, 'description', None) or 'Error HTTP'
+            name = getattr(error, 'name', None) or 'HTTP_ERROR'
+            return APIResponse.error(
+                message=description,
+                status_code=status_code,
+                error_code=name.upper().replace(' ', '_'),
+                details={
+                    'error': str(error),
+                    'path': request.path if request else None,
+                    'method': request.method if request else None,
+                }
             )
+
+        # Log como actividad sospechosa si no es un error HTTP conocido
+        log_suspicious_activity(
+            f"Excepción no manejada: {type(error).__name__}",
+            severity='HIGH',
+            additional_data={'error': str(error)}
+        )
 
         # En desarrollo, mostrar más detalles
         if current_app.config.get('DEBUG', False):

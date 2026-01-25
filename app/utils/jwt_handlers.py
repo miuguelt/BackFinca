@@ -48,6 +48,8 @@ def configure_jwt_handlers(jwt):
             'should_clear_auth': should_clear,
             'logout_url': '/api/v1/auth/logout'
         }
+        if token_type == 'access':
+            details['refresh_url'] = '/api/v1/auth/refresh'
         payload, status_code = APIResponse.error(
             "Token expirado",
             status_code=401,

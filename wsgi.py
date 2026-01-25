@@ -1,9 +1,8 @@
 import os
 from dotenv import load_dotenv
 from werkzeug.middleware.proxy_fix import ProxyFix
-from flask import request, jsonify, current_app
+from flask import request, current_app
 import logging
-from flask_jwt_extended.exceptions import JWTExtendedException
 
 # Detectar entorno y cargar el archivo .env apropiado
 flask_env = os.getenv('FLASK_ENV')
@@ -170,6 +169,3 @@ if __name__ == "__main__":
     # Deshabilitar el debugger interactivo incluso si DEBUG=True
     app.run(host="0.0.0.0", port=port, debug=False, ssl_context=ssl_context, use_debugger=False, use_evalex=False)
 
-@app.errorhandler(JWTExtendedException)
-def handle_jwt_errors(e):
-    return jsonify({"error": str(e)}), 401
