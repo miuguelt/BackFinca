@@ -1481,6 +1481,138 @@ def create_optimized_namespace(
                     return '', resp[1]
             return '', 200
 
+    # ---- Dependencies endpoint ----
+    @ns.route('/<int:record_id>/dependencies')
+    class ModelDependenciesResource(Resource):
+        @ns.doc('get_dependencies_' + name, description='Verificar dependencias de un registro antes de eliminar')
+        @_maybe_rate_limit
+        def get(self, record_id: int):
+            """Verificación de dependencias de un registro usando OptimizedIntegrityChecker."""
+            try:
+                # Verificar si el registro existe
+                instance = model_class.get_by_id(record_id)
+                if not instance:
+                    body, status = APIResponse.not_found(name.capitalize())
+                    return flask_make_response(jsonify(body), status)
+
+                # Usar el integrity checker ultra-optimizado
+                from app.utils.integrity_checker import OptimizedIntegrityChecker
+                warnings = OptimizedIntegrityChecker.check_integrity_fast(model_class, record_id)
+                
+                # Mapeo de campos técnicos a descriptivos si el modelo lo provee
+                field_mapping = getattr(model_class, '_field_mapping', {}) or {}
+                
+                dependencies = []
+                total_count = 0
+                
+                for warning in warnings:
+                    field_name = warning.dependent_field
+                    # Aplicar mapeo de campos si existe
+                    display_field = field_mapping.get(field_name, field_name)
+                    
+                    dependencies.append({
+                        'table': warning.dependent_table,
+                        'count': warning.dependent_count,
+                        'field': display_field,
+                        'cascade_delete': warning.cascade_delete,
+                        'message': warning.warning_message
+                    })
+                    total_count += warning.dependent_count
+                
+                can_delete = all(warning.cascade_delete for warning in warnings)
+                
+                # Construir mensaje apropiado
+                if can_delete and total_count > 0:
+                    message = f"Se eliminarán automáticamente {total_count} registro(s) relacionado(s)."
+                elif can_delete:
+                    message = f"Este {name} puede ser eliminado con seguridad."
+                else:
+                    message = f"No se puede eliminar este {name} porque tiene {total_count} registro(s) relacionado(s) que lo bloquean."
+                
+                return APIResponse.success(
+                    data={
+                        'id': record_id,
+                        'hasDependencies': total_count > 0,
+                        'canDelete': can_delete,
+                        'totalDependencies': total_count,
+                        'message': message,
+                        'dependencies': dependencies
+                    },
+                    message='Dependencias verificadas exitosamente'
+                )
+                
+            except Exception as e:
+                logger.error(f"Error verificando dependencias de {model_class.__name__} ID {record_id}: {e}", exc_info=True)
+                return APIResponse.error(
+                    message=f'Error al verificar dependencias: {str(e)}',
+                    status_code=500
+                )
+
+    # ---- Batch Dependencies endpoint ----
+    @ns.route('/batch-dependencies')
+    class ModelBatchDependenciesResource(Resource):
+        @ns.doc('post_batch_dependencies_' + name, description='Verificación batch de dependencias para múltiples registros')
+        @_maybe_rate_limit
+        def post(self):
+            """Verificación batch de dependencias. Espera JSON: { "ids": [1, 2, 3] }"""
+            try:
+                data = request.get_json() or {}
+                # Soportar 'ids' o el nombre específico 'animal_ids' etc para compatibilidad
+                record_ids = data.get('ids') or data.get(f'{name}_ids') or data.get('record_ids')
+                
+                if not record_ids:
+                    return APIResponse.error(message='Se requiere lista de ids', status_code=400)
+                
+                if not isinstance(record_ids, list):
+                    return APIResponse.error(message='ids debe ser una lista', status_code=400)
+
+                if len(record_ids) > 100:
+                    return APIResponse.error(message='Máximo 100 registros por consulta', status_code=400)
+                
+                from app.utils.integrity_checker import OptimizedIntegrityChecker
+                results = {}
+                
+                # Verificar qué registros existen
+                existing_records = model_class.query.filter(model_class.id.in_(record_ids)).all()
+                existing_ids = {r.id for r in existing_records}
+                
+                for record_id in record_ids:
+                    if record_id not in existing_ids:
+                        results[record_id] = {
+                            'exists': False,
+                            'hasDependencies': False,
+                            'canDelete': False,
+                            'message': 'Registro no encontrado'
+                        }
+                    else:
+                        warnings = OptimizedIntegrityChecker.check_integrity_fast(model_class, record_id)
+                        total_count = sum(w.dependent_count for w in warnings)
+                        can_delete = all(w.cascade_delete for w in warnings)
+                        
+                        results[record_id] = {
+                            'exists': True,
+                            'hasDependencies': total_count > 0,
+                            'canDelete': can_delete,
+                            'totalDependencies': total_count,
+                            'message': f"{'Puede eliminarse' if can_delete else 'No puede eliminarse'} ({total_count} dependencias)"
+                        }
+                
+                return APIResponse.success(
+                    data={
+                        'results': results,
+                        'processed': len(record_ids),
+                        'found': len(existing_ids)
+                    },
+                    message='Verificación batch completada'
+                )
+                
+            except Exception as e:
+                logger.error(f"Error en verificación batch de {model_class.__name__}: {e}", exc_info=True)
+                return APIResponse.error(
+                    message=f'Error en verificación batch: {str(e)}',
+                    status_code=500
+                )
+
     ns.add_resource(ModelListResource, '/', '')
     ns.add_resource(ModelDetailResource, '/<int:record_id>')
     ns._model_list_resource = ModelListResource

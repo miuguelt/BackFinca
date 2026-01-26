@@ -201,47 +201,48 @@ def register_api(app, limiter=None):
     except Exception:
         logging.getLogger(__name__).exception('No se pudo inicializar event_bus')
 
-    @api_bp.route('/events', methods=['GET', 'HEAD'])
-    def sse_events():
-        try:
-            if request.method == 'HEAD':
-                return APIResponse.success(message='SSE endpoint ready')
+    try:
+        @api_bp.route('/events', methods=['GET', 'HEAD'])
+        def sse_events():
+            try:
+                if request.method == 'HEAD':
+                    return APIResponse.success(message='SSE endpoint ready')
 
-            bus = app.extensions.get("event_bus")
-            if not bus:
-                return APIResponse.error('Eventos no disponibles', status_code=503)
-            max_conn_ip = int(app.config.get('SSE_MAX_CONN_PER_IP', 10))
-            max_conn_user = int(app.config.get('SSE_MAX_CONN_PER_USER', 10))
-            retry_ms = max(1000, int(app.config.get('SSE_RETRY_MS', 5000)))
-            cooldown_seconds = int(app.config.get('SSE_COOLDOWN_SECONDS', 15))
-            ping_interval = max(5, int(app.config.get('SSE_PING_INTERVAL_SECONDS', 25)))
-            @sock.route('/ws')
-            def ws(ws):
-                try:
-                    bus = app.extensions.get("event_bus")
-                    if not bus:
-                        ws.close()
-                        return
-                    q = bus.subscribe()
-                    last_ping = time.time()
-                    while True:
-                        try:
-                            payload = q.get(timeout=25)
-                            ws.send(payload)
-                        except Exception:
-                            now = time.time()
-                            if now - last_ping >= 25:
-                                ws.send(json.dumps({"endpoint":"system","action":"ping"}))
-                                last_ping = now
-                except Exception:
+                bus = app.extensions.get("event_bus")
+                if not bus:
+                    return APIResponse.error('Eventos no disponibles', status_code=503)
+                max_conn_ip = int(app.config.get('SSE_MAX_CONN_PER_IP', 10))
+                max_conn_user = int(app.config.get('SSE_MAX_CONN_PER_USER', 10))
+                retry_ms = max(1000, int(app.config.get('SSE_RETRY_MS', 5000)))
+                cooldown_seconds = int(app.config.get('SSE_COOLDOWN_SECONDS', 15))
+                ping_interval = max(5, int(app.config.get('SSE_PING_INTERVAL_SECONDS', 25)))
+                @sock.route('/ws')
+                def ws(ws):
                     try:
-                        bus.unsubscribe(q)
+                        bus = app.extensions.get("event_bus")
+                        if not bus:
+                            ws.close()
+                            return
+                        q = bus.subscribe()
+                        last_ping = time.time()
+                        while True:
+                            try:
+                                payload = q.get(timeout=25)
+                                ws.send(payload)
+                            except Exception:
+                                now = time.time()
+                                if now - last_ping >= 25:
+                                    ws.send(json.dumps({"endpoint":"system","action":"ping"}))
+                                    last_ping = now
                     except Exception:
-                        pass
-        except Exception:
-            @api_bp.route('/ws', methods=['GET'])
-            def ws_fallback():
-                return APIResponse.error('WebSocket no disponible', status_code=501, details={'require': 'Flask-Sock'})
+                        try:
+                            bus.unsubscribe(q)
+                        except Exception:
+                            pass
+            except Exception:
+                @api_bp.route('/ws', methods=['GET'])
+                def ws_fallback():
+                    return APIResponse.error('WebSocket no disponible', status_code=501, details={'require': 'Flask-Sock'})
     except Exception:
         logging.getLogger(__name__).exception('No se pudo inicializar WS')
 

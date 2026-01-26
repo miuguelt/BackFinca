@@ -79,6 +79,11 @@ class Animals(BaseModel):
     _enum_fields = {'sex': Sex, 'status': AnimalStatus}
     # Compatibilidad con claves usadas por frontend / legacy
     _input_aliases = {'father_id': 'idFather', 'mother_id': 'idMother'}
+    _field_mapping = {
+        'idFather': 'father_id', 
+        'idMother': 'mother_id',
+        'animals_id': 'animal_id'
+    }
 
     # Relaciones optimizadas
     breed = db.relationship('Breeds', back_populates='animals', lazy='selectin')
@@ -160,6 +165,35 @@ class Animals(BaseModel):
             'is_adult': self.is_adult()
         })
         return data
+
+    def delete(self, commit=True):
+        """Sobrescribe para limpiar archivos físicos del animal al eliminar."""
+        from app.utils.file_storage import delete_animal_directory, delete_animal_image
+        
+        # Capturar rutas de imágenes antes de la eliminación de la BD
+        image_filepaths = []
+        try:
+            image_filepaths = [img.filepath for img in self.images if img.filepath]
+        except Exception:
+            pass
+            
+        animal_id = self.id
+        
+        # Llamar al borrado base de BaseModel
+        result = super().delete(commit=commit)
+        
+        # Limpieza de archivos físicos (fuera de la transacción de BD)
+        try:
+            # Intentar eliminar el directorio completo primero
+            directory_deleted = delete_animal_directory(animal_id)
+            if not directory_deleted:
+                # Fallback: eliminar archivo por archivo
+                for filepath in image_filepaths:
+                    delete_animal_image(filepath)
+        except Exception as e:
+            logger.warning(f"Error limpiando archivos del animal {animal_id}: {e}")
+            
+        return result
 
     def __repr__(self):
         return f'<Animal {self.id}: {self.record}>'
