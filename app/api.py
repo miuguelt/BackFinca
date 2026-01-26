@@ -199,129 +199,217 @@ def register_api(app, limiter=None):
         app.extensions["sse_ip_counts"] = sse_ip_counts
         app.extensions["sse_ip_cooldowns"] = sse_ip_cooldowns
     except Exception:
+import pathlib
+from datetime import datetime, timezone
+import json
+import threading
+import queue
+
+from flask import Blueprint, jsonify, request, send_file, render_template
+from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+from flask_restx import Api
+from sqlalchemy import text
+
+from . import db
+from .utils.response_handler import APIResponse
+
+
+def register_api(app, limiter=None):
+    """Registrar Blueprint '/api/v1', configurar Flask-RESTX y exponer endpoints utilitarios.
+
+    - Registra todos los namespaces existentes
+    - Aplica rate limits específicos al namespace de autenticación (si hay limiter)
+    - Expone endpoints: /api/v1/health, /api/v1/docs/schema, /api/v1/docs/examples
+    """
+    logger = logging.getLogger(__name__)
+
+    # Crear el blueprint para la API
+    api_bp = Blueprint('api', __name__, url_prefix='/api/v1')
+
+
+    access_cookie_name = app.config.get('JWT_ACCESS_COOKIE_NAME', 'access_token_cookie')
+    refresh_cookie_name = app.config.get('JWT_REFRESH_COOKIE_NAME', 'refresh_token_cookie')
+    csrf_access_cookie_name = app.config.get('JWT_ACCESS_CSRF_COOKIE_NAME', 'csrf_access_token')
+    csrf_refresh_cookie_name = app.config.get('JWT_REFRESH_CSRF_COOKIE_NAME', 'csrf_refresh_token')
+
+    from collections import OrderedDict
+    
+    authorizations = OrderedDict()
+    authorizations['Bearer'] = {
+        'type': 'apiKey',
+        'in': 'header',
+        'name': 'Authorization',
+        'description': 'JWT token. Formato: Bearer <token>'
+    }
+    authorizations['Cookie'] = {
+        'type': 'apiKey',
+        'in': 'cookie',
+        'name': access_cookie_name,
+        'description': 'JWT token en cookie (autenticación automática)'
+    }
+
+    # Configurar Flask-RESTX con optimizaciones JSON y documentación
+    api = Api(
+        api_bp,
+        default_mediatype='application/json',
+        version='1.0',
+        title='Finca Villa Luz API',
+        description='''**API Optimizada para Finca Villa Luz**\n\nUna API RESTful para la gestión integral de ganado. Todos los endpoints devuelven respuestas en formato JSON estandarizado.\n\n**Notas de Inicio Rápido:**\n1.  **Autenticación**:\n    -   Usa el endpoint `/auth/login` para obtener tus tokens.\n    -   Usuario administrador por defecto: `identification=99999999`, `password=password123`.\n    -   La API utiliza JWT, que se puede enviar como `Bearer` token en el encabezado `Authorization` o a través de cookies seguras (HttpOnly).\n\n2.  **Endpoints**:\n    -   La mayoría de los recursos (animales, usuarios, etc.) siguen un patrón CRUD estándar.\n    -   Endpoints de analítica (`/analytics`) y seguridad (`/security`) ofrecen datos agregados.\n\n3.  **Respuestas JSON**:\n    -   Las respuestas exitosas (`200 OK`, `201CREATED`) siguen la estructura: `{ "success": true, "message": "...", "data": { ... } }`.\n    -   Las respuestas de error (`4xx`, `5xx`) siguen la estructura: `{ "success": false, "error": "...", "message": "...", "details": { ... } }`.\n\n**Guía para Frontend**: Consulta la guía de uso con ejemplos en `/api/v1/docs/guia-frontend`.''',
+        doc='/docs/',
+        contact='Finca Villa Luz',
+        contact_email='info@fincavillaluz.com',
+        license='MIT',
+        license_url='https://opensource.org/licenses/MIT',
+        authorizations=authorizations,
+        security=['Bearer', 'Cookie'],
+        validate=False,
+        ordered=True,
+        catch_all_404s=True,
+    )
+
+    # Expose the Api instance for internal endpoints (e.g. dynamic navigation generation)
+    try:
+        app.extensions["restx_api"] = api
+    except Exception:
+        pass
+
+    # UI de documentación personalizada con enlace visible a la guía
+    @api.documentation
+    def custom_swagger_ui():
+        return render_template(
+            'swagger_ui_custom.html',
+            title=api.title,
+            specs_url=api.specs_url,
+            cookie_config={
+                'access': access_cookie_name,
+                'refresh': refresh_cookie_name,
+                'csrf_access': csrf_access_cookie_name,
+                'csrf_refresh': csrf_refresh_cookie_name,
+            },
+        )
+
+    # Namespaces
+    from .namespaces.auth_namespace import auth_ns, set_limiter as set_auth_limiter
+    from .namespaces.users_namespace import users_ns, set_limiter as set_users_limiter
+    from .namespaces.animals_namespace import animals_ns
+    from .namespaces.analytics_namespace import analytics_ns
+    from .namespaces.security_namespace import security_ns
+    from .namespaces.species_namespace import species_ns
+    from .namespaces.breeds_namespace import breeds_ns
+    from .namespaces.control_namespace import control_ns
+    from .namespaces.fields_namespace import fields_ns
+    from .namespaces.diseases_namespace import diseases_ns
+    from .namespaces.genetic_improvements_namespace import genetic_improvements_ns
+    from .namespaces.food_types_namespace import food_types_ns
+    from .namespaces.treatments_namespace import treatments_ns
+    from .namespaces.vaccinations_namespace import vaccinations_ns
+    from .namespaces.vaccines_namespace import vaccines_ns
+    from .namespaces.medications_namespace import medications_ns
+    from .namespaces.route_administration_namespace import route_admin_ns
+    from .namespaces.animal_diseases_namespace import animal_diseases_ns
+    from .namespaces.animal_fields_namespace import animal_fields_ns
+    from .namespaces.treatment_medications_namespace import treatment_medications_ns
+    from .namespaces.treatment_vaccines_namespace import treatment_vaccines_ns
+    from .namespaces.user_preferences_namespace import prefs_ns
+    from .namespaces.navigation_namespace import nav_ns
+    from .namespaces.animal_images_namespace import animal_images_ns
+    from .namespaces.activity_namespace import activity_ns, set_limiter as set_activity_limiter
+
+    # Aplicar rate limits específicos a endpoints de autenticación (solo si hay limiter)
+    try:
+        if app.config.get('RATE_LIMIT_ENABLED', True) and limiter:
+            set_auth_limiter(limiter)
+            try:
+                set_users_limiter(limiter)
+            except Exception:
+                logging.getLogger(__name__).exception('No se pudo aplicar rate limiting a users_namespace')
+            try:
+                set_activity_limiter(limiter)
+            except Exception:
+                logging.getLogger(__name__).exception('No se pudo aplicar rate limiting a activity_namespace')
+        else:
+            logging.getLogger(__name__).info('Rate limiting no aplicado (deshabilitado o sin limiter)')
+    except Exception:
+        logging.getLogger(__name__).exception('No se pudo aplicar rate limiting a auth/users namespaces')
+
+    # Registrar namespaces
+    api.add_namespace(auth_ns)
+    api.add_namespace(users_ns)
+    api.add_namespace(animals_ns)
+    api.add_namespace(analytics_ns)
+    api.add_namespace(security_ns)
+    api.add_namespace(species_ns)
+    api.add_namespace(breeds_ns)
+    api.add_namespace(control_ns)
+    api.add_namespace(fields_ns)
+    api.add_namespace(diseases_ns)
+    api.add_namespace(genetic_improvements_ns)
+    api.add_namespace(food_types_ns)
+    api.add_namespace(treatments_ns)
+    api.add_namespace(vaccinations_ns)
+    api.add_namespace(vaccines_ns)
+    api.add_namespace(medications_ns)
+    api.add_namespace(route_admin_ns)
+    api.add_namespace(animal_diseases_ns)
+    api.add_namespace(animal_fields_ns)
+    api.add_namespace(treatment_medications_ns)
+    api.add_namespace(treatment_vaccines_ns)
+    api.add_namespace(prefs_ns)
+    api.add_namespace(nav_ns)
+    api.add_namespace(animal_images_ns)
+    api.add_namespace(activity_ns)
+
+    try:
+        bus_lock = threading.Lock()
+        subscribers = []
+        sse_ip_lock = threading.Lock()
+        sse_ip_counts = {}
+        sse_ip_cooldowns = {}
+        class EventBus:
+            def subscribe(self):
+                q = queue.Queue(maxsize=1000)
+                with bus_lock:
+                    subscribers.append(q)
+                return q
+            def unsubscribe(self, q):
+                with bus_lock:
+                    try:
+                        subscribers.remove(q)
+                    except ValueError:
+                        pass
+            def publish(self, endpoint: str, action: str, record_id=None):
+                payload = json.dumps({"endpoint": endpoint, "action": action, "id": record_id})
+                with bus_lock:
+                    for q in list(subscribers):
+                        try:
+                            q.put_nowait(payload)
+                        except queue.Full:
+                            try:
+                                _ = q.get_nowait()
+                                q.put_nowait(payload)
+                            except Exception:
+                                pass
+        app.extensions["event_bus"] = EventBus()
+        app.extensions["sse_ip_lock"] = sse_ip_lock
+        app.extensions["sse_ip_counts"] = sse_ip_counts
+        app.extensions["sse_ip_cooldowns"] = sse_ip_cooldowns
+    except Exception:
         logging.getLogger(__name__).exception('No se pudo inicializar event_bus')
 
-    @api_bp.route('/events', methods=['GET'])
+    @api_bp.route('/events', methods=['GET', 'HEAD'])
     def sse_events():
         try:
+            if request.method == 'HEAD':
+                return APIResponse.success(message='SSE endpoint ready')
+
             bus = app.extensions.get("event_bus")
             if not bus:
                 return APIResponse.error('Eventos no disponibles', status_code=503)
-            max_conn_ip = int(app.config.get('SSE_MAX_CONN_PER_IP', 3))
-            max_conn_user = int(app.config.get('SSE_MAX_CONN_PER_USER', max_conn_ip))
+            max_conn_ip = int(app.config.get('SSE_MAX_CONN_PER_IP', 10))
+            max_conn_user = int(app.config.get('SSE_MAX_CONN_PER_USER', 10))
             retry_ms = max(1000, int(app.config.get('SSE_RETRY_MS', 5000)))
             cooldown_seconds = int(app.config.get('SSE_COOLDOWN_SECONDS', 15))
             ping_interval = max(5, int(app.config.get('SSE_PING_INTERVAL_SECONDS', 25)))
-
-            # Límite de conexiones SSE por "cliente". En localhost varias pestañas/recargas
-            # comparten IP, así que preferimos agrupar por usuario autenticado cuando exista.
-            user_key = None
-            try:
-                verify_jwt_in_request(optional=True)
-                user_key = get_jwt_identity()
-            except Exception:
-                user_key = None
-
-            ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "127.0.0.1").split(",")[0].strip()
-            if user_key is not None:
-                try:
-                    user_key_str = str(user_key)
-                except Exception:
-                    user_key_str = "unknown"
-                client_key = f"user:{user_key_str}"
-                max_conn = max_conn_user
-            else:
-                client_key = f"ip:{ip}"
-                max_conn = max_conn_ip
-            sse_ip_lock = app.extensions.get("sse_ip_lock")
-            sse_ip_counts = app.extensions.get("sse_ip_counts")
-            sse_ip_cooldowns = app.extensions.get("sse_ip_cooldowns")
-            if sse_ip_lock and sse_ip_counts is not None:
-                now = time.time()
-                cooldown_seconds = max(0, cooldown_seconds)
-                with sse_ip_lock:
-                    if sse_ip_cooldowns is not None:
-                        cooldown_until = sse_ip_cooldowns.get(client_key, 0)
-                        if cooldown_until and cooldown_until > now:
-                            retry_after = max(1, int(cooldown_until - now))
-                            payload, status = APIResponse.error(
-                                'Limite de conexiones SSE excedido',
-                                status_code=429,
-                                error_code='SSE_CONNECTION_LIMIT',
-                                details={'retry_after_seconds': retry_after, 'client_key': client_key}
-                            )
-                            from flask import jsonify, make_response
-                            resp = make_response(jsonify(payload), status)
-                            resp.headers['Retry-After'] = str(retry_after)
-                            resp.headers['RateLimit-Reset'] = str(retry_after)
-                            return resp
-                        elif cooldown_until:
-                            sse_ip_cooldowns.pop(client_key, None)
-                    cnt = sse_ip_counts.get(client_key, 0)
-                    if cnt >= max_conn:
-                        retry_after = max(1, int(cooldown_seconds))
-                        if sse_ip_cooldowns is not None and retry_after:
-                            sse_ip_cooldowns[client_key] = now + retry_after
-                        payload, status = APIResponse.error(
-                            'Limite de conexiones SSE excedido',
-                            status_code=429,
-                            error_code='SSE_CONNECTION_LIMIT',
-                            details={'retry_after_seconds': retry_after, 'client_key': client_key}
-                        )
-                        from flask import jsonify, make_response
-                        resp = make_response(jsonify(payload), status)
-                        resp.headers['Retry-After'] = str(retry_after)
-                        resp.headers['RateLimit-Reset'] = str(retry_after)
-                        return resp
-                    sse_ip_counts[client_key] = cnt + 1
-            q = bus.subscribe()
-            released = False
-            def _release():
-                nonlocal released
-                if released:
-                    return
-                released = True
-                try:
-                    bus.unsubscribe(q)
-                except Exception:
-                    pass
-                try:
-                    if sse_ip_lock and sse_ip_counts is not None:
-                        with sse_ip_lock:
-                            if client_key in sse_ip_counts:
-                                v = sse_ip_counts[client_key]
-                                if v <= 1:
-                                    sse_ip_counts.pop(client_key, None)
-                                else:
-                                    sse_ip_counts[client_key] = v - 1
-                except Exception:
-                    pass
-            def _gen():
-                try:
-                    yield f'retry: {retry_ms}\n\n'
-                    yield ': init\n\n'
-                    while True:
-                        try:
-                            payload = q.get(timeout=ping_interval)
-                            yield f'data: {payload}\n\n'
-                        except Exception:
-                            yield ': ping\n\n'
-                finally:
-                    _release()
-            from flask import Response, stream_with_context
-            resp = Response(stream_with_context(_gen()), mimetype='text/event-stream')
-            resp.headers['Cache-Control'] = 'no-cache'
-            resp.headers['Connection'] = 'keep-alive'
-            resp.headers['X-Accel-Buffering'] = 'no'
-            resp.call_on_close(_release)
-            return resp
-        except Exception as e:
-            return APIResponse.error('Error de SSE', status_code=500, details={'error': str(e)})
-
-    try:
-        try:
-            from flask_sock import Sock
-            sock = Sock(app)
             @sock.route('/ws')
             def ws(ws):
                 try:
