@@ -13,6 +13,7 @@ services:
 
     environment:
       FLASK_ENV: ${FLASK_ENV:-production}
+      FORCE_DB_CREATE: ${FORCE_DB_CREATE:-true}
       # Base de datos
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT:-3306}
